@@ -1,0 +1,39 @@
+//! # wallet-core
+//!
+//! Shared client-side wallet logic for BTC2Blake, compiled to WASM for the web app
+//! and to a native library (via UniFFI) for the iOS / Android apps. The
+//! security-critical code lives here once and is audited once.
+//!
+//! **Non-custodial.** This crate derives keys, builds and signs transactions, and
+//! runs the client half of the HTLC atomic-swap protocol. It performs **no I/O** —
+//! the platform shell supplies data (UTXOs, confirmations, the counterparty's
+//! contract) and carries out storage, networking, and biometrics through the traits
+//! in [`storage`].
+//!
+//! ## Status
+//!
+//! `keys`, `htlc`, `sighash` (segwit v0), `swap`, and address derivation in `wallet`
+//! are implemented and tested. Still stubbed: `SIGHASH_UNIFIED` (needs the Knots
+//! PR #357 spec), `wallet::build_tx` coin selection, and `crypto` seed sealing.
+
+#![forbid(unsafe_code)]
+
+pub mod chain;
+pub mod crypto;
+pub mod error;
+pub mod htlc;
+pub mod keys;
+pub mod sighash;
+pub mod storage;
+pub mod swap;
+pub mod types;
+pub mod wallet;
+
+pub use bitcoin;
+
+pub use chain::{Chain, ChainParams};
+pub use error::{Result, WalletError};
+pub use htlc::HtlcContract;
+pub use keys::MasterKey;
+pub use swap::{SwapEvent, SwapMachine, SwapParams, SwapRole, SwapState};
+pub use wallet::{FundingPlan, Utxo, WalletView};
