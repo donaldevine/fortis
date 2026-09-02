@@ -12,9 +12,9 @@
 //!
 //! ## Status
 //!
-//! `keys`, `htlc`, `sighash` (segwit v0), `swap`, and address derivation in `wallet`
-//! are implemented and tested. Still stubbed: `SIGHASH_UNIFIED` (needs the Knots
-//! PR #357 spec), `wallet::build_tx` coin selection, and `crypto` seed sealing.
+//! `keys`, `htlc`, `sighash` (BIP-143 + `SIGHASH_UNIFIED`, Knots PR #357), `swap`,
+//! `crypto` seed sealing, and `wallet` (address derivation, coin selection, sweeps)
+//! are implemented and tested. Remaining: the mobile (`wallet-ffi`) bindings.
 
 #![forbid(unsafe_code)]
 

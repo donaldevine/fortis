@@ -3,9 +3,12 @@
 
 use wasm_bindgen::prelude::*;
 
+use wallet_core::bitcoin::address::NetworkUnchecked;
 use wallet_core::bitcoin::hashes::{sha256, Hash};
 use wallet_core::bitcoin::secp256k1::PublicKey;
-use wallet_core::bitcoin::{consensus, Amount, OutPoint, ScriptBuf, Transaction, TxOut, Txid};
+use wallet_core::bitcoin::{
+    consensus, Address, Amount, OutPoint, ScriptBuf, Transaction, TxOut, Txid,
+};
 use wallet_core::crypto::{self, KdfParams};
 use wallet_core::swap::UnsignedSpend;
 use wallet_core::{
@@ -111,6 +114,13 @@ impl Wallet {
         Ok(self.key.account_xpub(&params(chain)?, account).map_err(js)?.to_string())
     }
 
+    /// Master key fingerprint (8 hex chars) — the descriptor key-origin the gateway
+    /// needs for `POST /v1/connect`.
+    #[wasm_bindgen(js_name = masterFingerprint)]
+    pub fn master_fingerprint(&self) -> String {
+        self.key.master_fingerprint().to_string()
+    }
+
     /// Compressed swap public key (hex), `m/84'/coin'/account'/2'/index'`.
     #[wasm_bindgen(js_name = swapPubkey)]
     pub fn swap_pubkey(&self, chain: &str, account: u32, swap_index: u32) -> Result<String, JsError> {
@@ -170,6 +180,7 @@ impl Wallet {
 #[wasm_bindgen]
 pub struct WalletView {
     inner: wallet_core::WalletView,
+    chain: String,
 }
 
 #[wasm_bindgen]
@@ -177,7 +188,36 @@ impl WalletView {
     #[wasm_bindgen(constructor)]
     pub fn new(chain: &str, account_xpub: &str) -> Result<WalletView, JsError> {
         let xpub = account_xpub.parse().map_err(|_| JsError::new("invalid account xpub"))?;
-        Ok(WalletView { inner: wallet_core::WalletView::new(params(chain)?, xpub) })
+        Ok(WalletView {
+            inner: wallet_core::WalletView::new(params(chain)?, xpub),
+            chain: chain.to_string(),
+        })
+    }
+
+    /// Resume derivation counters after a reload so the next address is not one
+    /// already handed out (persist these client-side).
+    #[wasm_bindgen(js_name = setNextIndices)]
+    pub fn set_next_indices(&mut self, next_receive: u32, next_change: u32) {
+        self.inner.set_next_indices(next_receive, next_change);
+    }
+
+    /// `{ next_receive, next_change }` — read back to persist after planning a payment.
+    #[wasm_bindgen(js_name = nextIndices)]
+    pub fn next_indices(&self) -> Result<JsValue, JsError> {
+        let (next_receive, next_change) = self.inner.next_indices();
+        serde_wasm_bindgen::to_value(&dto::JsIndices { next_receive, next_change }).map_err(js)
+    }
+
+    /// `{ address, script_pubkey_hex }` at `.../<branch>/<index>` (branch 0 receive,
+    /// 1 change) without touching the counters.
+    #[wasm_bindgen(js_name = addressAt)]
+    pub fn address_at(&self, branch: u32, index: u32) -> Result<JsValue, JsError> {
+        let a = self.inner.address_at(branch, index).map_err(js)?;
+        serde_wasm_bindgen::to_value(&dto::JsAddress {
+            script_pubkey_hex: hex::encode(a.script_pubkey().as_bytes()),
+            address: a.to_string(),
+        })
+        .map_err(js)
     }
 
     /// `{ address, script_pubkey_hex }` for the next unused external address.
@@ -228,6 +268,68 @@ impl WalletView {
             .map_err(js)?;
         serde_wasm_bindgen::to_value(&dto::JsFundingPlan::from_core(&plan)).map_err(js)
     }
+
+    /// Coin-select and build an unsigned payment. `outputs` is
+    /// `[{ address, amount_sat }]`. Returns the same `{ tx_hex, fee_sat,
+    /// change_sat|null, selected }` shape — pass `selected` to `Wallet.signFundingTx`.
+    #[wasm_bindgen(js_name = planPayment)]
+    pub fn plan_payment(
+        &mut self,
+        utxos: JsValue,
+        outputs: JsValue,
+        feerate_sat_vb: u64,
+        min_confirmations: u32,
+    ) -> Result<JsValue, JsError> {
+        let js_utxos: Vec<dto::JsUtxo> = serde_wasm_bindgen::from_value(utxos).map_err(js)?;
+        let utxos: Vec<_> =
+            js_utxos.iter().map(|u| u.to_core()).collect::<Result<_, _>>().map_err(js)?;
+        let net = params(&self.chain)?.network;
+        let js_outs: Vec<dto::JsPayTo> = serde_wasm_bindgen::from_value(outputs).map_err(js)?;
+        let outs: Vec<TxOut> = js_outs
+            .iter()
+            .map(|o| {
+                Ok(TxOut {
+                    value: Amount::from_sat(o.amount_sat),
+                    script_pubkey: address_spk(&o.address, net)?,
+                })
+            })
+            .collect::<Result<_, JsError>>()?;
+        let plan = self
+            .inner
+            .plan_payment(&utxos, outs, feerate_sat_vb, min_confirmations)
+            .map_err(js)?;
+        serde_wasm_bindgen::to_value(&dto::JsFundingPlan::from_core(&plan)).map_err(js)
+    }
+
+    /// Send the whole confirmed balance to `destAddress` (fee deducted, no change).
+    #[wasm_bindgen(js_name = planSweep)]
+    pub fn plan_sweep(
+        &self,
+        utxos: JsValue,
+        dest_address: &str,
+        feerate_sat_vb: u64,
+        min_confirmations: u32,
+    ) -> Result<JsValue, JsError> {
+        let js_utxos: Vec<dto::JsUtxo> = serde_wasm_bindgen::from_value(utxos).map_err(js)?;
+        let utxos: Vec<_> =
+            js_utxos.iter().map(|u| u.to_core()).collect::<Result<_, _>>().map_err(js)?;
+        let net = params(&self.chain)?.network;
+        let dest = address_spk(dest_address, net)?;
+        let plan = self
+            .inner
+            .plan_sweep(&utxos, dest, feerate_sat_vb, min_confirmations)
+            .map_err(js)?;
+        serde_wasm_bindgen::to_value(&dto::JsFundingPlan::from_core(&plan)).map_err(js)
+    }
+}
+
+fn address_spk(addr: &str, net: wallet_core::bitcoin::Network) -> Result<ScriptBuf, JsError> {
+    Ok(addr
+        .parse::<Address<NetworkUnchecked>>()
+        .map_err(|e| JsError::new(&format!("bad address {addr}: {e}")))?
+        .require_network(net)
+        .map_err(|_| JsError::new(&format!("address {addr} is not valid on this network")))?
+        .script_pubkey())
 }
 
 /// One HTLC leg. Build it from the agreed swap parameters, then use it to make and

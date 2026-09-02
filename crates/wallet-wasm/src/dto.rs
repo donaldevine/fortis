@@ -77,6 +77,12 @@ impl JsFundingPlan {
 }
 
 #[derive(Deserialize)]
+pub struct JsPayTo {
+    pub address: String,
+    pub amount_sat: u64,
+}
+
+#[derive(Deserialize)]
 pub struct JsSpentInput {
     pub value_sat: u64,
     pub script_pubkey_hex: String,
@@ -121,6 +127,12 @@ pub struct JsSwapParams {
 pub struct JsAddress {
     pub address: String,
     pub script_pubkey_hex: String,
+}
+
+#[derive(Serialize)]
+pub struct JsIndices {
+    pub next_receive: u32,
+    pub next_change: u32,
 }
 
 #[derive(Serialize)]

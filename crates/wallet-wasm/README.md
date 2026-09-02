@@ -39,12 +39,17 @@ trading app's bundler at `pkg/`.
 | `generateMnemonic(Uint8Array(32)) → string` | 24-word phrase from platform entropy |
 | `new Wallet(mnemonic, passphrase)` | holds the key |
 | `wallet.accountXpub(chain, account) → string` | for `WalletView` |
+| `wallet.masterFingerprint() → hex` | descriptor key-origin (for `fortisd` `POST /v1/connect`) |
 | `wallet.swapPubkey(chain, account, swapIndex) → hex` | per-swap pubkey |
 | `wallet.signSwap(chain, account, swapIndex, sighashHex) → hex` | HTLC leg signature |
-| `wallet.signFundingTx(chain, account, txHex, selected) → txHex` | signs the funding tx's P2WPKH inputs |
+| `wallet.signFundingTx(chain, account, txHex, selected) → txHex` | signs a tx's P2WPKH inputs (funding *or* a plain payment) |
 | `new WalletView(chain, accountXpub)` | watch-only |
-| `view.nextReceiveAddress() / nextChangeAddress() → string` | BIP-84 bech32 |
-| `view.planHtlcFunding(utxos, htlcSpkHex, valueSat, feerate, minConf) → plan` | coin selection |
+| `view.setNextIndices(nextReceive, nextChange)` / `view.nextIndices() → {nextReceive,nextChange}` | resume / read derivation counters across reloads |
+| `view.nextReceiveAddress() / nextChangeAddress() → {address, script_pubkey_hex}` | BIP-84 bech32, advances a counter |
+| `view.addressAt(branch, index) → {address, script_pubkey_hex}` | a specific address, no advance (branch 0 receive, 1 change) |
+| `view.planPayment(utxos, [{address, amount_sat}], feerate, minConf) → plan` | coin selection for an arbitrary payment |
+| `view.planSweep(utxos, destAddress, feerate, minConf) → plan` | send the whole confirmed balance, fee deducted |
+| `view.planHtlcFunding(utxos, htlcSpkHex, valueSat, feerate, minConf) → plan` | coin selection for a swap-leg funding output |
 | `Htlc.build(chain, hashlockHex, redeemPkHex, refundPkHex, locktime, valueSat)` | one leg |
 | `htlc.scriptPubkeyHex / witnessScriptHex` | |
 | `htlc.findOutput(fundingTxHex, minValueSat) → {vout, value_sat}` | verify a counterparty's funding |
@@ -101,7 +106,7 @@ const ourPk = wallet.swapPubkey("btc", 0, SWAP);
 const htlc = Htlc.build("btc", hashlockHex, theirPkHex, ourPk, refundUnixSecs, 250_000);
 
 // --- fund it ---
-const plan = JSON.parse(view.planHtlcFunding(utxos, htlc.scriptPubkeyHex, 250_000, feerate, 2));
+const plan = view.planHtlcFunding(utxos, htlc.scriptPubkeyHex, 250_000, feerate, 2);
 const fundingHex = wallet.signFundingTx("btc", 0, plan.tx_hex, plan.selected);
 // broadcast fundingHex; note its txid + the HTLC output vout
 
@@ -140,7 +145,7 @@ const session = new SwapSession({
 // 1. fund our BLK HTLC
 const c = session.ourContract();
 const view = new WalletView("blk", wallet.accountXpub("blk", 0));
-const plan = JSON.parse(view.planHtlcFunding(blkUtxos, c.script_pubkey_hex, 2_000_000, feerate, 100));
+const plan = view.planHtlcFunding(blkUtxos, c.script_pubkey_hex, 2_000_000, feerate, 100);
 const fundingHex = wallet.signFundingTx("blk", 0, plan.tx_hex, plan.selected);   // SIGHASH_UNIFIED
 // broadcast; tell the platform the funding txid
 
@@ -153,6 +158,15 @@ const redeemHex = session.finalizeRedeem(r.tx_hex, sig, wallet.swapPubkey("btc",
 
 // refund path if it stalls: session.buildRefund(...) → signSwap("blk",...) → session.finalizeRefund(...)
 ```
+
+`plan` (from `planPayment` / `planSweep` / `planHtlcFunding`) is a plain object:
+`{ tx_hex, fee_sat, change_sat | null, selected: [...] }` — pass `selected`
+straight to `wallet.signFundingTx`.
+
+## Consumers
+
+[`web/`](../../web) is the browser wallet built on this module (keys in wasm, seed
+sealed in IndexedDB, chain data via a `fortisd` gateway).
 
 ## Next
 

@@ -65,6 +65,19 @@ impl WalletView {
         Self { params, xpub, next_receive: 0, next_change: 0 }
     }
 
+    /// Resume address derivation from persisted counters after a shell restart, so
+    /// the next receive / change address is not one already handed out.
+    pub fn set_next_indices(&mut self, next_receive: u32, next_change: u32) {
+        self.next_receive = next_receive;
+        self.next_change = next_change;
+    }
+
+    /// `(next_receive, next_change)` — read back after planning to persist the
+    /// change index that a payment consumed.
+    pub fn next_indices(&self) -> (u32, u32) {
+        (self.next_receive, self.next_change)
+    }
+
     pub fn balance(&self, utxos: &[Utxo]) -> Amount {
         utxos.iter().map(|u| u.value).fold(Amount::ZERO, |a, b| a + b)
     }
@@ -83,7 +96,10 @@ impl WalletView {
         Ok(addr)
     }
 
-    fn address_at(&self, branch: u32, index: u32) -> Result<Address> {
+    /// The P2WPKH (BIP-84) address at `.../<branch>/<index>` — `branch` 0 for
+    /// receive, 1 for change. Lets a shell re-derive a specific address (e.g. to
+    /// cross-check one the node reported) without reimplementing derivation.
+    pub fn address_at(&self, branch: u32, index: u32) -> Result<Address> {
         let secp = Secp256k1::verification_only();
         let child = self
             .xpub
@@ -147,6 +163,38 @@ impl WalletView {
         }
 
         Err(WalletError::InsufficientFunds { need: target.to_sat(), have: acc.to_sat() })
+    }
+
+    /// Send every input confirmed at least `min_confirmations` deep to a single
+    /// destination, with the fee taken from the total (no change output). For
+    /// "empty this wallet" / sweeps.
+    pub fn plan_sweep(
+        &self,
+        utxos: &[Utxo],
+        dest: ScriptBuf,
+        feerate_sat_vb: u64,
+        min_confirmations: u32,
+    ) -> Result<FundingPlan> {
+        let selected: Vec<Utxo> = utxos
+            .iter()
+            .filter(|u| u.confirmations >= min_confirmations)
+            .cloned()
+            .collect();
+        if selected.is_empty() {
+            return Err(WalletError::InsufficientFunds { need: 1, have: 0 });
+        }
+        let total = selected.iter().map(|u| u.value).fold(Amount::ZERO, |a, b| a + b);
+        let vb = TX_OVERHEAD_VB + selected.len() as u64 * P2WPKH_INPUT_VB + output_vb(&dest);
+        let fee = Amount::from_sat(vb * feerate_sat_vb);
+        let value = total
+            .checked_sub(fee)
+            .filter(|v| v.to_sat() >= CHANGE_DUST_SAT)
+            .ok_or(WalletError::InsufficientFunds {
+                need: fee.to_sat() + CHANGE_DUST_SAT,
+                have: total.to_sat(),
+            })?;
+        let outs = vec![TxOut { value, script_pubkey: dest }];
+        Ok(assemble(selected, outs, fee, None))
     }
 
     /// Plan a transaction that funds `contract`'s HTLC output.
@@ -277,5 +325,37 @@ mod tests {
         let mut v = view();
         let utxos = [utxo(1_000_000, 0, 1)];
         assert!(v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1).is_err());
+    }
+
+    #[test]
+    fn sweep_spends_everything_minus_fee() {
+        let v = view();
+        let utxos = [utxo(400_000, 3, 1), utxo(600_000, 3, 2), utxo(9_999, 0, 3)];
+        let dest = ScriptBuf::from(vec![0u8; 22]); // P2WPKH-shaped
+        let plan = v.plan_sweep(&utxos, dest, 10, 1).unwrap();
+        assert_eq!(plan.selected.len(), 2); // the 0-conf utxo is excluded
+        assert_eq!(plan.tx.output.len(), 1);
+        assert!(plan.change.is_none());
+        assert_eq!(plan.tx.output[0].value + plan.fee, Amount::from_sat(1_000_000));
+        // vsize = 11 + 2*68 + 31 = 178; fee @10 = 1780
+        assert_eq!(plan.fee.to_sat(), 1_780);
+    }
+
+    #[test]
+    fn sweep_rejects_when_fee_exceeds_funds() {
+        let v = view();
+        let utxos = [utxo(500, 3, 1)];
+        assert!(v.plan_sweep(&utxos, ScriptBuf::from(vec![0u8; 22]), 10, 1).is_err());
+    }
+
+    #[test]
+    fn resumes_change_index_from_persisted_counter() {
+        let mut v = view();
+        v.set_next_indices(7, 4);
+        assert_eq!(v.next_indices(), (7, 4));
+        let utxos = [utxo(1_000_000, 3, 1)];
+        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1).unwrap();
+        assert!(plan.change.is_some());
+        assert_eq!(v.next_indices().1, 5); // change index advanced 4 -> 5
     }
 }

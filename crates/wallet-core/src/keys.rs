@@ -37,11 +37,23 @@ impl MasterKey {
         Self::from_mnemonic(&mnemonic, passphrase)
     }
 
+    /// BIP-32 fingerprint of the master key — the `[abcd1234/…]` key-origin prefix
+    /// a descriptor wallet wants when importing this account's xpub watch-only.
+    pub fn master_fingerprint(&self) -> bitcoin::bip32::Fingerprint {
+        self.xpriv.fingerprint(&Secp256k1::new())
+    }
+
     /// Account xpub at `m/84'/<coin_type>'/<account>'`, for a [`crate::wallet::WalletView`].
+    ///
+    /// The serialization version follows `params.network`: `xpub…` on mainnet,
+    /// `tpub…` on regtest — a regtest node rejects a mainnet-versioned key in a
+    /// descriptor.
     pub fn account_xpub(&self, params: &ChainParams, account: u32) -> Result<Xpub> {
         let secp = Secp256k1::new();
         let child = self.xpriv.derive_priv(&secp, &account_path(params.bip44_coin_type, account)?)?;
-        Ok(Xpub::from_priv(&secp, &child))
+        let mut xpub = Xpub::from_priv(&secp, &child);
+        xpub.network = NetworkKind::from(params.network);
+        Ok(xpub)
     }
 
     /// Ephemeral keypair for one swap, under a hardened branch so a leaked swap key
