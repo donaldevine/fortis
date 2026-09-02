@@ -38,6 +38,47 @@ export async function copy(text) {
 
 export const SAT = 100_000_000;
 export const fmt = (sat) => (Number(sat) / SAT).toFixed(8);
+
+const reduceMotion = () =>
+  typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Animate `el`'s text from `fromSat` to `toSat` (both in sats), easeOutCubic. */
+export function countUp(el, fromSat, toSat) {
+  const from = Number(fromSat) || 0;
+  const to = Number(toSat) || 0;
+  if (from === to || reduceMotion()) {
+    el.textContent = fmt(to);
+    return;
+  }
+  const t0 = performance.now();
+  const dur = 650;
+  const tick = (now) => {
+    const p = Math.min(1, (now - t0) / dur);
+    const e = 1 - (1 - p) ** 3;
+    el.textContent = fmt(from + (to - from) * e);
+    if (p < 1) requestAnimationFrame(tick);
+    else el.textContent = fmt(to);
+  };
+  requestAnimationFrame(tick);
+}
+
+/** Nudge the ambient background as the page scrolls. */
+export function initParallax() {
+  const bg = document.querySelector('.bg');
+  if (!bg || reduceMotion()) return;
+  let raf = 0;
+  addEventListener(
+    'scroll',
+    () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        bg.style.transform = `translateY(${scrollY * -0.06}px)`;
+        raf = 0;
+      });
+    },
+    { passive: true },
+  );
+}
 export const parseAmount = (s) => {
   const n = Number(String(s).trim());
   if (!isFinite(n) || n < 0) throw new Error('enter a valid amount');

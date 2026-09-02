@@ -8,7 +8,7 @@ import { loadState, saveState, wipeState } from './store.js';
 import { Gateway } from './gateway.js';
 import { EsploraBackend } from './esplora.js';
 import { ensureWasm, newMnemonic, validateMnemonic, seal, unseal, Session } from './wallet.js';
-import { el, mount, toast, copy, fmt, parseAmount, shortTxid, timeAgo } from './ui.js';
+import { el, mount, toast, copy, fmt, parseAmount, shortTxid, timeAgo, countUp, initParallax } from './ui.js';
 
 const UNIT = { blk: 'BLK', btc: 'BTC' };
 const DEFAULT_ESPLORA = { blk: 'https://mempool.guide/api', btc: 'https://mempool.space/api' };
@@ -30,6 +30,7 @@ async function start() {
       el('pre', { class: 'card mono' }, 'wasm-pack build crates/wallet-wasm --target web --out-dir ../../web/pkg')));
   }
   state = migrate(await loadState());
+  initParallax();
   render();
 }
 
@@ -68,13 +69,28 @@ function render() {
 
 /* ------------------------------------------------------------------ onboard */
 
+const SHIELD = `<svg viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M256 60 L436 126 v146 c0 114 -78 180 -180 220 C154 452 76 386 76 272 V126 Z"
+        stroke="url(#bg)" stroke-width="30" stroke-linejoin="round"/>
+  <path d="M200 252 h116 M236 200 v104 M266 200 v104 M208 200 h84 a34 34 0 0 1 0 66 h-84"
+        stroke="#eaf0ff" stroke-width="22" stroke-linecap="round"/>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#6ea8fe"/><stop offset="1" stop-color="#b98cff"/>
+  </linearGradient></defs></svg>`;
+
+function brand(tagline) {
+  return el('div', { class: 'brand' },
+    el('div', { html: SHIELD }),
+    el('div', { class: 'name' }, 'fortis'),
+    tagline ? el('p', { class: 'center', style: 'max-width:22rem' }, tagline) : null);
+}
+
 function renderOnboard() {
   if (ui.screen === 'create') return renderCreate();
   if (ui.screen === 'restore') return renderRestore();
   mount(el('div', { class: 'screen' },
     el('div', { class: 'spacer' }),
-    el('h1', { class: 'center' }, 'fortis'),
-    el('p', { class: 'center' }, 'a non-custodial wallet for Bitcoin and its BLAKE2b fork'),
+    brand('a non-custodial wallet for Bitcoin and its BLAKE2b fork'),
     el('div', { class: 'spacer' }),
     el('button', { class: 'primary wide', onclick: () => go('create') }, 'Create a new wallet'),
     el('button', { class: 'ghost wide', onclick: () => go('restore') }, 'Restore from a recovery phrase'),
@@ -218,11 +234,12 @@ async function onUseEsplora() {
 function renderLocked() {
   mount(el('div', { class: 'screen' },
     el('div', { class: 'spacer' }),
-    el('h1', { class: 'center' }, 'fortis'),
-    el('label', {}, 'Password'),
-    el('input', { id: 'pw', type: 'password', autocomplete: 'current-password', onkeydown: (e) => e.key === 'Enter' && onUnlock() }),
-    el('div', { id: 'err', class: 'err' }),
-    el('button', { class: 'primary wide', onclick: onUnlock }, 'Unlock'),
+    brand(),
+    el('div', { class: 'card stack' },
+      el('label', {}, 'Password'),
+      el('input', { id: 'pw', type: 'password', autocomplete: 'current-password', onkeydown: (e) => e.key === 'Enter' && onUnlock() }),
+      el('div', { id: 'err', class: 'err' }),
+      el('button', { class: 'primary wide', onclick: onUnlock }, 'Unlock')),
     el('div', { class: 'spacer' }),
     el('button', { class: 'ghost danger', onclick: onWipe }, 'Forget this wallet'),
   ));
@@ -315,7 +332,9 @@ function renderHome() {
 
   const top = el('div', { class: 'topbar' },
     el('div', {},
-      el('div', { class: 'bal' }, b ? fmt(b.confirmed_sat) : '—', ' ', el('span', { class: 'unit' }, unit)),
+      el('div', { class: 'bal' },
+        el('span', { class: 'num' }, b ? fmt(b.confirmed_sat) : '—'), ' ',
+        el('span', { class: 'unit' }, unit)),
       el('div', { class: 'hint' },
         el('span', { class: `dot ${dot}` }), ' ', hint, `  ·  ${via}`,
         b && b.pending_sat ? `  ·  +${fmt(b.pending_sat)} pending` : '')),
@@ -332,6 +351,12 @@ function renderHome() {
   else body = paneHistory();
 
   mount(el('div', { class: 'screen', style: 'gap:.9rem' }, top, tabs, body));
+
+  if (b) {
+    const num = document.querySelector('.bal .num');
+    if (num) countUp(num, cache._shownBal ?? 0, b.confirmed_sat);
+    cache._shownBal = b.confirmed_sat;
+  }
   startPolling();
 }
 
@@ -413,21 +438,24 @@ function renderConfirm() {
   const unit = UNIT[state.chain];
   const inTotal = plan.selected.reduce((s, u) => s + Number(u.value_sat), 0);
   const outAmount = sweep ? inTotal - Number(plan.fee_sat) : inTotal - Number(plan.fee_sat) - Number(plan.change_sat || 0);
+  const cancel = () => { ui.pendingPlan = null; renderHome(); };
 
-  mount(el('div', { class: 'screen' },
-    el('h2', {}, 'Confirm payment'),
-    el('div', { class: 'card' },
-      row('To', el('span', { class: 'mono', style: 'word-break:break-all;text-align:right' }, to)),
-      row('Amount', `${fmt(outAmount)} ${unit}`),
-      row('Network fee', `${fmt(plan.fee_sat)} ${unit}  (${feerate} sat/vB)`),
-      plan.change_sat != null ? row('Change', `${fmt(plan.change_sat)} ${unit}`) : null,
-      row('Inputs', String(plan.selected.length)),
-      el('hr', { style: 'border:0;border-top:1px solid var(--border);margin:.5rem 0' }),
-      row('Total', el('b', {}, `${fmt(outAmount + Number(plan.fee_sat))} ${unit}`))),
-    el('div', { id: 'err', class: 'err' }),
-    el('div', { class: 'row' },
-      el('button', { class: 'ghost', onclick: () => { ui.pendingPlan = null; renderHome(); } }, 'Cancel'),
-      el('button', { class: 'primary', id: 'send', onclick: onSend }, 'Sign & send'))));
+  mount(el('div', { class: 'sheet-wrap' },
+    el('div', { class: 'scrim', onclick: cancel }),
+    el('div', { class: 'sheet' },
+      el('div', { class: 'grabber' }),
+      el('h2', {}, sweep ? 'Confirm sweep' : 'Confirm payment'),
+      el('div', { class: 'amount-lead mono' }, `${fmt(outAmount)} `, el('span', { class: 'unit' }, unit)),
+      el('div', { class: 'kvs' },
+        row('To', el('span', { class: 'mono', style: 'word-break:break-all;text-align:right' }, to)),
+        row('Network fee', `${fmt(plan.fee_sat)} ${unit} · ${feerate} sat/vB`),
+        plan.change_sat != null ? row('Change', `${fmt(plan.change_sat)} ${unit}`) : null,
+        row('From', `${plan.selected.length} input${plan.selected.length > 1 ? 's' : ''}`),
+        row('Total', el('b', {}, `${fmt(outAmount + Number(plan.fee_sat))} ${unit}`))),
+      el('div', { id: 'err', class: 'err' }),
+      el('div', { class: 'row' },
+        el('button', { class: 'ghost', onclick: cancel }, 'Cancel'),
+        el('button', { class: 'primary', id: 'send', onclick: onSend }, 'Sign & send')))));
 }
 const row = (k, v) => el('div', { class: 'kv' }, el('span', {}, k), v?.nodeType ? v : el('span', {}, v));
 
