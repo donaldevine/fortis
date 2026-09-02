@@ -11,3 +11,7 @@ Thumbs.db
 # binding outputs
 crates/wallet-wasm/pkg/
 crates/wallet-ffi/out/
+web/pkg/
+
+# fortisd / fortis local state
+*.token
