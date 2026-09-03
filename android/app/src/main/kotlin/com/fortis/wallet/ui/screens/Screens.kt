@@ -1,5 +1,9 @@
 package com.fortis.wallet.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,6 +28,12 @@ import com.fortis.wallet.ui.*
 import com.fortis.wallet.ui.theme.Fx
 
 private fun fmt(sat: Long) = "%.8f".format(sat / 1e8)
+
+private fun copyToClipboard(ctx: Context, label: String, text: String) {
+    val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    cm.setPrimaryClip(ClipData.newPlainText(label, text))
+    Toast.makeText(ctx, "Copied", Toast.LENGTH_SHORT).show()
+}
 
 @Composable
 fun OnboardScreen(vm: WalletViewModel) = Screen {
@@ -232,14 +243,26 @@ fun HomeScreen(vm: WalletViewModel) {
 
 @Composable
 private fun ReceiveTab(vm: WalletViewModel) {
+    val ctx = LocalContext.current
     val i = vm.config?.nextReceive ?: 0
     val addr = remember(i, vm.session) { runCatching { vm.session?.receiveAddress(i)?.address }.getOrNull() ?: "…" }
+    val copy = { copyToClipboard(ctx, "address", addr) }
     GlassCard {
         Text("Receive", color = Fx.text, fontWeight = FontWeight.SemiBold)
-        Text(addr, fontFamily = FontFamily.Monospace, color = Fx.text,
-            modifier = Modifier.fillMaxWidth().background(Fx.glass1, RoundedCornerShape(Fx.rSm)).padding(Fx.s4))
-        Text("address #$i", color = Fx.textFaint, fontSize = 12.sp)
+        Text(
+            addr,
+            fontFamily = FontFamily.Monospace,
+            color = Fx.text,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(Fx.rSm))
+                .background(Fx.glass1)
+                .clickable { copy() }
+                .padding(Fx.s4),
+        )
+        Text("address #$i · tap to copy", color = Fx.textFaint, fontSize = 12.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
+            GhostButton("Copy", Modifier.weight(1f)) { copy() }
             GhostButton("New address", Modifier.weight(1f)) { vm.newReceiveAddress() }
         }
     }
@@ -271,13 +294,17 @@ private fun SendTab(vm: WalletViewModel) {
 
 @Composable
 private fun HistoryTab(vm: WalletViewModel, unit: String) {
+    val ctx = LocalContext.current
     if (vm.history.isEmpty()) {
         GlassCard { Text("no transactions yet", color = Fx.textFaint) }
         return
     }
     GlassCard {
         vm.history.forEach { h ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                Modifier.fillMaxWidth().clickable { copyToClipboard(ctx, "txid", h.txid) }.padding(vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
                 Column {
                     Text((if (h.amountSat > 0) "+" else "") + fmt(h.amountSat) + " " + unit,
                         fontFamily = FontFamily.Monospace, color = if (h.amountSat > 0) Fx.good else Fx.text)
