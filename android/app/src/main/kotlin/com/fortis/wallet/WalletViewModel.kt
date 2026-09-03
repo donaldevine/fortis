@@ -14,6 +14,7 @@ import com.fortis.wallet.wallet.unsealSeed
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import uniffi.wallet_ffi.FundingPlan
+import java.net.Proxy
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToLong
 
@@ -24,7 +25,10 @@ data class PlanPreview(val plan: FundingPlan, val feerate: ULong, val to: String
 class WalletViewModel(app: Application) : AndroidViewModel(app) {
     private val store = Store(app)
     private val http = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS).readTimeout(30, TimeUnit.SECONDS).build()
+        .proxy(Proxy.NO_PROXY) // ignore any Wi-Fi/Studio proxy — local hosts must be direct
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
 
     var phase by mutableStateOf(Phase.Loading); private set
     var config by mutableStateOf<WalletConfig?>(null); private set
