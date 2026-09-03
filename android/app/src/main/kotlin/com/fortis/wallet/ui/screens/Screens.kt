@@ -191,6 +191,13 @@ fun HomeScreen(vm: WalletViewModel) {
     val unit = if (vm.config?.chain == "btc") "BTC" else "BLK"
     val b = vm.balances
 
+    LaunchedEffect(Unit) {
+        while (true) {
+            vm.refresh()
+            kotlinx.coroutines.delay(20_000)
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
         AmbientBackground()
         Column(
