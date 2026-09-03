@@ -148,6 +148,11 @@ struct SendArgs {
     /// Read the seed from stdin instead of the sealed seed.enc.
     #[arg(long)]
     phrase_stdin: bool,
+    /// BTC only: append a 100-byte random OP_RETURN so the tx is consensus-invalid
+    /// on the BLAKE2b fork and cannot be replayed there. Non-standard on default
+    /// Bitcoin relay — needs a tolerant node/service to broadcast.
+    #[arg(long)]
+    replay_protect: bool,
     /// Build and check the transaction but do not broadcast; print the signed hex.
     #[arg(long)]
     dry_run: bool,
@@ -661,14 +666,25 @@ fn cmd_send(home: &Path, mut cfg: WalletConfig, rpc: &Rpc, a: &SendArgs) -> Resu
     let mut view = WalletView::new(params.clone(), xpub);
     view.set_next_indices(cfg.next_receive, cfg.next_change);
 
+    let mut extra_outs: Vec<TxOut> = Vec::new();
+    if a.replay_protect {
+        if cfg.chain != "btc" {
+            bail!("--replay-protect only makes sense on the btc chain");
+        }
+        let mut data = [0u8; 100];
+        getrandom::getrandom(&mut data).map_err(|e| anyhow!("CSPRNG: {e}"))?;
+        extra_outs.push(wallet_core::op_return_output(&data)?);
+        eprintln!("replay-protect: +100-byte OP_RETURN (non-standard on default Bitcoin relay)");
+    }
+
     let plan = match amount {
-        None => view.plan_sweep(&utxos, dest_spk.clone(), feerate, a.min_conf)?,
-        Some(v) => view.plan_payment(
-            &utxos,
-            vec![TxOut { value: v, script_pubkey: dest_spk.clone() }],
-            feerate,
-            a.min_conf,
-        )?,
+        None if extra_outs.is_empty() => view.plan_sweep(&utxos, dest_spk.clone(), feerate, a.min_conf)?,
+        None => bail!("--sweep and --replay-protect can't be combined"),
+        Some(v) => {
+            let mut outs = vec![TxOut { value: v, script_pubkey: dest_spk.clone() }];
+            outs.append(&mut extra_outs);
+            view.plan_payment(&utxos, outs, feerate, a.min_conf)?
+        }
     };
     let (_, next_change_after) = view.next_indices();
 

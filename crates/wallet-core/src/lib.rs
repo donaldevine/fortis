@@ -36,4 +36,4 @@ pub use error::{Result, WalletError};
 pub use htlc::HtlcContract;
 pub use keys::MasterKey;
 pub use swap::{SwapEvent, SwapMachine, SwapParams, SwapRole, SwapState};
-pub use wallet::{FundingPlan, Utxo, WalletView};
+pub use wallet::{op_return_output, FundingPlan, Utxo, WalletView};

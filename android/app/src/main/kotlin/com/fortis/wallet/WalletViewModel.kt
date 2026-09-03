@@ -20,7 +20,10 @@ import kotlin.math.roundToLong
 
 enum class Phase { Loading, Onboard, Create, Restore, Locked, BackendPicker, Home, Settings }
 
-data class PlanPreview(val plan: FundingPlan, val feerate: ULong, val to: String, val sweep: Boolean)
+data class PlanPreview(
+    val plan: FundingPlan, val feerate: ULong, val to: String,
+    val sweep: Boolean, val replayProtected: Boolean = false,
+)
 
 class WalletViewModel(app: Application) : AndroidViewModel(app) {
     private val store = Store(app)
@@ -149,18 +152,23 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         store.save(updated); config = updated
     }
 
-    fun buildPayment(to: String, amountBlk: String, sweep: Boolean, feerateOverride: Long?, confTarget: Int) = wrap {
+    fun buildPayment(
+        to: String, amountBlk: String, sweep: Boolean,
+        feerateOverride: Long?, confTarget: Int, replayProtect: Boolean,
+    ) = wrap {
         val b = backend!!; val s = session!!; val c = config!!
         val feerate = (feerateOverride ?: b.feerateSatVb(confTarget).toLong()).coerceAtLeast(1)
         val utxos = b.utxos(1u)
         require(utxos.isNotEmpty()) { "no confirmed coins to spend" }
         s.setIndices(c.nextReceive, c.nextChange)
+        val opReturn = if (replayProtect && c.chain == "btc" && !sweep)
+            com.fortis.wallet.wallet.randomBytes(100) else null
         val plan = if (sweep) s.view.planSweep(utxos, to, feerate.toULong(), 1u)
         else {
             val sat = (amountBlk.trim().toDouble() * 1e8).roundToLong()
-            s.view.planPayment(utxos, listOf(uniffi.wallet_ffi.PayTo(to, sat.toULong())), feerate.toULong(), 1u)
+            s.view.planPayment(utxos, listOf(uniffi.wallet_ffi.PayTo(to, sat.toULong())), feerate.toULong(), 1u, opReturn)
         }
-        pending = PlanPreview(plan, feerate.toULong(), to, sweep)
+        pending = PlanPreview(plan, feerate.toULong(), to, sweep, replayProtected = opReturn != null)
     }
 
     fun cancelPending() { pending = null }

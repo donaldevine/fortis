@@ -403,6 +403,15 @@ function paneSend() {
     feeSeg,
     el('input', { id: 'customfee', placeholder: 'custom sat/vB (optional)', inputmode: 'numeric',
       value: d.customFee || '', oninput: (e) => (d.customFee = e.target.value) }),
+    state.chain === 'btc' && !d.sweep
+      ? el('label', { class: 'row', style: 'align-items:center;gap:.5rem' },
+          el('input', { type: 'checkbox', style: 'width:auto;flex:0', checked: d.replayProtect,
+            onchange: (e) => (d.replayProtect = e.target.checked) }),
+          el('span', {}, 'BLK replay protection (100-byte OP_RETURN)'))
+      : null,
+    state.chain === 'btc' && !d.sweep && d.replayProtect
+      ? el('div', { class: 'hint' }, 'Adds ~110 vB of fee. Non-standard on default Bitcoin relay — broadcast via a node/service that accepts large OP_RETURN.')
+      : null,
     el('div', { id: 'err', class: 'err' }),
     el('button', { class: 'primary wide', onclick: onReview }, 'Review'));
 }
@@ -422,11 +431,16 @@ async function onReview() {
     if (!utxos.length) throw new Error('no confirmed coins to spend');
 
     session.setIndices(state.next_receive, state.next_change);
+    let opReturnHex;
+    if (state.chain === 'btc' && !d.sweep && d.replayProtect) {
+      opReturnHex = [...crypto.getRandomValues(new Uint8Array(100))]
+        .map((b) => b.toString(16).padStart(2, '0')).join('');
+    }
     const plan = d.sweep
       ? session.planSweep(utxos, d.to, feerate, minConf)
-      : session.planPayment(utxos, [{ address: d.to, amount_sat: parseAmount(d.amount) }], feerate, minConf);
+      : session.planPayment(utxos, [{ address: d.to, amount_sat: parseAmount(d.amount) }], feerate, minConf, opReturnHex);
 
-    ui.pendingPlan = { plan, feerate, to: d.to, sweep: d.sweep };
+    ui.pendingPlan = { plan, feerate, to: d.to, sweep: d.sweep, replayProtect: !!opReturnHex };
     renderConfirm();
   } catch (e) {
     err.textContent = String(e.message || e).replace(/^.*?: /, '');
@@ -451,6 +465,7 @@ function renderConfirm() {
         row('Network fee', `${fmt(plan.fee_sat)} ${unit} · ${feerate} sat/vB`),
         plan.change_sat != null ? row('Change', `${fmt(plan.change_sat)} ${unit}`) : null,
         row('From', `${plan.selected.length} input${plan.selected.length > 1 ? 's' : ''}`),
+        ui.pendingPlan.replayProtect ? row('Replay protection', 'on · 100-byte OP_RETURN') : null,
         row('Total', el('b', {}, `${fmt(outAmount + Number(plan.fee_sat))} ${unit}`))),
       el('div', { id: 'err', class: 'err' }),
       el('div', { class: 'row' },

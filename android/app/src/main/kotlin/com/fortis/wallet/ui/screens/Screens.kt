@@ -288,6 +288,8 @@ private fun SendTab(vm: WalletViewModel) {
     var sweep by remember { mutableStateOf(false) }
     var target by remember { mutableStateOf(6) }
     var custom by remember { mutableStateOf("") }
+    var replayProtect by remember { mutableStateOf(false) }
+    val isBtc = vm.config?.chain == "btc"
     GlassCard {
         Text("Send", color = Fx.text, fontWeight = FontWeight.SemiBold)
         Field(to, { to = it }, "To address", mono = true)
@@ -298,9 +300,20 @@ private fun SendTab(vm: WalletViewModel) {
         Segmented(listOf("1" to "Fast", "6" to "Normal", "144" to "Slow"), target.toString(),
             { target = it.toInt(); custom = "" })
         Field(custom, { custom = it }, "custom sat/vB (optional)")
+        if (isBtc && !sweep) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(replayProtect, { replayProtect = it })
+                Text("BLK replay protection (100-byte OP_RETURN)", color = Fx.text)
+            }
+            if (replayProtect) Text(
+                "Adds ~110 vB of fee. Non-standard on default Bitcoin relay — " +
+                    "broadcast via a node/service that accepts large OP_RETURN.",
+                color = Fx.textFaint, fontSize = 12.sp,
+            )
+        }
         ErrorText(vm.error)
         PrimaryButton("Review", enabled = to.isNotBlank() && (sweep || amount.isNotBlank())) {
-            vm.buildPayment(to, amount, sweep, custom.toLongOrNull(), target)
+            vm.buildPayment(to, amount, sweep, custom.toLongOrNull(), target, replayProtect && isBtc)
         }
     }
 }
@@ -341,6 +354,7 @@ private fun ConfirmSheet(vm: WalletViewModel, p: PlanPreview, unit: String) {
             kv("To", p.to); kv("Amount", "${fmt(out)} $unit")
             kv("Network fee", "${fmt(p.plan.feeSat.toLong())} $unit · ${p.feerate} sat/vB")
             p.plan.changeSat?.let { kv("Change", "${fmt(it.toLong())} $unit") }
+            if (p.replayProtected) kv("Replay protection", "on · 100-byte OP_RETURN")
             kv("Total", "${fmt(out + p.plan.feeSat.toLong())} $unit")
             ErrorText(vm.error)
             Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {

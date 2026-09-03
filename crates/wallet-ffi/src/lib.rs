@@ -316,15 +316,19 @@ impl WalletView {
         })
     }
 
+    /// `op_return` (optional): bytes for a 0-value `OP_RETURN` appended to the tx.
+    /// On the Bitcoin chain, ~100 random bytes make the tx consensus-invalid on
+    /// the BLAKE2b fork (over its 82-byte datacarrier cap) — replay protection.
     pub fn plan_payment(
         &self,
         utxos: Vec<WalletUtxo>,
         outputs: Vec<PayTo>,
         feerate_sat_vb: u64,
         min_confirmations: u32,
+        op_return: Option<Vec<u8>>,
     ) -> Result<FundingPlan> {
         let coins = to_core_utxos(&utxos)?;
-        let outs: Vec<TxOut> = outputs
+        let mut outs: Vec<TxOut> = outputs
             .iter()
             .map(|o| {
                 Ok(TxOut {
@@ -333,6 +337,9 @@ impl WalletView {
                 })
             })
             .collect::<Result<_>>()?;
+        if let Some(data) = op_return.filter(|d| !d.is_empty()) {
+            outs.push(wallet_core::op_return_output(&data)?);
+        }
         let plan = self
             .inner
             .lock()

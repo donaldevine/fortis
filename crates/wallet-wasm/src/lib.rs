@@ -270,8 +270,10 @@ impl WalletView {
     }
 
     /// Coin-select and build an unsigned payment. `outputs` is
-    /// `[{ address, amount_sat }]`. Returns the same `{ tx_hex, fee_sat,
-    /// change_sat|null, selected }` shape — pass `selected` to `Wallet.signFundingTx`.
+    /// `[{ address, amount_sat }]`. `opReturnHex` (optional) appends a 0-value
+    /// `OP_RETURN` carrying those bytes — pass ~100 random bytes on the Bitcoin
+    /// chain to make the tx consensus-invalid on the BLAKE2b fork (replay
+    /// protection). Returns `{ tx_hex, fee_sat, change_sat|null, selected }`.
     #[wasm_bindgen(js_name = planPayment)]
     pub fn plan_payment(
         &mut self,
@@ -279,13 +281,14 @@ impl WalletView {
         outputs: JsValue,
         feerate_sat_vb: u64,
         min_confirmations: u32,
+        op_return_hex: Option<String>,
     ) -> Result<JsValue, JsError> {
         let js_utxos: Vec<dto::JsUtxo> = serde_wasm_bindgen::from_value(utxos).map_err(js)?;
         let utxos: Vec<_> =
             js_utxos.iter().map(|u| u.to_core()).collect::<Result<_, _>>().map_err(js)?;
         let net = params(&self.chain)?.network;
         let js_outs: Vec<dto::JsPayTo> = serde_wasm_bindgen::from_value(outputs).map_err(js)?;
-        let outs: Vec<TxOut> = js_outs
+        let mut outs: Vec<TxOut> = js_outs
             .iter()
             .map(|o| {
                 Ok(TxOut {
@@ -294,6 +297,9 @@ impl WalletView {
                 })
             })
             .collect::<Result<_, JsError>>()?;
+        if let Some(h) = op_return_hex.filter(|h| !h.is_empty()) {
+            outs.push(wallet_core::op_return_output(&hex::decode(h).map_err(js)?).map_err(js)?);
+        }
         let plan = self
             .inner
             .plan_payment(&utxos, outs, feerate_sat_vb, min_confirmations)

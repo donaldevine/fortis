@@ -2,6 +2,7 @@
 //! plans unsigned transactions from UTXOs the shell provides. Holds no secret keys.
 
 use bitcoin::bip32::{ChildNumber, Xpub};
+use bitcoin::script::PushBytesBuf;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::{
     absolute, transaction, Address, Amount, CompressedPublicKey, OutPoint, Script, ScriptBuf,
@@ -11,6 +12,19 @@ use bitcoin::{
 use crate::chain::ChainParams;
 use crate::error::{Result, WalletError};
 use crate::htlc::HtlcContract;
+
+/// A 0-value `OP_RETURN` output carrying `data`.
+///
+/// Opt-in BTC-side replay protection: the BLAKE2b fork caps datacarrier data at
+/// **82 bytes at consensus** (RDTS), so a Bitcoin transaction that includes an
+/// `OP_RETURN` larger than that is consensus-invalid on the fork and cannot be
+/// replayed there. Pass ~100 fresh random bytes. (Such an output is non-standard
+/// on default Bitcoin relay too — broadcast via a node/service that accepts it.)
+pub fn op_return_output(data: &[u8]) -> Result<TxOut> {
+    let push = PushBytesBuf::try_from(data.to_vec())
+        .map_err(|_| WalletError::Bitcoin("OP_RETURN data too large".into()))?;
+    Ok(TxOut { value: Amount::ZERO, script_pubkey: ScriptBuf::new_op_return(push) })
+}
 
 /// A coin the shell reports to the core (from the platform indexer or an Electrum
 /// server). Every wallet UTXO is assumed P2WPKH (BIP-84).
@@ -346,6 +360,27 @@ mod tests {
         let v = view();
         let utxos = [utxo(500, 3, 1)];
         assert!(v.plan_sweep(&utxos, ScriptBuf::from(vec![0u8; 22]), 10, 1).is_err());
+    }
+
+    #[test]
+    fn op_return_output_is_a_zero_value_data_push() {
+        let out = super::op_return_output(&[7u8; 100]).unwrap();
+        assert_eq!(out.value, Amount::ZERO);
+        assert!(out.script_pubkey.is_op_return());
+        // OP_RETURN + OP_PUSHDATA1 + len byte + 100 data
+        assert_eq!(out.script_pubkey.len(), 103);
+    }
+
+    #[test]
+    fn payment_with_op_return_pays_for_the_extra_bytes() {
+        let mut v = view();
+        let utxos = [utxo(1_000_000, 3, 1)];
+        let mut outs = vec![htlc_out(200_000)];
+        outs.push(super::op_return_output(&[9u8; 100]).unwrap());
+        let plan = v.plan_payment(&utxos, outs, 10, 1).unwrap();
+        assert_eq!(plan.tx.output.iter().filter(|o| o.script_pubkey.is_op_return()).count(), 1);
+        // fee covers the ~112 vB OP_RETURN output on top of the base tx
+        assert!(plan.fee.to_sat() >= (11 + 68 + 43 + 31 + 112) * 10 - 20);
     }
 
     #[test]
