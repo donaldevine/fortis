@@ -123,7 +123,22 @@ fun Field(
             onValueChange = onValueChange,
             singleLine = !mono,
             visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
-            textStyle = LocalTextStyle.current.copy(fontFamily = if (mono) FontFamily.Monospace else null),
+            textStyle = LocalTextStyle.current.copy(
+                color = Fx.text,
+                fontFamily = if (mono) FontFamily.Monospace else null,
+            ),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Fx.text,
+                unfocusedTextColor = Fx.text,
+                disabledTextColor = Fx.text,
+                cursorColor = Fx.accent,
+                focusedBorderColor = Fx.accent,
+                unfocusedBorderColor = Fx.hair,
+                focusedContainerColor = Fx.glass1,
+                unfocusedContainerColor = Fx.glass1,
+                focusedPlaceholderColor = Fx.textFaint,
+                unfocusedPlaceholderColor = Fx.textFaint,
+            ),
             modifier = Modifier.fillMaxWidth(),
         )
     }

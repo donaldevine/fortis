@@ -23,8 +23,8 @@ object Fx {
     val blobC = Color(0x5C3AE0CD)
 
     val text = Color(0xFFEEF1F8)
-    val textDim = Color(0xFF9AA3BA)
-    val textFaint = Color(0xFF5C6580)
+    val textDim = Color(0xFFB7BFD2)
+    val textFaint = Color(0xFF8A93A8)
 
     val accent = Color(0xFF6EA8FE)
     val accent2 = Color(0xFFB98CFF)

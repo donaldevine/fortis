@@ -129,7 +129,7 @@ fun Segmented(options: List<Pair<String, String>>, selected: String, onSelect: (
                     .background(if (on) Brush.linearGradient(listOf(Fx.accent, Fx.accent2)) else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)))
                     .clickable { onSelect(v) }.padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text(label, color = if (on) Color(0xFF0A0C16) else Fx.textDim, fontSize = 13.sp) }
+            ) { Text(label, color = if (on) Color(0xFF0A0C16) else Color.White.copy(alpha = 0.75f), fontSize = 13.sp) }
         }
     }
 }
@@ -229,7 +229,7 @@ fun HomeScreen(vm: WalletViewModel) {
                     Box(Modifier.weight(1f).clip(RoundedCornerShape(Fx.pill))
                         .background(if (tab == i) Brush.linearGradient(listOf(Fx.accent, Fx.accent2)) else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)))
                         .clickable { tab = i }.padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-                        Text(label, color = if (tab == i) Color(0xFF0A0C16) else Fx.textDim, fontSize = 13.sp)
+                        Text(label, color = if (tab == i) Color(0xFF0A0C16) else Color.White.copy(alpha = 0.75f), fontSize = 13.sp)
                     }
                 }
             }
