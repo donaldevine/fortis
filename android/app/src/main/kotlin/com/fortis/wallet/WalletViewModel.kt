@@ -18,7 +18,7 @@ import java.net.Proxy
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToLong
 
-enum class Phase { Loading, Onboard, Create, Restore, Locked, BackendPicker, Home }
+enum class Phase { Loading, Onboard, Create, Restore, Locked, BackendPicker, Home, Settings }
 
 data class PlanPreview(val plan: FundingPlan, val feerate: ULong, val to: String, val sweep: Boolean)
 
@@ -58,6 +58,17 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     fun goCreate() { draftMnemonic = draftMnemonic ?: newMnemonic(); phase = Phase.Create }
     fun goRestore() { phase = Phase.Restore }
     fun goOnboard() { draftMnemonic = null; phase = Phase.Onboard }
+    fun goSettings() { phase = Phase.Settings }
+    fun goHome() { resolvePhase() }
+
+    /** Forget the current backend and return to the picker (wallet + seed kept). */
+    fun changeBackend() = viewModelScope.launch {
+        val c = config ?: return@launch
+        val updated = c.copy(backendKind = null, backendUrl = null, backendToken = null)
+        store.save(updated); config = updated; backend = null
+        status = null; balances = null; history = emptyList()
+        resolvePhase()
+    }
 
     fun createWallet(chain: String, network: String, password: String) = wrap {
         finishOnboard(chain, network, draftMnemonic!!, "", password)

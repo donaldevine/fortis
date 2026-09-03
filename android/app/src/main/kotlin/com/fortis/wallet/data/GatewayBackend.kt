@@ -49,6 +49,9 @@ class GatewayBackend(
             blocks = (node?.optLong("blocks") ?: 0L).toULong(),
             synced = scanning == null && (node?.optDouble("progress") ?: 0.0) > 0.999,
             via = label,
+            chain = node?.optString("chain") ?: "",
+            subversion = node?.optString("subversion") ?: "",
+            scanningPct = scanning?.let { (it.optDouble("progress") * 100).toInt() },
         )
     }
 

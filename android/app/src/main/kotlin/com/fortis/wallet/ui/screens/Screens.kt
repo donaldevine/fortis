@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -220,7 +223,10 @@ fun HomeScreen(vm: WalletViewModel) {
                         } ?: "connecting…"
                         Text(hint, color = Fx.textFaint, fontSize = 12.sp)
                     }
-                    TextButton({ vm.lock() }) { Text("Lock", color = Fx.textDim) }
+                    Row {
+                        IconButton({ vm.goSettings() }) { Icon(Icons.Outlined.Settings, "Settings", tint = Fx.textDim) }
+                        TextButton({ vm.lock() }) { Text("Lock", color = Fx.textDim) }
+                    }
                 }
             }
             // tabs
@@ -348,5 +354,77 @@ private fun ConfirmSheet(vm: WalletViewModel, p: PlanPreview, unit: String) {
 @Composable
 private fun kv(k: String, v: String) = Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
     Text(k, color = Fx.textDim)
-    Text(v, color = Fx.text, modifier = Modifier.padding(start = Fx.s4))
+    Text(v, color = Fx.text, modifier = Modifier.padding(start = Fx.s4), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+}
+
+@Composable
+fun SettingsScreen(vm: WalletViewModel) {
+    val ctx = LocalContext.current
+    val c = vm.config
+    val s = vm.session
+    val st = vm.status
+    var showToken by remember { mutableStateOf(false) }
+
+    Screen(scroll = true) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton({ vm.goHome() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Fx.text) }
+            Text("Settings", style = MaterialTheme.typography.titleMedium, color = Fx.text)
+        }
+
+        // --- wallets (one for now) ---
+        GlassCard {
+            Text("Wallets", color = Fx.text, fontWeight = FontWeight.SemiBold)
+            if (c != null && s != null) {
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(Fx.rSm)).background(Fx.glass1)
+                        .clickable { copyToClipboard(ctx, "xpub", s.xpub) }.padding(Fx.s3),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text("${c.chain.uppercase()} · ${c.network}", color = Fx.text, fontWeight = FontWeight.Medium)
+                    Text(s.xpub, color = Fx.textDim, fontFamily = FontFamily.Monospace, fontSize = 11.sp, maxLines = 2)
+                    Text("fp ${s.fingerprint}  ·  receive #${c.nextReceive}  ·  change #${c.nextChange}  ·  tap to copy xpub",
+                        color = Fx.textFaint, fontSize = 11.sp)
+                }
+            }
+            Text("Multiple wallets: not yet — one seed per install.", color = Fx.textFaint, fontSize = 12.sp)
+        }
+
+        // --- backend / fortisd ---
+        GlassCard {
+            Text(if (c?.backendKind == "gateway") "Node gateway (fortisd)" else "Public explorer",
+                color = Fx.text, fontWeight = FontWeight.SemiBold)
+            kv("URL", c?.backendUrl ?: "—")
+            if (c?.backendKind == "gateway") {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("Token", color = Fx.textDim)
+                    Text(
+                        if (showToken) c.backendToken ?: "—" else "•".repeat(16),
+                        color = Fx.text, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
+                        modifier = Modifier.clickable { showToken = !showToken }.padding(start = Fx.s4),
+                    )
+                }
+            }
+            kv("Status", when {
+                st == null -> "not connected"
+                st.scanningPct != null -> "rescanning ${st.scanningPct}%"
+                st.synced -> "synced"
+                else -> "syncing"
+            })
+            kv("Chain height", st?.blocks?.toString() ?: "—")
+            if (st?.chain?.isNotBlank() == true) kv("Network", st.chain)
+            if (st?.subversion?.isNotBlank() == true) kv("Node", st.subversion)
+            Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
+                GhostButton("Reconnect", Modifier.weight(1f)) { vm.refresh() }
+                GhostButton("Change backend", Modifier.weight(1f)) { vm.changeBackend() }
+            }
+        }
+
+        // --- danger ---
+        GlassCard {
+            Text("This wallet", color = Fx.text, fontWeight = FontWeight.SemiBold)
+            GhostButton("Lock") { vm.lock() }
+            GhostButton("Forget this wallet", tint = Fx.bad) { vm.wipe() }
+        }
+        Text("fortis 0.1.0", color = Fx.textFaint, fontSize = 11.sp)
+    }
 }

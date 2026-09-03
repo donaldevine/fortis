@@ -85,7 +85,7 @@ class EsploraBackend(
 
     override suspend fun status(): ChainStatus {
         val t = tip()
-        return ChainStatus(blocks = t, synced = true, via = label)
+        return ChainStatus(blocks = t, synced = true, via = label, chain = "explorer", subversion = "esplora")
     }
 
     override suspend fun balances(): Balances {

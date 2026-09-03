@@ -6,6 +6,9 @@ data class ChainStatus(
     val blocks: ULong,
     val synced: Boolean,
     val via: String,
+    val chain: String = "",
+    val subversion: String = "",
+    val scanningPct: Int? = null,
 )
 
 data class Balances(val confirmedSat: Long, val pendingSat: Long)
