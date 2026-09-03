@@ -13,11 +13,12 @@ reimplementation of the crypto per platform.
 |---|---|
 | [`crates/wallet-core`](crates/wallet-core) | keys (BIP-32/39/84), addresses, coin selection, HTLC atomic-swap contracts, `SIGHASH_UNIFIED` (Knots PR #357), the client swap state machine, seed sealing. Pure — no I/O. |
 | [`crates/wallet-wasm`](crates/wallet-wasm) | `wasm-bindgen` bindings for the web |
-| [`crates/wallet-ffi`](crates/wallet-ffi) | UniFFI bindings for mobile |
+| [`crates/wallet-ffi`](crates/wallet-ffi) | UniFFI bindings for mobile — full parity with `wallet-wasm` (keys, `WalletView`, coin selection, `SIGHASH_UNIFIED` signing, seed sealing) |
 | [`crates/fortis-node`](crates/fortis-node) | watch-only chain-gateway logic: a Bitcoin Core / Knots JSON-RPC client plus wallet ops (descriptors, UTXOs, fees, broadcast). No keys. |
 | [`crates/wallet-cli`](crates/wallet-cli) | `fortis` — desktop shell: watch-only reporting plus send / sweep (coin selection, `SIGHASH_UNIFIED` signing, fee estimation, broadcast). |
 | [`crates/fortisd`](crates/fortisd) | token-guarded local HTTP gateway over the node for the web wallet, or an Esplora CORS proxy (`--esplora-proxy`, no node). No keys. |
 | [`web/`](web) | the browser wallet — a static PWA; keys stay in wasm, encrypted seed in IndexedDB. Reads the chain via a public Esplora explorer or your own node. |
+| [`android/`](android) | native Android wallet — Jetpack Compose; keys via `wallet-ffi`, encrypted seed in DataStore. Same design language and backends as `web/`. |
 
 ## Tests
 
