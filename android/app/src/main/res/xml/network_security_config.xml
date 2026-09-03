@@ -6,7 +6,6 @@
         <domain includeSubdomains="true">10.0.2.2</domain>   <!-- emulator → host -->
         <domain includeSubdomains="true">127.0.0.1</domain>
         <domain includeSubdomains="true">localhost</domain>
-        <!-- Physical device on your LAN: add your PC's IP, e.g.
-        <domain includeSubdomains="true">192.168.1.42</domain> -->
+        <domain includeSubdomains="true">192.168.0.34</domain>  <!-- this PC on the LAN; update if DHCP changes it -->
     </domain-config>
 </network-security-config>
