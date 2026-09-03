@@ -1,16 +1,15 @@
-# Bump these to whatever your Android Studio recommends on first sync.
+# Targeting Gradle 9.7.1 / AGP 9. Bump to whatever Android Studio recommends on sync.
 [versions]
-agp = "8.13.0"
-kotlin = "2.1.21"
-coreKtx = "1.16.0"
-lifecycle = "2.9.1"
-activityCompose = "1.10.1"
-composeBom = "2025.06.01"
-navigationCompose = "2.9.0"
+agp = "9.2.0"
+kotlin = "2.2.20"
+gobley = "0.3.7"
+coreKtx = "1.17.0"
+lifecycle = "2.9.4"
+activityCompose = "1.11.0"
+composeBom = "2026.08.00"
+navigationCompose = "2.9.5"
 datastore = "1.1.7"
 okhttp = "4.12.0"
-jna = "5.17.0"
-rustAndroid = "0.9.6"
 biometric = "1.2.0-alpha05"
 
 [libraries]
@@ -29,10 +28,12 @@ navigation-compose = { group = "androidx.navigation", name = "navigation-compose
 datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
-jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
+jna = { group = "net.java.dev.jna", name = "jna", version = "5.17.0" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-rust-android = { id = "org.mozilla.rust-android-gradle.rust-android", version.ref = "rustAndroid" }
+kotlin-atomicfu = { id = "org.jetbrains.kotlin.plugin.atomicfu", version.ref = "kotlin" }
+gobley-cargo = { id = "dev.gobley.cargo", version.ref = "gobley" }
+gobley-uniffi = { id = "dev.gobley.uniffi", version.ref = "gobley" }

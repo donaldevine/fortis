@@ -9,49 +9,58 @@ Compose UI  ─►  WalletViewModel  ─►  wallet-ffi (Rust .so)   keys, coin-
                                  └►  Backend (OkHttp)         Esplora | fortisd
 ```
 
+## Toolchain
+
+`gradle/libs.versions.toml`, `gradle/wrapper/gradle-wrapper.properties`:
+
+| | |
+|---|---|
+| Gradle | 9.7.1 |
+| AGP | 9.2.0 (compileSdk / targetSdk 37 — matches your installed platform) |
+| Kotlin | 2.2.20 |
+| Gradle JDK | 21 recommended; 25 works on Gradle 9.7 if you'd rather keep the bundled JBR |
+| Rust ↔ Gradle | [Gobley](https://gobley.dev) `dev.gobley.cargo` + `dev.gobley.uniffi` 0.3.7 |
+| `wallet-ffi` uniffi | 0.29 (workspace `Cargo.toml`) |
+
+AGP 9 is a major release — `android.builtInKotlin=false` in `gradle.properties`
+keeps the explicit Kotlin plugin; if a plugin trips on the new DSL, add
+`android.newDsl=false` there too (temporary, gone in AGP 10).
+
 ## First-time setup
 
-This scaffold was written without a working Android toolchain to test against, so
-**the first Gradle sync will need a few fixes.** Expected:
+1. **Gradle JDK** — Settings → Build, Execution, Deployment → Build Tools →
+   Gradle → **Gradle JDK: 21** (Download JDK → 21 if not listed). AGP wants
+   JDK 17+; the bundled JBR 25 is too new for some plugins.
+2. **Install the NDK** — Settings → Languages & Frameworks → Android SDK →
+   **SDK Tools** → check **NDK (Side by side)** + **CMake** → Apply.
+3. **Point Gradle at `cargo`** — `android/gradle.properties`:
+   `fortis.cargo=C:/Users/you/.cargo/bin/cargo.exe`
+4. `rustup target add aarch64-linux-android x86_64-linux-android` (done if you
+   built from this repo).
 
-1. **Install the NDK** — Android Studio → *Settings → Languages & Frameworks →
-   Android SDK → SDK Tools* → check **NDK (Side by side)** and **CMake**. Apply.
-2. **Point Gradle at `cargo`** — the Gradle daemon usually can't see `~/.cargo/bin`.
-   Edit `android/gradle.properties`:
-   ```
-   fortis.cargo=C:/Users/YOU/.cargo/bin/cargo.exe
-   ```
-3. **Let Studio bump versions** — `gradle/libs.versions.toml` pins AGP / Kotlin /
-   Compose and `gradle/wrapper/gradle-wrapper.properties` pins Gradle. If Studio's
-   "AGP upgrade" or a sync error asks for newer, accept it — one-file change.
-   Your SDK has API 37 installed; `app/build.gradle.kts` uses `compileSdk = 36`
-   (Studio will download it), bump to 37 if you prefer.
-4. `rustup target add aarch64-linux-android x86_64-linux-android` (done already if
-   you built from this repo).
-
-Then: **Open the `android/` folder in Android Studio** → Sync → Run on an
-emulator or device (`arm64-v8a` device, or `x86_64` emulator — the two ABIs the
-build compiles).
+**Open the `android/` folder** → Sync → Run on an emulator (`x86_64`) or an
+`arm64-v8a` device.
 
 ## How the Rust wiring works
 
-- `org.mozilla.rust-android-gradle` cross-compiles `wallet-ffi` to
-  `app/build/rustJniLibs/android/<abi>/libwallet_ffi.so` (task `cargoBuild`).
-- A Gradle `Exec` task (`generateUniffiBindings`) then runs
-  `cargo run -p wallet-ffi --bin uniffi-bindgen -- generate --library <that .so>
-  --language kotlin` into `app/build/generated/uniffi/` (package `uniffi.wallet_ffi`).
-- JNA (`net.java.dev.jna:jna@aar`) is the runtime the generated Kotlin uses.
+Gobley's **cargo** plugin cross-compiles `crates/wallet-ffi` (pointed at by
+`cargo { packageDirectory = ... }`) to the app's `jniLibs` for each
+`ndk.abiFilters` ABI. Its **uniffi** plugin then runs library-mode bindgen and
+drops the generated Kotlin (`package uniffi.wallet_ffi`) into the build. JNA is
+the JVM runtime it calls through — Gobley wires it; if a sync error says JNA or
+`kotlinx-atomicfu` is unresolved, add `implementation("net.java.dev.jna:jna:5.17.0@aar")`.
 
-If the Gradle task is fighting you, do it by hand once to unblock the UI work:
+### Manual fallback (if Gobley fights the bleeding-edge AGP)
+
 ```sh
-# from repo root, with the NDK on ANDROID_NDK_HOME
 cargo install cargo-ndk
 cargo ndk -t arm64-v8a -t x86_64 -o android/app/src/main/jniLibs build --release -p wallet-ffi
 cargo run -p wallet-ffi --bin uniffi-bindgen -- generate \
   --library android/app/src/main/jniLibs/arm64-v8a/libwallet_ffi.so \
   --language kotlin --out-dir android/app/src/main/kotlin
 ```
-(then drop the `cargo`/`generateUniffiBindings` bits from `app/build.gradle.kts`).
+then drop the `dev.gobley.*` plugins + `cargo {}` / `uniffi {}` blocks and add
+`implementation("net.java.dev.jna:jna:5.17.0@aar")`.
 
 ## Layout
 
