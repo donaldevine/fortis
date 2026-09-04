@@ -73,11 +73,13 @@ export class Session {
   receiveAddress(index) {
     return this.addressAt(0, index);
   }
-  planPayment(utxos, outputs, feerate, minConf, opReturnHex) {
-    return this.view.planPayment(utxos, outputs, BigInt(feerate), minConf >>> 0, opReturnHex || undefined);
+  planPayment(utxos, outputs, feerate, minConf, opReturnHex, serviceFee) {
+    return this.view.planPayment(
+      utxos, outputs, BigInt(feerate), minConf >>> 0, opReturnHex || undefined, serviceFee || undefined,
+    );
   }
-  planSweep(utxos, destAddress, feerate, minConf) {
-    return this.view.planSweep(utxos, destAddress, BigInt(feerate), minConf >>> 0);
+  planSweep(utxos, destAddress, feerate, minConf, serviceFee) {
+    return this.view.planSweep(utxos, destAddress, BigInt(feerate), minConf >>> 0, serviceFee || undefined);
   }
   sign(planTxHex, selected) {
     return this.wallet.signFundingTx(this.chain, 0, planTxHex, selected);

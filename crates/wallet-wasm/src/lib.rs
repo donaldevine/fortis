@@ -264,7 +264,7 @@ impl WalletView {
         };
         let plan = self
             .inner
-            .plan_payment(&utxos, vec![out], feerate_sat_vb, min_confirmations)
+            .plan_payment(&utxos, vec![out], feerate_sat_vb, min_confirmations, None)
             .map_err(js)?;
         serde_wasm_bindgen::to_value(&dto::JsFundingPlan::from_core(&plan)).map_err(js)
     }
@@ -273,7 +273,9 @@ impl WalletView {
     /// `[{ address, amount_sat }]`. `opReturnHex` (optional) appends a 0-value
     /// `OP_RETURN` carrying those bytes — pass ~100 random bytes on the Bitcoin
     /// chain to make the tx consensus-invalid on the BLAKE2b fork (replay
-    /// protection). Returns `{ tx_hex, fee_sat, change_sat|null, selected }`.
+    /// protection). `serviceFee` (optional, from the backend's `/v1/status`)
+    /// appends the hosted backend's fee output. Returns `{ tx_hex, fee_sat,
+    /// change_sat|null, service_fee_sat|null, selected }`.
     #[wasm_bindgen(js_name = planPayment)]
     pub fn plan_payment(
         &mut self,
@@ -282,6 +284,7 @@ impl WalletView {
         feerate_sat_vb: u64,
         min_confirmations: u32,
         op_return_hex: Option<String>,
+        service_fee: JsValue,
     ) -> Result<JsValue, JsError> {
         let js_utxos: Vec<dto::JsUtxo> = serde_wasm_bindgen::from_value(utxos).map_err(js)?;
         let utxos: Vec<_> =
@@ -300,14 +303,16 @@ impl WalletView {
         if let Some(h) = op_return_hex.filter(|h| !h.is_empty()) {
             outs.push(wallet_core::op_return_output(&hex::decode(h).map_err(js)?).map_err(js)?);
         }
+        let sf = parse_service_fee(&service_fee, net)?;
         let plan = self
             .inner
-            .plan_payment(&utxos, outs, feerate_sat_vb, min_confirmations)
+            .plan_payment(&utxos, outs, feerate_sat_vb, min_confirmations, sf.as_ref())
             .map_err(js)?;
         serde_wasm_bindgen::to_value(&dto::JsFundingPlan::from_core(&plan)).map_err(js)
     }
 
     /// Send the whole confirmed balance to `destAddress` (fee deducted, no change).
+    /// `serviceFee` (optional) carves the hosted backend's fee out of the amount sent.
     #[wasm_bindgen(js_name = planSweep)]
     pub fn plan_sweep(
         &self,
@@ -315,15 +320,17 @@ impl WalletView {
         dest_address: &str,
         feerate_sat_vb: u64,
         min_confirmations: u32,
+        service_fee: JsValue,
     ) -> Result<JsValue, JsError> {
         let js_utxos: Vec<dto::JsUtxo> = serde_wasm_bindgen::from_value(utxos).map_err(js)?;
         let utxos: Vec<_> =
             js_utxos.iter().map(|u| u.to_core()).collect::<Result<_, _>>().map_err(js)?;
         let net = params(&self.chain)?.network;
         let dest = address_spk(dest_address, net)?;
+        let sf = parse_service_fee(&service_fee, net)?;
         let plan = self
             .inner
-            .plan_sweep(&utxos, dest, feerate_sat_vb, min_confirmations)
+            .plan_sweep(&utxos, dest, feerate_sat_vb, min_confirmations, sf.as_ref())
             .map_err(js)?;
         serde_wasm_bindgen::to_value(&dto::JsFundingPlan::from_core(&plan)).map_err(js)
     }
@@ -336,6 +343,24 @@ fn address_spk(addr: &str, net: wallet_core::bitcoin::Network) -> Result<ScriptB
         .require_network(net)
         .map_err(|_| JsError::new(&format!("address {addr} is not valid on this network")))?
         .script_pubkey())
+}
+
+/// `serviceFee` is `undefined`/`null` (self-hosted backend, no fee) or
+/// `{ address, bps, floor_sat, cap_sat }` from the backend's `/v1/status`.
+fn parse_service_fee(
+    v: &JsValue,
+    net: wallet_core::bitcoin::Network,
+) -> Result<Option<wallet_core::ServiceFee>, JsError> {
+    if v.is_undefined() || v.is_null() {
+        return Ok(None);
+    }
+    let sf: dto::JsServiceFee = serde_wasm_bindgen::from_value(v.clone()).map_err(js)?;
+    Ok(Some(wallet_core::ServiceFee {
+        bps: sf.bps,
+        floor_sat: sf.floor_sat,
+        cap_sat: sf.cap_sat,
+        fee_spk: address_spk(&sf.address, net)?,
+    }))
 }
 
 /// One HTLC leg. Build it from the agreed swap parameters, then use it to make and

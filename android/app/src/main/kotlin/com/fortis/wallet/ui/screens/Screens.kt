@@ -311,6 +311,13 @@ private fun SendTab(vm: WalletViewModel) {
                 color = Fx.textFaint, fontSize = 12.sp,
             )
         }
+        vm.status?.pricing?.let {
+            Text(
+                "Service fee: ${"%.2f".format(it.bps / 100.0)}% of the amount sent " +
+                    "(min ${it.floorSat} sat) — supports this hosted node.",
+                color = Fx.textFaint, fontSize = 12.sp,
+            )
+        }
         ErrorText(vm.error)
         PrimaryButton("Review", enabled = to.isNotBlank() && (sweep || amount.isNotBlank())) {
             vm.buildPayment(to, amount, sweep, custom.toLongOrNull(), target, replayProtect && isBtc)
@@ -350,12 +357,14 @@ private fun ConfirmSheet(vm: WalletViewModel, p: PlanPreview, unit: String) {
         Column(Modifier.padding(Fx.s4).padding(bottom = Fx.s5), verticalArrangement = Arrangement.spacedBy(Fx.s3)) {
             Text(if (p.sweep) "Confirm sweep" else "Confirm payment", style = MaterialTheme.typography.titleMedium, color = Fx.text)
             val inTotal = p.plan.selected.sumOf { it.valueSat.toLong() }
-            val out = inTotal - p.plan.feeSat.toLong() - (p.plan.changeSat?.toLong() ?: 0L)
+            val svcFee = p.plan.serviceFeeSat?.toLong() ?: 0L
+            val out = inTotal - p.plan.feeSat.toLong() - svcFee - (p.plan.changeSat?.toLong() ?: 0L)
             kv("To", p.to); kv("Amount", "${fmt(out)} $unit")
             kv("Network fee", "${fmt(p.plan.feeSat.toLong())} $unit · ${p.feerate} sat/vB")
+            if (svcFee > 0) kv("Service fee", "${fmt(svcFee)} $unit")
             p.plan.changeSat?.let { kv("Change", "${fmt(it.toLong())} $unit") }
             if (p.replayProtected) kv("Replay protection", "on · 100-byte OP_RETURN")
-            kv("Total", "${fmt(out + p.plan.feeSat.toLong())} $unit")
+            kv("Total", "${fmt(out + p.plan.feeSat.toLong() + svcFee)} $unit")
             ErrorText(vm.error)
             Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
                 GhostButton("Cancel", Modifier.weight(1f)) { vm.cancelPending() }

@@ -26,6 +26,35 @@ pub fn op_return_output(data: &[u8]) -> Result<TxOut> {
     Ok(TxOut { value: Amount::ZERO, script_pubkey: ScriptBuf::new_op_return(push) })
 }
 
+/// A service fee for a hosted backend, charged as a percentage of the amount
+/// moved and added as an extra output on `plan_payment` / `plan_sweep`. Clamped to
+/// `[floor_sat, cap_sat]` (`cap_sat == 0` means uncapped). Self-hosted backends
+/// pass `None` and charge nothing.
+#[derive(Debug, Clone)]
+pub struct ServiceFee {
+    pub bps: u32,
+    pub floor_sat: u64,
+    pub cap_sat: u64,
+    pub fee_spk: ScriptBuf,
+}
+
+impl ServiceFee {
+    fn amount_sat(&self, send_amount_sat: u64) -> u64 {
+        let pct = (u128::from(send_amount_sat) * u128::from(self.bps) / 10_000) as u64;
+        let fee = pct.max(self.floor_sat);
+        if self.cap_sat > 0 {
+            fee.min(self.cap_sat)
+        } else {
+            fee
+        }
+    }
+
+    fn output(&self, send_amount_sat: u64) -> Option<TxOut> {
+        let sat = self.amount_sat(send_amount_sat);
+        (sat > 0).then(|| TxOut { value: Amount::from_sat(sat), script_pubkey: self.fee_spk.clone() })
+    }
+}
+
 /// A coin the shell reports to the core (from the platform indexer or an Electrum
 /// server). Every wallet UTXO is assumed P2WPKH (BIP-84).
 #[derive(Debug, Clone)]
@@ -45,6 +74,8 @@ pub struct FundingPlan {
     pub selected: Vec<Utxo>,
     pub fee: Amount,
     pub change: Option<Amount>,
+    /// The service fee (if any), also present as an output in `tx`.
+    pub service_fee: Option<Amount>,
 }
 
 // Rough vsize model. P2WPKH spends, segwit tx. Estimates run 1–2 vB high per input
@@ -136,10 +167,20 @@ impl WalletView {
     pub fn plan_payment(
         &mut self,
         utxos: &[Utxo],
-        outputs: Vec<TxOut>,
+        mut outputs: Vec<TxOut>,
         feerate_sat_vb: u64,
         min_confirmations: u32,
+        service_fee: Option<&ServiceFee>,
     ) -> Result<FundingPlan> {
+        let service_fee_amt = service_fee.and_then(|sf| {
+            let send_amount_sat: u64 = outputs.iter().map(|o| o.value.to_sat()).sum();
+            sf.output(send_amount_sat)
+        });
+        if let Some(out) = &service_fee_amt {
+            outputs.push(out.clone());
+        }
+        let service_fee_sat = service_fee_amt.map(|o| o.value);
+
         let target = outputs.iter().map(|o| o.value).fold(Amount::ZERO, |a, b| a + b);
         let outputs_vb: u64 = outputs.iter().map(|o| output_vb(&o.script_pubkey)).sum();
 
@@ -167,12 +208,12 @@ impl WalletView {
                     let mut outs = outputs.clone();
                     outs.push(TxOut { value: change, script_pubkey: change_spk });
                     self.next_change += 1;
-                    return Ok(assemble(selected, outs, fee_with_change, Some(change)));
+                    return Ok(assemble(selected, outs, fee_with_change, Some(change), service_fee_sat));
                 }
             }
             if acc >= target + fee_no_change {
                 // No change output — the surplus (< a change output's cost) is fee.
-                return Ok(assemble(selected, outputs, acc - target, None));
+                return Ok(assemble(selected, outputs, acc - target, None, service_fee_sat));
             }
         }
 
@@ -188,6 +229,7 @@ impl WalletView {
         dest: ScriptBuf,
         feerate_sat_vb: u64,
         min_confirmations: u32,
+        service_fee: Option<&ServiceFee>,
     ) -> Result<FundingPlan> {
         let selected: Vec<Utxo> = utxos
             .iter()
@@ -198,17 +240,26 @@ impl WalletView {
             return Err(WalletError::InsufficientFunds { need: 1, have: 0 });
         }
         let total = selected.iter().map(|u| u.value).fold(Amount::ZERO, |a, b| a + b);
-        let vb = TX_OVERHEAD_VB + selected.len() as u64 * P2WPKH_INPUT_VB + output_vb(&dest);
+        let fee_out = service_fee.and_then(|sf| sf.output(total.to_sat()));
+        let fee_out_value = fee_out.as_ref().map_or(Amount::ZERO, |o| o.value);
+        let fee_out_vb = fee_out.as_ref().map_or(0, |o| output_vb(&o.script_pubkey));
+
+        let vb = TX_OVERHEAD_VB + selected.len() as u64 * P2WPKH_INPUT_VB + output_vb(&dest) + fee_out_vb;
         let fee = Amount::from_sat(vb * feerate_sat_vb);
         let value = total
             .checked_sub(fee)
+            .and_then(|v| v.checked_sub(fee_out_value))
             .filter(|v| v.to_sat() >= CHANGE_DUST_SAT)
             .ok_or(WalletError::InsufficientFunds {
-                need: fee.to_sat() + CHANGE_DUST_SAT,
+                need: (fee + fee_out_value).to_sat() + CHANGE_DUST_SAT,
                 have: total.to_sat(),
             })?;
-        let outs = vec![TxOut { value, script_pubkey: dest }];
-        Ok(assemble(selected, outs, fee, None))
+        let service_fee_sat = fee_out.as_ref().map(|o| o.value);
+        let mut outs = vec![TxOut { value, script_pubkey: dest }];
+        if let Some(o) = fee_out {
+            outs.push(o);
+        }
+        Ok(assemble(selected, outs, fee, None, service_fee_sat))
     }
 
     /// Plan a transaction that funds `contract`'s HTLC output.
@@ -219,7 +270,7 @@ impl WalletView {
         feerate_sat_vb: u64,
         min_confirmations: u32,
     ) -> Result<FundingPlan> {
-        self.plan_payment(utxos, vec![contract.funding_output()], feerate_sat_vb, min_confirmations)
+        self.plan_payment(utxos, vec![contract.funding_output()], feerate_sat_vb, min_confirmations, None)
     }
 }
 
@@ -228,6 +279,7 @@ fn assemble(
     outputs: Vec<TxOut>,
     fee: Amount,
     change: Option<Amount>,
+    service_fee: Option<Amount>,
 ) -> FundingPlan {
     let input = selected
         .iter()
@@ -244,7 +296,7 @@ fn assemble(
         input,
         output: outputs,
     };
-    FundingPlan { tx, selected, fee, change }
+    FundingPlan { tx, selected, fee, change, service_fee }
 }
 
 #[cfg(test)]
@@ -295,7 +347,7 @@ mod tests {
     fn funds_with_change() {
         let mut v = view();
         let utxos = [utxo(1_000_000, 3, 1)];
-        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1).unwrap();
+        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1, None).unwrap();
         assert_eq!(plan.selected.len(), 1);
         assert_eq!(plan.tx.output.len(), 2); // htlc + change
         let change = plan.change.unwrap();
@@ -313,7 +365,7 @@ mod tests {
         // base vsize = 11 + 68 + 43 = 122; no-change fee @10 sat/vB = 1220.
         // A change output would cost ~310 more, so a ~100 sat leftover folds into fee.
         let utxos = [utxo(200_000 + 1_320, 3, 1)];
-        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1).unwrap();
+        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1, None).unwrap();
         assert_eq!(plan.tx.output.len(), 1);
         assert!(plan.change.is_none());
         assert_eq!(plan.fee.to_sat(), 1_320);
@@ -323,7 +375,7 @@ mod tests {
     fn accumulates_multiple_inputs() {
         let mut v = view();
         let utxos = [utxo(100_000, 3, 1), utxo(90_000, 3, 2), utxo(80_000, 3, 3)];
-        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1).unwrap();
+        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1, None).unwrap();
         assert_eq!(plan.selected.len(), 3);
     }
 
@@ -331,14 +383,14 @@ mod tests {
     fn rejects_insufficient_funds() {
         let mut v = view();
         let utxos = [utxo(50_000, 3, 1)];
-        assert!(v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1).is_err());
+        assert!(v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1, None).is_err());
     }
 
     #[test]
     fn excludes_unconfirmed_below_threshold() {
         let mut v = view();
         let utxos = [utxo(1_000_000, 0, 1)];
-        assert!(v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1).is_err());
+        assert!(v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1, None).is_err());
     }
 
     #[test]
@@ -346,7 +398,7 @@ mod tests {
         let v = view();
         let utxos = [utxo(400_000, 3, 1), utxo(600_000, 3, 2), utxo(9_999, 0, 3)];
         let dest = ScriptBuf::from(vec![0u8; 22]); // P2WPKH-shaped
-        let plan = v.plan_sweep(&utxos, dest, 10, 1).unwrap();
+        let plan = v.plan_sweep(&utxos, dest, 10, 1, None).unwrap();
         assert_eq!(plan.selected.len(), 2); // the 0-conf utxo is excluded
         assert_eq!(plan.tx.output.len(), 1);
         assert!(plan.change.is_none());
@@ -359,7 +411,7 @@ mod tests {
     fn sweep_rejects_when_fee_exceeds_funds() {
         let v = view();
         let utxos = [utxo(500, 3, 1)];
-        assert!(v.plan_sweep(&utxos, ScriptBuf::from(vec![0u8; 22]), 10, 1).is_err());
+        assert!(v.plan_sweep(&utxos, ScriptBuf::from(vec![0u8; 22]), 10, 1, None).is_err());
     }
 
     #[test]
@@ -377,7 +429,7 @@ mod tests {
         let utxos = [utxo(1_000_000, 3, 1)];
         let mut outs = vec![htlc_out(200_000)];
         outs.push(super::op_return_output(&[9u8; 100]).unwrap());
-        let plan = v.plan_payment(&utxos, outs, 10, 1).unwrap();
+        let plan = v.plan_payment(&utxos, outs, 10, 1, None).unwrap();
         assert_eq!(plan.tx.output.iter().filter(|o| o.script_pubkey.is_op_return()).count(), 1);
         // fee covers the ~112 vB OP_RETURN output on top of the base tx
         assert!(plan.fee.to_sat() >= (11 + 68 + 43 + 31 + 112) * 10 - 20);
@@ -389,8 +441,62 @@ mod tests {
         v.set_next_indices(7, 4);
         assert_eq!(v.next_indices(), (7, 4));
         let utxos = [utxo(1_000_000, 3, 1)];
-        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1).unwrap();
+        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1, None).unwrap();
         assert!(plan.change.is_some());
         assert_eq!(v.next_indices().1, 5); // change index advanced 4 -> 5
+    }
+
+    fn fee_addr_spk() -> ScriptBuf {
+        ScriptBuf::from(vec![0u8; 22]) // P2WPKH-shaped
+    }
+
+    #[test]
+    fn service_fee_is_a_percentage_with_floor_and_cap() {
+        let sf = ServiceFee { bps: 25, floor_sat: 200, cap_sat: 5_000, fee_spk: fee_addr_spk() };
+        assert_eq!(sf.amount_sat(10_000), 200); // 0.25% of 10k = 25, below floor
+        assert_eq!(sf.amount_sat(1_000_000), 2_500); // 0.25% of 1,000,000 = 2,500
+        assert_eq!(sf.amount_sat(10_000_000), 5_000); // 0.25% of 10M = 25,000, capped
+    }
+
+    #[test]
+    fn service_fee_uncapped_when_cap_is_zero() {
+        let sf = ServiceFee { bps: 25, floor_sat: 0, cap_sat: 0, fee_spk: fee_addr_spk() };
+        assert_eq!(sf.amount_sat(10_000_000), 25_000);
+    }
+
+    #[test]
+    fn payment_adds_a_service_fee_output_paid_from_the_inputs() {
+        let mut v = view();
+        let utxos = [utxo(1_000_000, 3, 1)];
+        let sf = ServiceFee { bps: 100, floor_sat: 200, cap_sat: 0, fee_spk: fee_addr_spk() };
+        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1, Some(&sf)).unwrap();
+        // 1% of 200,000 = 2,000
+        assert_eq!(plan.service_fee, Some(Amount::from_sat(2_000)));
+        assert_eq!(
+            plan.tx.output.iter().filter(|o| o.script_pubkey == fee_addr_spk()).count(),
+            1
+        );
+        let change = plan.change.unwrap();
+        assert_eq!(
+            (Amount::from_sat(200_000) + Amount::from_sat(2_000) + plan.fee + change).to_sat(),
+            1_000_000
+        );
+    }
+
+    #[test]
+    fn sweep_carves_the_service_fee_out_of_the_swept_total() {
+        let v = view();
+        let utxos = [utxo(1_000_000, 3, 1)];
+        let dest = ScriptBuf::from(vec![1u8; 22]);
+        let sf = ServiceFee { bps: 100, floor_sat: 200, cap_sat: 0, fee_spk: fee_addr_spk() };
+        let plan = v.plan_sweep(&utxos, dest, 10, 1, Some(&sf)).unwrap();
+        // 1% of the swept 1,000,000 = 10,000
+        assert_eq!(plan.service_fee, Some(Amount::from_sat(10_000)));
+        assert_eq!(plan.tx.output.len(), 2); // destination + fee
+        let dest_out = plan.tx.output.iter().find(|o| o.script_pubkey != fee_addr_spk()).unwrap();
+        assert_eq!(
+            (dest_out.value + Amount::from_sat(10_000) + plan.fee).to_sat(),
+            1_000_000
+        );
     }
 }

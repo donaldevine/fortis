@@ -53,6 +53,19 @@ struct Args {
     /// Print the API token and exit.
     #[arg(long)]
     print_token: bool,
+    /// Charge a service fee on sends through this gateway (address to receive
+    /// it). Omit to run free — the normal choice for self-hosting.
+    #[arg(long)]
+    service_fee_address: Option<String>,
+    /// Service fee, in basis points (1/100 of a percent) of the amount sent.
+    #[arg(long, default_value_t = 25)]
+    service_fee_bps: u32,
+    /// Minimum service fee, satoshis.
+    #[arg(long, default_value_t = 200)]
+    service_fee_floor_sat: u64,
+    /// Maximum service fee, satoshis (0 = uncapped).
+    #[arg(long, default_value_t = 5_000)]
+    service_fee_cap_sat: u64,
 }
 
 fn main() -> ExitCode {
@@ -88,6 +101,12 @@ fn run() -> Result<()> {
         .to_string_lossy()
         .into_owned();
 
+    let pricing = args.service_fee_address.clone().map(|address| state::Pricing {
+        address,
+        bps: args.service_fee_bps,
+        floor_sat: args.service_fee_floor_sat,
+        cap_sat: args.service_fee_cap_sat,
+    });
     let settings = Settings {
         datadir,
         rpc_url,
@@ -96,6 +115,7 @@ fn run() -> Result<()> {
         allow_origin: args.allow_origin.clone(),
         esplora_proxy: args.esplora_proxy.clone(),
         home: home.clone(),
+        pricing,
     };
     let proxy_only = settings.esplora_proxy.is_some();
 
@@ -123,6 +143,15 @@ fn run() -> Result<()> {
     eprintln!("fortisd  →  {node_line}");
     if let Some(u) = &settings.esplora_proxy {
         eprintln!("           esplora proxy: /esplora/*  →  {u}");
+    }
+    if let Some(p) = &settings.pricing {
+        eprintln!(
+            "           service fee: {}bps of amount sent, min {} sat, {} → {}",
+            p.bps,
+            p.floor_sat,
+            if p.cap_sat > 0 { format!("max {} sat", p.cap_sat) } else { "uncapped".into() },
+            p.address
+        );
     }
     if let Some(c) = &st.connected {
         eprintln!("           serving {} / {}  (wallet {})", c.chain, c.network, c.watch_wallet);
@@ -212,7 +241,7 @@ fn handle(
     };
 
     let result: Result<Value> = match (&method, path) {
-        (Method::Get, "/v1/status") => handlers::status(rpc, st),
+        (Method::Get, "/v1/status") => handlers::status(rpc, st, settings.pricing.as_ref()),
         (Method::Post, "/v1/connect") => serde_json::from_value(body)
             .map_err(Into::into)
             .and_then(|r| handlers::connect(rpc, st, &settings.home, r)),
@@ -222,9 +251,9 @@ fn handle(
             handlers::feerate(rpc, q_u32(query, "conf_target").unwrap_or(6) as u16)
         }
         (Method::Get, "/v1/history") => handlers::history(rpc, st, q_u32(query, "count").unwrap_or(50)),
-        (Method::Post, "/v1/broadcast") => serde_json::from_value(body)
-            .map_err(Into::into)
-            .and_then(|r| handlers::broadcast(rpc, r)),
+        (Method::Post, "/v1/broadcast") => serde_json::from_value(body).map_err(Into::into).and_then(|r| {
+            handlers::broadcast(rpc, r, settings.pricing.as_ref(), &settings.network)
+        }),
         _ => return err(404, "no such route"),
     };
 

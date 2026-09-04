@@ -678,12 +678,14 @@ fn cmd_send(home: &Path, mut cfg: WalletConfig, rpc: &Rpc, a: &SendArgs) -> Resu
     }
 
     let plan = match amount {
-        None if extra_outs.is_empty() => view.plan_sweep(&utxos, dest_spk.clone(), feerate, a.min_conf)?,
+        None if extra_outs.is_empty() => {
+            view.plan_sweep(&utxos, dest_spk.clone(), feerate, a.min_conf, None)?
+        }
         None => bail!("--sweep and --replay-protect can't be combined"),
         Some(v) => {
             let mut outs = vec![TxOut { value: v, script_pubkey: dest_spk.clone() }];
             outs.append(&mut extra_outs);
-            view.plan_payment(&utxos, outs, feerate, a.min_conf)?
+            view.plan_payment(&utxos, outs, feerate, a.min_conf, None)?
         }
     };
     let (_, next_change_after) = view.next_indices();

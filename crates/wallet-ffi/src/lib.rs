@@ -92,6 +92,16 @@ pub struct PayTo {
     pub amount_sat: u64,
 }
 
+/// A hosted backend's pricing (from its status endpoint). Self-hosted backends
+/// don't report one, and no fee is charged.
+#[derive(uniffi::Record)]
+pub struct ServiceFee {
+    pub address: String,
+    pub bps: u32,
+    pub floor_sat: u64,
+    pub cap_sat: u64,
+}
+
 #[derive(uniffi::Record)]
 pub struct SpentInput {
     pub value_sat: u64,
@@ -117,6 +127,7 @@ pub struct FundingPlan {
     pub tx_hex: String,
     pub fee_sat: u64,
     pub change_sat: Option<u64>,
+    pub service_fee_sat: Option<u64>,
     pub selected: Vec<SelectedInput>,
 }
 
@@ -126,6 +137,7 @@ impl FundingPlan {
             tx_hex: hex::encode(consensus::serialize(&p.tx)),
             fee_sat: p.fee.to_sat(),
             change_sat: p.change.map(|c| c.to_sat()),
+            service_fee_sat: p.service_fee.map(|c| c.to_sat()),
             selected: p
                 .selected
                 .iter()
@@ -319,6 +331,8 @@ impl WalletView {
     /// `op_return` (optional): bytes for a 0-value `OP_RETURN` appended to the tx.
     /// On the Bitcoin chain, ~100 random bytes make the tx consensus-invalid on
     /// the BLAKE2b fork (over its 82-byte datacarrier cap) — replay protection.
+    /// `service_fee` (optional, from the backend's status) appends the hosted
+    /// backend's fee output.
     pub fn plan_payment(
         &self,
         utxos: Vec<WalletUtxo>,
@@ -326,6 +340,7 @@ impl WalletView {
         feerate_sat_vb: u64,
         min_confirmations: u32,
         op_return: Option<Vec<u8>>,
+        service_fee: Option<ServiceFee>,
     ) -> Result<FundingPlan> {
         let coins = to_core_utxos(&utxos)?;
         let mut outs: Vec<TxOut> = outputs
@@ -340,28 +355,36 @@ impl WalletView {
         if let Some(data) = op_return.filter(|d| !d.is_empty()) {
             outs.push(wallet_core::op_return_output(&data)?);
         }
-        let plan = self
-            .inner
-            .lock()
-            .unwrap()
-            .plan_payment(&coins, outs, feerate_sat_vb, min_confirmations)?;
+        let sf = to_core_service_fee(&service_fee, self.net)?;
+        let plan = self.inner.lock().unwrap().plan_payment(
+            &coins,
+            outs,
+            feerate_sat_vb,
+            min_confirmations,
+            sf.as_ref(),
+        )?;
         Ok(FundingPlan::from_core(&plan))
     }
 
+    /// `service_fee` (optional) carves the hosted backend's fee out of the swept amount.
     pub fn plan_sweep(
         &self,
         utxos: Vec<WalletUtxo>,
         dest_address: String,
         feerate_sat_vb: u64,
         min_confirmations: u32,
+        service_fee: Option<ServiceFee>,
     ) -> Result<FundingPlan> {
         let coins = to_core_utxos(&utxos)?;
         let dest = address_spk(&dest_address, self.net)?;
-        let plan = self
-            .inner
-            .lock()
-            .unwrap()
-            .plan_sweep(&coins, dest, feerate_sat_vb, min_confirmations)?;
+        let sf = to_core_service_fee(&service_fee, self.net)?;
+        let plan = self.inner.lock().unwrap().plan_sweep(
+            &coins,
+            dest,
+            feerate_sat_vb,
+            min_confirmations,
+            sf.as_ref(),
+        )?;
         Ok(FundingPlan::from_core(&plan))
     }
 }
@@ -384,4 +407,20 @@ fn address_spk(addr: &str, net: wallet_core::bitcoin::Network) -> Result<ScriptB
         .require_network(net)
         .map_err(|_| err(format!("address {addr} is not valid on this network")))?
         .script_pubkey())
+}
+
+fn to_core_service_fee(
+    sf: &Option<ServiceFee>,
+    net: wallet_core::bitcoin::Network,
+) -> Result<Option<wallet_core::ServiceFee>> {
+    sf.as_ref()
+        .map(|sf| {
+            Ok(wallet_core::ServiceFee {
+                bps: sf.bps,
+                floor_sat: sf.floor_sat,
+                cap_sat: sf.cap_sat,
+                fee_spk: address_spk(&sf.address, net)?,
+            })
+        })
+        .transpose()
 }

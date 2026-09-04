@@ -163,10 +163,15 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         s.setIndices(c.nextReceive, c.nextChange)
         val opReturn = if (replayProtect && c.chain == "btc" && !sweep)
             com.fortis.wallet.wallet.randomBytes(100) else null
-        val plan = if (sweep) s.view.planSweep(utxos, to, feerate.toULong(), 1u)
+        val serviceFee = status?.pricing?.let {
+            uniffi.wallet_ffi.ServiceFee(it.address, it.bps.toUInt(), it.floorSat.toULong(), it.capSat.toULong())
+        }
+        val plan = if (sweep) s.view.planSweep(utxos, to, feerate.toULong(), 1u, serviceFee)
         else {
             val sat = (amountBlk.trim().toDouble() * 1e8).roundToLong()
-            s.view.planPayment(utxos, listOf(uniffi.wallet_ffi.PayTo(to, sat.toULong())), feerate.toULong(), 1u, opReturn)
+            s.view.planPayment(
+                utxos, listOf(uniffi.wallet_ffi.PayTo(to, sat.toULong())), feerate.toULong(), 1u, opReturn, serviceFee,
+            )
         }
         pending = PlanPreview(plan, feerate.toULong(), to, sweep, replayProtected = opReturn != null)
     }

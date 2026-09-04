@@ -16,6 +16,19 @@ pub struct Settings {
     pub allow_origin: String,
     pub esplora_proxy: Option<String>,
     pub home: PathBuf,
+    pub pricing: Option<Pricing>,
+}
+
+/// A service fee the operator charges on sends made through this gateway.
+/// Reported in `/v1/status` so clients add the fee output themselves;
+/// `/v1/broadcast` requires at least `floor_sat` paid to `address` as a basic
+/// integrity check. Self-hosters simply don't set this — it costs nothing.
+#[derive(Debug, Clone, Serialize)]
+pub struct Pricing {
+    pub address: String,
+    pub bps: u32,
+    pub floor_sat: u64,
+    pub cap_sat: u64,
 }
 
 /// The account this gateway is currently serving (learned from `POST /v1/connect`).

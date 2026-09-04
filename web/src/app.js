@@ -412,6 +412,9 @@ function paneSend() {
     state.chain === 'btc' && !d.sweep && d.replayProtect
       ? el('div', { class: 'hint' }, 'Adds ~110 vB of fee. Non-standard on default Bitcoin relay — broadcast via a node/service that accepts large OP_RETURN.')
       : null,
+    cache.status?.pricing
+      ? el('div', { class: 'hint' }, `Service fee: ${(cache.status.pricing.bps / 100).toFixed(2)}% of the amount sent (min ${fmt(cache.status.pricing.floor_sat)} sat) — supports this hosted node.`)
+      : null,
     el('div', { id: 'err', class: 'err' }),
     el('button', { class: 'primary wide', onclick: onReview }, 'Review'));
 }
@@ -436,9 +439,15 @@ async function onReview() {
       opReturnHex = [...crypto.getRandomValues(new Uint8Array(100))]
         .map((b) => b.toString(16).padStart(2, '0')).join('');
     }
+    const pricing = cache.status?.pricing;
+    const serviceFee = pricing
+      ? { address: pricing.address, bps: pricing.bps, floor_sat: pricing.floor_sat, cap_sat: pricing.cap_sat }
+      : undefined;
     const plan = d.sweep
-      ? session.planSweep(utxos, d.to, feerate, minConf)
-      : session.planPayment(utxos, [{ address: d.to, amount_sat: parseAmount(d.amount) }], feerate, minConf, opReturnHex);
+      ? session.planSweep(utxos, d.to, feerate, minConf, serviceFee)
+      : session.planPayment(
+          utxos, [{ address: d.to, amount_sat: parseAmount(d.amount) }], feerate, minConf, opReturnHex, serviceFee,
+        );
 
     ui.pendingPlan = { plan, feerate, to: d.to, sweep: d.sweep, replayProtect: !!opReturnHex };
     renderConfirm();
@@ -451,7 +460,8 @@ function renderConfirm() {
   const { plan, feerate, to, sweep } = ui.pendingPlan;
   const unit = UNIT[state.chain];
   const inTotal = plan.selected.reduce((s, u) => s + Number(u.value_sat), 0);
-  const outAmount = sweep ? inTotal - Number(plan.fee_sat) : inTotal - Number(plan.fee_sat) - Number(plan.change_sat || 0);
+  const svcFee = Number(plan.service_fee_sat || 0);
+  const outAmount = inTotal - Number(plan.fee_sat) - svcFee - Number(plan.change_sat || 0);
   const cancel = () => { ui.pendingPlan = null; renderHome(); };
 
   mount(el('div', { class: 'sheet-wrap' },
@@ -463,10 +473,11 @@ function renderConfirm() {
       el('div', { class: 'kvs' },
         row('To', el('span', { class: 'mono', style: 'word-break:break-all;text-align:right' }, to)),
         row('Network fee', `${fmt(plan.fee_sat)} ${unit} · ${feerate} sat/vB`),
+        svcFee > 0 ? row('Service fee', `${fmt(svcFee)} ${unit}`) : null,
         plan.change_sat != null ? row('Change', `${fmt(plan.change_sat)} ${unit}`) : null,
         row('From', `${plan.selected.length} input${plan.selected.length > 1 ? 's' : ''}`),
         ui.pendingPlan.replayProtect ? row('Replay protection', 'on · 100-byte OP_RETURN') : null,
-        row('Total', el('b', {}, `${fmt(outAmount + Number(plan.fee_sat))} ${unit}`))),
+        row('Total', el('b', {}, `${fmt(outAmount + Number(plan.fee_sat) + svcFee)} ${unit}`))),
       el('div', { id: 'err', class: 'err' }),
       el('div', { class: 'row' },
         el('button', { class: 'ghost', onclick: cancel }, 'Cancel'),

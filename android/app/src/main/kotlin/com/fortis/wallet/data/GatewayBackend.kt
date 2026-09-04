@@ -45,6 +45,14 @@ class GatewayBackend(
         val s = JSONObject(req("GET", "/v1/status"))
         val node = s.optJSONObject("node")
         val scanning = s.optJSONObject("scanning")
+        val pricing = s.optJSONObject("pricing")?.let {
+            ServicePricing(
+                address = it.getString("address"),
+                bps = it.getInt("bps"),
+                floorSat = it.getLong("floor_sat"),
+                capSat = it.getLong("cap_sat"),
+            )
+        }
         return ChainStatus(
             blocks = (node?.optLong("blocks") ?: 0L).toULong(),
             synced = scanning == null && (node?.optDouble("progress") ?: 0.0) > 0.999,
@@ -52,6 +60,7 @@ class GatewayBackend(
             chain = node?.optString("chain") ?: "",
             subversion = node?.optString("subversion") ?: "",
             scanningPct = scanning?.let { (it.optDouble("progress") * 100).toInt() },
+            pricing = pricing,
         )
     }
 

@@ -51,6 +51,7 @@ pub struct JsFundingPlan {
     pub tx_hex: String,
     pub fee_sat: u64,
     pub change_sat: Option<u64>,
+    pub service_fee_sat: Option<u64>,
     pub selected: Vec<JsSelectedInput>,
 }
 
@@ -60,6 +61,7 @@ impl JsFundingPlan {
             tx_hex: hex::encode(wallet_core::bitcoin::consensus::serialize(&p.tx)),
             fee_sat: p.fee.to_sat(),
             change_sat: p.change.map(|c| c.to_sat()),
+            service_fee_sat: p.service_fee.map(|c| c.to_sat()),
             selected: p
                 .selected
                 .iter()
@@ -80,6 +82,18 @@ impl JsFundingPlan {
 pub struct JsPayTo {
     pub address: String,
     pub amount_sat: u64,
+}
+
+/// A hosted backend's pricing, as reported in `/v1/status`. Self-hosted backends
+/// don't send one, and no fee is charged.
+#[derive(Deserialize)]
+pub struct JsServiceFee {
+    pub address: String,
+    pub bps: u32,
+    #[serde(default)]
+    pub floor_sat: u64,
+    #[serde(default)]
+    pub cap_sat: u64,
 }
 
 #[derive(Deserialize)]

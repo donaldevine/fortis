@@ -2,6 +2,10 @@ package com.fortis.wallet.data
 
 import uniffi.wallet_ffi.WalletUtxo
 
+/** A hosted backend's service fee, from its status endpoint. Self-hosted backends
+ *  don't report one, and no fee is charged. */
+data class ServicePricing(val address: String, val bps: Int, val floorSat: Long, val capSat: Long)
+
 data class ChainStatus(
     val blocks: ULong,
     val synced: Boolean,
@@ -9,6 +13,7 @@ data class ChainStatus(
     val chain: String = "",
     val subversion: String = "",
     val scanningPct: Int? = null,
+    val pricing: ServicePricing? = null,
 )
 
 data class Balances(val confirmedSat: Long, val pendingSat: Long)
