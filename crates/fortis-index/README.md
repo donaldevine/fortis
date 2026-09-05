@@ -19,6 +19,10 @@ multi-tenant, since no public Esplora exists for the fork.
   the sync loop writes, the HTTP server reads).
 - Reorg-safe: each block must extend our tip or the index unwinds one block and
   retries; a reorg back past `--start-height` clears and re-syncs.
+- Keeps an in-memory **mempool overlay**, refreshed each poll: unconfirmed
+  outputs show up in `/address/:a/utxo` with `status.confirmed = false`, and a
+  confirmed coin already spent by a pending tx is dropped so it isn't offered
+  for coin selection again.
 - `/address/:a/txs` stores only txid lists and rebuilds full detail on read from
   `getrawtransaction <txid> 2 <blockhash>` (no `txindex` needed on the node).
 

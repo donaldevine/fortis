@@ -9,12 +9,13 @@
 //! for now — a restored old seed's historical UTXOs won't appear.
 
 mod api;
+mod mempool;
 mod store;
 mod sync;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
 
@@ -22,6 +23,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 
 use fortis_node::Rpc;
+use mempool::Mempool;
 use store::Store;
 use sync::Syncer;
 
@@ -99,27 +101,40 @@ fn run() -> Result<()> {
 
     // Ensure the file + schema exist before the reader opens it.
     let writer = Store::open(&args.db)?;
+    let mempool = Arc::new(RwLock::new(Mempool::default()));
 
     {
         let rpc = Arc::clone(&rpc);
+        let mempool = Arc::clone(&mempool);
         let poll = args.poll.max(1);
         let mut store = writer;
         thread::Builder::new()
             .name("indexer".into())
-            .spawn(move || indexer_loop(&rpc, &mut store, start_height, poll))
+            .spawn(move || indexer_loop(&rpc, &mut store, &mempool, start_height, poll))
             .context("spawning indexer thread")?;
     }
 
     let reader = Store::open_readonly(&args.db)?;
-    api::serve(&args.bind, reader, rpc, network)
+    api::serve(&args.bind, reader, rpc, mempool, network)
 }
 
-fn indexer_loop(rpc: &Rpc, store: &mut Store, start_height: u64, poll: u64) {
+fn indexer_loop(
+    rpc: &Rpc,
+    store: &mut Store,
+    mempool: &RwLock<Mempool>,
+    start_height: u64,
+    poll: u64,
+) {
+    let mut local = Mempool::default();
     loop {
         match (Syncer { rpc, store, start_height }).sync_to_tip() {
             Ok((tip, applied)) if applied > 0 => eprintln!("index: +{applied} block(s), tip {tip}"),
             Ok(_) => {}
             Err(e) => eprintln!("index: {e:#}"),
+        }
+        match local.refresh(rpc) {
+            Ok(()) => *mempool.write().unwrap() = local.clone(),
+            Err(e) => eprintln!("mempool: {e:#}"),
         }
         thread::sleep(Duration::from_secs(poll));
     }

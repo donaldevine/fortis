@@ -3,7 +3,7 @@
 //! `/v1/fees/recommended`, and `POST /tx`. Public chain data only — no auth; bind
 //! to localhost or a trusted network, or front it with a TLS/rate-limiting proxy.
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use anyhow::{anyhow, Context, Result};
 use bitcoin::address::NetworkUnchecked;
@@ -13,6 +13,7 @@ use tiny_http::{Header, Method, Request, Response, Server};
 
 use fortis_node::Rpc;
 
+use crate::mempool::Mempool;
 use crate::store::Store;
 
 enum Reply {
@@ -21,18 +22,33 @@ enum Reply {
     Empty(u16),
 }
 
-pub fn serve(bind: &str, store: Store, rpc: Arc<Rpc>, network: Network) -> Result<()> {
+pub fn serve(
+    bind: &str,
+    store: Store,
+    rpc: Arc<Rpc>,
+    mempool: Arc<RwLock<Mempool>>,
+    network: Network,
+) -> Result<()> {
     let server = Server::http(bind).map_err(|e| anyhow!("cannot bind {bind}: {e}"))?;
     eprintln!("fortis-index listening on  http://{bind}");
     for mut req in server.incoming_requests() {
         let body = read_body(&mut req);
-        let reply = route(&req, &store, &rpc, network, &body);
+        let mp = mempool.read().unwrap();
+        let reply = route(&req, &store, &rpc, &mp, network, &body);
+        drop(mp);
         let _ = respond(req, reply);
     }
     Ok(())
 }
 
-fn route(req: &Request, store: &Store, rpc: &Rpc, network: Network, body: &str) -> Reply {
+fn route(
+    req: &Request,
+    store: &Store,
+    rpc: &Rpc,
+    mp: &Mempool,
+    network: Network,
+    body: &str,
+) -> Reply {
     let method = req.method().clone();
     let url = req.url().to_string();
     let path = url.split('?').next().unwrap_or("").trim_end_matches('/');
@@ -43,7 +59,12 @@ fn route(req: &Request, store: &Store, rpc: &Rpc, network: Network, body: &str) 
     match (&method, path) {
         (Method::Get, "") | (Method::Get, "/") => Reply::Json(
             200,
-            json!({ "name": "fortis-index", "version": env!("CARGO_PKG_VERSION") }),
+            json!({
+                "name": "fortis-index",
+                "version": env!("CARGO_PKG_VERSION"),
+                "tip": store.tip().ok().flatten().map(|(h, _)| h),
+                "mempool": mp.len(),
+            }),
         ),
         (Method::Get, "/blocks/tip/height") => match store.tip() {
             Ok(Some((h, _))) => Reply::Text(200, h.to_string()),
@@ -56,13 +77,13 @@ fn route(req: &Request, store: &Store, rpc: &Rpc, network: Network, body: &str) 
             Err(e) => Reply::Text(400, format!("{e:#}")),
         },
         (Method::Get, p) if p.starts_with("/address/") => {
-            address_route(p, store, rpc, network)
+            address_route(p, store, rpc, mp, network)
         }
         _ => err(404, "no such route"),
     }
 }
 
-fn address_route(path: &str, store: &Store, rpc: &Rpc, network: Network) -> Reply {
+fn address_route(path: &str, store: &Store, rpc: &Rpc, mp: &Mempool, network: Network) -> Reply {
     // /address/<addr>/utxo  or  /address/<addr>/txs
     let rest = &path["/address/".len()..];
     let (addr, tail) = match rest.split_once('/') {
@@ -73,28 +94,13 @@ fn address_route(path: &str, store: &Store, rpc: &Rpc, network: Network) -> Repl
         Ok(s) => s,
         Err(e) => return err(400, e),
     };
-    let tip = store.tip().ok().flatten().map(|(h, _)| h).unwrap_or(0);
 
     match tail {
-        "utxo" => match store.utxos_for(&spk) {
-            Ok(us) => Reply::Json(
-                200,
-                Value::Array(
-                    us.iter()
-                        .map(|u| {
-                            json!({
-                                "txid": u.txid,
-                                "vout": u.vout,
-                                "value": u.value_sat,
-                                "status": { "confirmed": true, "block_height": u.height },
-                            })
-                        })
-                        .collect(),
-                ),
-            ),
+        "utxo" => match address_utxo(&spk, store, mp) {
+            Ok(v) => Reply::Json(200, v),
             Err(e) => err(500, e),
         },
-        "txs" => match address_txs(&spk, store, rpc, tip) {
+        "txs" => match address_txs(&spk, store, rpc, mp) {
             Ok(v) => Reply::Json(200, v),
             Err(e) => err(502, e),
         },
@@ -102,23 +108,57 @@ fn address_route(path: &str, store: &Store, rpc: &Rpc, network: Network) -> Repl
     }
 }
 
-/// Rebuild an address's transaction list in the Esplora shape the client parses
+/// Confirmed UTXOs (minus any spent by a pending tx) followed by unconfirmed
+/// ones the mempool creates for this address.
+fn address_utxo(spk: &str, store: &Store, mp: &Mempool) -> Result<Value> {
+    let mut rows: Vec<Value> = store
+        .utxos_for(spk)?
+        .into_iter()
+        .filter(|u| !mp.is_spent(&u.txid, u.vout))
+        .map(|u| {
+            json!({
+                "txid": u.txid,
+                "vout": u.vout,
+                "value": u.value_sat,
+                "status": { "confirmed": true, "block_height": u.height },
+            })
+        })
+        .collect();
+    for (txid, vout, value) in mp.utxos_for(spk) {
+        rows.push(json!({
+            "txid": txid,
+            "vout": vout,
+            "value": value,
+            "status": { "confirmed": false },
+        }));
+    }
+    Ok(Value::Array(rows))
+}
+
+/// An address's transactions in the Esplora shape the client parses
 /// (`vin[].prevout.{scriptpubkey_address,value}`, `vout[].{scriptpubkey_address,
-/// value}`, `fee`, `status`). The index stores only txid lists; the full detail
-/// comes from `getrawtransaction <txid> 2 <blockhash>` (no txindex needed).
-fn address_txs(spk: &str, store: &Store, rpc: &Rpc, tip: u64) -> Result<Value> {
-    let rows = store.history_for(spk, 100)?;
-    let mut txs = Vec::with_capacity(rows.len());
-    for h in rows {
+/// value}`, `fee`, `status`). Mempool txs first, then confirmed newest-first. The
+/// index stores only txid lists; confirmed detail comes from `getrawtransaction
+/// <txid> 2 <blockhash>` (no txindex needed), mempool detail from the overlay.
+fn address_txs(spk: &str, store: &Store, rpc: &Rpc, mp: &Mempool) -> Result<Value> {
+    let mut txs: Vec<Value> = mp.txs_for(spk).into_iter().map(|t| esplora_tx(t, None)).collect();
+    let pending: std::collections::HashSet<String> =
+        txs.iter().filter_map(|t| t["txid"].as_str().map(str::to_string)).collect();
+
+    for h in store.history_for(spk, 100)? {
+        if pending.contains(&h.txid) {
+            continue; // a block just landed that the mempool snapshot still lists
+        }
         let t = rpc
             .call("getrawtransaction", json!([h.txid, 2, h.block_hash]))
             .with_context(|| format!("getrawtransaction {}", h.txid))?;
-        txs.push(esplora_tx(&t, h.height, tip));
+        txs.push(esplora_tx(&t, Some(h.height)));
     }
     Ok(Value::Array(txs))
 }
 
-fn esplora_tx(t: &Value, height: u64, _tip: u64) -> Value {
+/// `confirmed_at` is `Some(height)` for a mined tx, `None` for a mempool one.
+fn esplora_tx(t: &Value, confirmed_at: Option<u64>) -> Value {
     let vin: Vec<Value> = t["vin"]
         .as_array()
         .map(|a| {
@@ -148,17 +188,21 @@ fn esplora_tx(t: &Value, height: u64, _tip: u64) -> Value {
                 .collect()
         })
         .unwrap_or_default();
+    let status = match confirmed_at {
+        Some(height) => json!({
+            "confirmed": true,
+            "block_height": height,
+            "block_time": t.get("blocktime").and_then(Value::as_u64)
+                .or_else(|| t.get("time").and_then(Value::as_u64)),
+        }),
+        None => json!({ "confirmed": false }),
+    };
     json!({
         "txid": t["txid"],
         "vin": vin,
         "vout": vout,
         "fee": t.get("fee").map(btc_to_sat).unwrap_or(0),
-        "status": {
-            "confirmed": true,
-            "block_height": height,
-            "block_time": t.get("blocktime").and_then(Value::as_u64)
-                .or_else(|| t.get("time").and_then(Value::as_u64)),
-        },
+        "status": status,
     })
 }
 
