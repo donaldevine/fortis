@@ -67,6 +67,25 @@ cargo run -p fortisd -- --datadir "C:\Bitcoin\Knots"
 It prints a URL + token; paste both, "Connect" imports your account xpub as a
 watch-only descriptor on the node.
 
+### Serving both chains from one `fortisd`
+
+One process can serve BLK from a Knots node and BTC from a public explorer, and —
+when you also run a local Bitcoin Core — route BTC **broadcast + fee estimation**
+through your own node while address/history reads still come from the explorer:
+
+```sh
+cargo run -p fortisd -- \
+  --datadir "C:\Bitcoin\Knots" --network mainnet \
+  --esplora-proxy https://mempool.space/api \
+  --btc-rpc-url http://127.0.0.1:8532 --btc-datadir "C:\Bitcoin\Core"
+```
+
+- BLK wallet → gateway URL `http://<host>:8088`
+- BTC wallet → explorer URL `http://<host>:8088/esplora`
+
+`--btc-*` needs no address index (a pruned node is fine); it only does
+`sendrawtransaction` and `estimatesmartfee`.
+
 ### From a phone
 
 `fortisd --bind 0.0.0.0:8088`, serve `web/` on the same machine, browse from the
