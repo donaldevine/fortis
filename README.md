@@ -17,6 +17,7 @@ reimplementation of the crypto per platform.
 | [`crates/fortis-node`](crates/fortis-node) | watch-only chain-gateway logic: a Bitcoin Core / Knots JSON-RPC client plus wallet ops (descriptors, UTXOs, fees, broadcast). No keys. |
 | [`crates/wallet-cli`](crates/wallet-cli) | `fortis` — desktop shell: watch-only reporting plus send / sweep (coin selection, `SIGHASH_UNIFIED` signing, fee estimation, broadcast). |
 | [`crates/fortisd`](crates/fortisd) | token-guarded local HTTP gateway over the node for the web wallet, or an Esplora CORS proxy (`--esplora-proxy`, no node). No keys. |
+| [`crates/fortis-index`](crates/fortis-index) | address index over a Knots / BLAKE2b node, served as the Esplora REST subset the wallet already speaks — stateless, so one instance serves many wallets. No keys. |
 | [`web/`](web) | the browser wallet — a static PWA; keys stay in wasm, encrypted seed in IndexedDB. Reads the chain via a public Esplora explorer or your own node. |
 | [`android/`](android) | native Android wallet — Jetpack Compose; keys via `wallet-ffi`, encrypted seed in DataStore. Same design language and backends as `web/`. |
 
