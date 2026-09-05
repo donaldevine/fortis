@@ -20,6 +20,7 @@
 
 pub mod chain;
 pub mod crypto;
+pub mod entropy;
 pub mod error;
 pub mod htlc;
 pub mod keys;
@@ -32,6 +33,7 @@ pub mod wallet;
 pub use bitcoin;
 
 pub use chain::{Chain, ChainParams};
+pub use entropy::mix_entropy;
 pub use error::{Result, WalletError};
 pub use htlc::HtlcContract;
 pub use keys::MasterKey;

@@ -25,6 +25,20 @@ impl MasterKey {
         Ok((mnemonic, key))
     }
 
+    /// Like [`generate`](Self::generate) but folds shell-collected `extra` entropy
+    /// (pointer/touch jitter, device-motion noise, dice, …) into the CSPRNG bytes
+    /// first — see [`crate::entropy`]. `csprng` must still be ≥ 32 fresh bytes
+    /// from the OS RNG; `extra` supplements it, never replaces it.
+    pub fn generate_mixed(csprng: &[u8], extra: &[&[u8]]) -> Result<(Mnemonic, MasterKey)> {
+        if csprng.len() < 32 {
+            return Err(WalletError::InvalidMnemonic);
+        }
+        let mut sources: Vec<&[u8]> = Vec::with_capacity(extra.len() + 1);
+        sources.push(csprng);
+        sources.extend_from_slice(extra);
+        Self::generate(&crate::entropy::mix_entropy(&sources))
+    }
+
     pub fn from_mnemonic(mnemonic: &Mnemonic, passphrase: &str) -> Result<MasterKey> {
         let seed = Zeroizing::new(mnemonic.to_seed(passphrase));
         let xpriv = Xpriv::new_master(NetworkKind::Main, seed.as_ref())
@@ -199,6 +213,21 @@ mod tests {
             m.to_string(),
             "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
         );
+    }
+
+    #[test]
+    fn generate_mixed_folds_in_extra_and_rejects_short_csprng() {
+        let csprng = [3u8; 32];
+        let (plain, _) = MasterKey::generate_mixed(&csprng, &[]).unwrap();
+        let (with_dice, _) = MasterKey::generate_mixed(&csprng, &[b"6 1 4 4 2 5 3 1"]).unwrap();
+        assert_ne!(plain.to_string(), with_dice.to_string());
+        assert_eq!(plain.to_string().split(' ').count(), 24);
+
+        // same inputs -> same phrase
+        let (again, _) = MasterKey::generate_mixed(&csprng, &[b"6 1 4 4 2 5 3 1"]).unwrap();
+        assert_eq!(with_dice.to_string(), again.to_string());
+
+        assert!(MasterKey::generate_mixed(&[0u8; 16], &[]).is_err());
     }
 
     // BIP-32 test vector 1: seed 000102...0f, chain m/0H extended private key.

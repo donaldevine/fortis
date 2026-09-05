@@ -112,6 +112,11 @@ struct InitArgs {
     /// Also seal the seed to <home>/seed.enc (prompts for a password).
     #[arg(long)]
     seal: bool,
+    /// Fold extra entropy into the new seed: a file of bytes, or `-` for stdin
+    /// (e.g. a page of dice rolls or keyboard mashing). Supplements the OS
+    /// CSPRNG, never replaces it.
+    #[arg(long, value_name = "FILE")]
+    extra_entropy: Option<String>,
     /// Overwrite an existing wallet.json.
     #[arg(long)]
     force: bool,
@@ -260,9 +265,24 @@ fn cmd_init(home: &Path, a: &InitArgs) -> Result<()> {
         }
         Zeroizing::new(words.join(" "))
     } else {
-        let mut entropy = Zeroizing::new([0u8; 32]);
-        getrandom::getrandom(&mut entropy[..]).map_err(|e| anyhow!("CSPRNG failed: {e}"))?;
-        let (mnemonic, _key) = MasterKey::generate(&entropy)?;
+        let mut csprng = Zeroizing::new([0u8; 32]);
+        getrandom::getrandom(&mut csprng[..]).map_err(|e| anyhow!("CSPRNG failed: {e}"))?;
+        let extra: Zeroizing<Vec<u8>> = match a.extra_entropy.as_deref() {
+            None => Zeroizing::new(Vec::new()),
+            Some("-") => {
+                let mut buf = Vec::new();
+                io::stdin().read_to_end(&mut buf)?;
+                eprintln!("mixed in {} bytes of extra entropy from stdin", buf.len());
+                Zeroizing::new(buf)
+            }
+            Some(path) => {
+                let buf = std::fs::read(path).with_context(|| format!("reading {path}"))?;
+                eprintln!("mixed in {} bytes of extra entropy from {path}", buf.len());
+                Zeroizing::new(buf)
+            }
+        };
+        let sources: &[&[u8]] = if extra.is_empty() { &[] } else { &[extra.as_slice()] };
+        let (mnemonic, _key) = MasterKey::generate_mixed(csprng.as_slice(), sources)?;
         Zeroizing::new(mnemonic.to_string())
     };
 

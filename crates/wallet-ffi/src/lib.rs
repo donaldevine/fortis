@@ -158,11 +158,19 @@ impl FundingPlan {
 // free functions
 // ---------------------------------------------------------------------------
 
-/// A 24-word mnemonic from 32 bytes of platform entropy.
+/// A 24-word mnemonic. `csprng` is ≥ 32 bytes from `SecureRandom`. `extra`
+/// (optional) is additional entropy the shell collected — device-motion sensor
+/// noise, touch jitter, timing jitter — folded into the CSPRNG bytes (see
+/// `wallet_core::entropy`); it can only strengthen the seed.
 #[uniffi::export]
-pub fn generate_mnemonic(entropy: Vec<u8>) -> Result<String> {
-    let bytes: [u8; 32] = entropy.try_into().map_err(|_| err("entropy must be 32 bytes"))?;
-    let (mnemonic, _key) = MasterKey::generate(&bytes)?;
+pub fn generate_mnemonic(csprng: Vec<u8>, extra: Option<Vec<u8>>) -> Result<String> {
+    let mut sources: Vec<&[u8]> = Vec::new();
+    if let Some(e) = extra.as_deref() {
+        if !e.is_empty() {
+            sources.push(e);
+        }
+    }
+    let (mnemonic, _key) = MasterKey::generate_mixed(&csprng, &sources)?;
     Ok(mnemonic.to_string())
 }
 

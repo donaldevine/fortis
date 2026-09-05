@@ -18,7 +18,7 @@ import java.net.Proxy
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToLong
 
-enum class Phase { Loading, Onboard, Create, Restore, Locked, BackendPicker, Home, Settings }
+enum class Phase { Loading, Onboard, Gen, Create, Restore, Locked, BackendPicker, Home, Settings }
 
 data class PlanPreview(
     val plan: FundingPlan, val feerate: ULong, val to: String,
@@ -58,7 +58,15 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         if (phase == Phase.Home) refresh()
     }
 
-    fun goCreate() { draftMnemonic = draftMnemonic ?: newMnemonic(); phase = Phase.Create }
+    fun goCreate() {
+        // Existing draft (came back from the phrase screen) → skip re-collecting.
+        phase = if (draftMnemonic != null) Phase.Create else Phase.Gen
+    }
+    /** Finish the entropy step: mix `extra` into the CSPRNG and show the phrase. */
+    fun generateSeed(extra: ByteArray) = wrap {
+        draftMnemonic = newMnemonic(extra)
+        phase = Phase.Create
+    }
     fun goRestore() { phase = Phase.Restore }
     fun goOnboard() { draftMnemonic = null; phase = Phase.Onboard }
     fun goSettings() { phase = Phase.Settings }

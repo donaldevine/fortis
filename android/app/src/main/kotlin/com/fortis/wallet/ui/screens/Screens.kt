@@ -3,9 +3,14 @@ package com.fortis.wallet.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -29,6 +35,10 @@ import com.fortis.wallet.PlanPreview
 import com.fortis.wallet.WalletViewModel
 import com.fortis.wallet.ui.*
 import com.fortis.wallet.ui.theme.Fx
+import com.fortis.wallet.wallet.EntropyCollector
+import com.fortis.wallet.wallet.entropyProgress
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private fun fmt(sat: Long) = "%.8f".format(sat / 1e8)
 
@@ -46,6 +56,71 @@ fun OnboardScreen(vm: WalletViewModel) = Screen {
     PrimaryButton("Create a new wallet") { vm.goCreate() }
     GhostButton("Restore from a recovery phrase") { vm.goRestore() }
     Spacer(Modifier.weight(1f))
+}
+
+@Composable
+fun GenScreen(vm: WalletViewModel) {
+    val ctx = LocalContext.current
+    val collector = remember { EntropyCollector() }
+    var bits by remember { mutableStateOf(0) }
+
+    // Motion-sensor noise while the user shakes the phone — the novel source.
+    DisposableEffect(Unit) {
+        val sm = ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(e: SensorEvent) {
+                collector.addMotion(e.values)
+                bits = collector.bits
+            }
+            override fun onAccuracyChanged(s: Sensor?, a: Int) {}
+        }
+        listOf(Sensor.TYPE_ACCELEROMETER, Sensor.TYPE_GYROSCOPE).forEach { t ->
+            sm.getDefaultSensor(t)?.let { sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME) }
+        }
+        onDispose { sm.unregisterListener(listener) }
+    }
+    // Passive timing jitter — no interaction needed.
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.Default) { collector.addJitter() }
+        bits = collector.bits
+    }
+
+    Screen(scroll = true) {
+        Text("Add some randomness", style = MaterialTheme.typography.titleMedium, color = Fx.text)
+        Text(
+            "Your phone already generated a secure seed. Shake it — or scribble on the pad — " +
+                "to stir in extra entropy from the motion sensors and timing jitter. Belt and braces.",
+            color = Fx.textDim,
+        )
+        Box(
+            Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(Fx.rLg)).background(Fx.glass1)
+                .pointerInput(Unit) {
+                    detectDragGestures { change, _ ->
+                        collector.addTouch(change.position.x, change.position.y, System.nanoTime())
+                        bits = collector.bits
+                    }
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("shake, or scribble here", color = Fx.textFaint, fontSize = 13.sp)
+        }
+        Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(Fx.pill)).background(Fx.glass1)) {
+            Box(
+                Modifier.fillMaxWidth(entropyProgress(bits)).fillMaxHeight()
+                    .background(Brush.horizontalGradient(listOf(Fx.accent, Fx.accent2))),
+            )
+        }
+        Text(
+            if (entropyProgress(bits) >= 1f) "plenty of extra entropy — the base seed is already secure"
+            else "~$bits extra bits stirred in",
+            color = Fx.textFaint, fontSize = 12.sp,
+        )
+        ErrorText(vm.error)
+        Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
+            GhostButton("Back", Modifier.weight(1f)) { vm.goOnboard() }
+            PrimaryButton("Generate wallet", Modifier.weight(1f)) { vm.generateSeed(collector.bytes()) }
+        }
+    }
 }
 
 @Composable

@@ -13,7 +13,10 @@ fun randomBytes(n: Int): ByteArray = ByteArray(n).also { SecureRandom().nextByte
 private fun ByteArray.toHex() = joinToString("") { "%02x".format(it) }
 private fun String.hexToBytes() = chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
-fun newMnemonic(): String = generateMnemonic(randomBytes(32))
+/** `extra` (optional, from [EntropyCollector.bytes]) is folded into the CSPRNG
+ *  bytes inside wallet-ffi — it can only strengthen the seed. */
+fun newMnemonic(extra: ByteArray? = null): String =
+    generateMnemonic(randomBytes(32), extra?.takeIf { it.isNotEmpty() })
 
 data class SealedSeed(val blobHex: String, val saltHex: String)
 

@@ -8,6 +8,7 @@ import { loadState, saveState, wipeState } from './store.js';
 import { Gateway } from './gateway.js';
 import { EsploraBackend } from './esplora.js';
 import { ensureWasm, newMnemonic, validateMnemonic, seal, unseal, Session } from './wallet.js';
+import { EntropyPool } from './entropy.js';
 import { el, mount, toast, copy, fmt, parseAmount, shortTxid, timeAgo, countUp, initParallax } from './ui.js';
 
 const UNIT = { blk: 'BLK', btc: 'BTC' };
@@ -86,15 +87,88 @@ function brand(tagline) {
 }
 
 function renderOnboard() {
+  if (ui.screen === 'gen') return renderGen();
   if (ui.screen === 'create') return renderCreate();
   if (ui.screen === 'restore') return renderRestore();
   mount(el('div', { class: 'screen' },
     el('div', { class: 'spacer' }),
     brand('a non-custodial wallet for Bitcoin and its BLAKE2b fork'),
     el('div', { class: 'spacer' }),
-    el('button', { class: 'primary wide', onclick: () => go('create') }, 'Create a new wallet'),
+    el('button', { class: 'primary wide', onclick: () => go('gen') }, 'Create a new wallet'),
     el('button', { class: 'ghost wide', onclick: () => go('restore') }, 'Restore from a recovery phrase'),
     el('div', { class: 'spacer' })));
+}
+
+// Supplementary entropy: crypto.getRandomValues already gives 256 bits, but a
+// wallet is worth hedging the CSPRNG. Whatever is gathered here is *mixed* with
+// it in wasm — it can only strengthen the seed — so this step is skippable.
+const TARGET_BITS = 128;
+
+function renderGen() {
+  const pool = ui.entropyPool || (ui.entropyPool = new EntropyPool());
+  if (!ui.jitterStarted) {
+    ui.jitterStarted = true;
+    pool.collectJitter(400).then(() => { if (ui.screen === 'gen') paintBar(); });
+  }
+
+  const pad = el('div', {
+    style:
+      'height:150px;border:1px dashed var(--hair);border-radius:var(--r-lg);' +
+      'display:flex;align-items:center;justify-content:center;color:var(--text-faint);' +
+      'touch-action:none;user-select:none;cursor:crosshair',
+  }, 'drag around in here');
+  let drawing = false;
+  const sample = (e) => {
+    if (!drawing) return;
+    const r = pad.getBoundingClientRect();
+    pool.addPointer(e.clientX - r.left, e.clientY - r.top, e.timeStamp);
+    paintBar();
+  };
+  pad.addEventListener('pointerdown', (e) => { drawing = true; pad.setPointerCapture(e.pointerId); sample(e); });
+  pad.addEventListener('pointermove', sample);
+  pad.addEventListener('pointerup', () => (drawing = false));
+
+  const bar = el('div', { style: 'height:8px;border-radius:999px;background:var(--glass-1);overflow:hidden' },
+    el('div', { id: 'entbar', style: 'height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .1s' }));
+  const label = el('div', { id: 'entlabel', class: 'hint' }, '');
+
+  mount(el('div', { class: 'screen' },
+    el('h2', {}, 'Add some randomness'),
+    el('p', {}, 'Your device already generated a secure seed. Drag your pointer around to stir in extra entropy from your own motion and your machine’s timing jitter — belt and braces.'),
+    pad,
+    bar,
+    label,
+    el('div', { id: 'err', class: 'err' }),
+    el('div', { class: 'row' },
+      el('button', { class: 'ghost', onclick: () => { ui.entropyPool = null; ui.jitterStarted = false; go('main'); } }, 'Back'),
+      el('button', { class: 'primary', onclick: onGenerate }, 'Generate wallet'))));
+  paintBar();
+}
+
+function paintBar() {
+  const pool = ui.entropyPool;
+  if (!pool) return;
+  const bar = document.getElementById('entbar');
+  const label = document.getElementById('entlabel');
+  if (!bar) return;
+  const pct = Math.min(100, Math.round((pool.bits / TARGET_BITS) * 100));
+  bar.style.width = pct + '%';
+  label.textContent =
+    pct >= 100 ? 'plenty of extra entropy — or generate now, the base seed is already secure'
+              : `~${pool.bits} extra bits stirred in`;
+}
+
+async function onGenerate() {
+  const err = document.getElementById('err');
+  err.textContent = 'generating…';
+  try {
+    ui.draftMnemonic = newMnemonic(ui.entropyPool ? ui.entropyPool.bytes() : undefined);
+    ui.entropyPool = null;
+    ui.jitterStarted = false;
+    go('create');
+  } catch (e) {
+    err.textContent = String(e.message || e);
+  }
 }
 
 function chainPicker(current = 'blk') {

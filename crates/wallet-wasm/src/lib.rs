@@ -83,14 +83,19 @@ fn tx_to_hex(tx: &Transaction) -> String {
     hex::encode(consensus::serialize(tx))
 }
 
-/// Build a 24-word mnemonic from 32 bytes of platform entropy
-/// (`crypto.getRandomValues(new Uint8Array(32))`).
+/// Build a 24-word mnemonic. `csprng` is ≥ 32 bytes from
+/// `crypto.getRandomValues`. `extra` (optional) is any additional entropy the
+/// shell collected — pointer/touch jitter, timing jitter, dice — folded into the
+/// CSPRNG bytes (see `wallet_core::entropy`); it can only strengthen the seed.
 #[wasm_bindgen(js_name = generateMnemonic)]
-pub fn generate_mnemonic(entropy: &[u8]) -> Result<String, JsError> {
-    let e: [u8; 32] = entropy
-        .try_into()
-        .map_err(|_| JsError::new("entropy must be 32 bytes"))?;
-    let (mnemonic, _key) = MasterKey::generate(&e).map_err(js)?;
+pub fn generate_mnemonic(csprng: &[u8], extra: Option<Vec<u8>>) -> Result<String, JsError> {
+    let mut sources: Vec<&[u8]> = Vec::new();
+    if let Some(e) = extra.as_deref() {
+        if !e.is_empty() {
+            sources.push(e);
+        }
+    }
+    let (mnemonic, _key) = MasterKey::generate_mixed(csprng, &sources).map_err(js)?;
     Ok(mnemonic.to_string())
 }
 
