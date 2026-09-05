@@ -15,3 +15,7 @@ web/pkg/
 
 # fortisd / fortis local state
 *.token
+
+# fortis-index / fortis-edge local state
+fortis-index.sqlite*
+fortis-edge.secret
