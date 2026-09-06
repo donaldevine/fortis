@@ -13,9 +13,8 @@ import { el, mount, toast, copy, fmt, parseAmount, shortTxid, timeAgo, countUp, 
 
 const UNIT = { btcb2: 'BTCB2', btc: 'BTC' };
 const DEFAULT_ESPLORA = { btcb2: 'https://mempool.guide/api', btc: 'https://mempool.space/api' };
-// The hosted fortis-edge. A local instance by default; becomes a fixed
-// production URL once deployed.
-const DEFAULT_EDGE = 'http://127.0.0.1:8098';
+// The hosted fortis-edge. Override for a local instance (http://127.0.0.1:8098).
+const DEFAULT_EDGE = 'https://api.fortis.rest';
 
 let state = null; // persisted config or null
 let backend = null; // Gateway | EsploraBackend | null

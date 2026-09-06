@@ -228,7 +228,7 @@ fun UnlockScreen(vm: WalletViewModel) {
     }
 }
 
-private const val DEFAULT_EDGE = "http://10.0.2.2:8098"
+private const val DEFAULT_EDGE = "https://api.fortis.rest" // local: http://10.0.2.2:8098
 
 @Composable
 fun BackendPickerScreen(vm: WalletViewModel) {

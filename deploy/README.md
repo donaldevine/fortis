@@ -61,30 +61,44 @@ published; `edge` is bound to `127.0.0.1:8098` for a front proxy to pick up.
 
 ## 3. Make it reachable
 
-### Tailscale (private, no DNS, no open ports) — recommended to start
+Keep `fortis-edge --bind 127.0.0.1:8098` in every case — the front door is one
+of the following, never the port directly.
+
+### Cloudflare Tunnel + your own domain — the home-machine path (in use)
+
+A public `https://api.<domain>` with a real cert, no open ports, home IP hidden.
+See [`cloudflared/config.example.yml`](cloudflared/config.example.yml):
 
 ```sh
-tailscale up
-tailscale serve https / http://127.0.0.1:8098      # HTTPS on your tailnet
+winget install Cloudflare.cloudflared        # or the platform package
+cloudflared tunnel login
+cloudflared tunnel create fortis
+cloudflared tunnel route dns fortis api.example.com
+# write ~/.cloudflared/config.yml (ingress -> http://localhost:8098)
+cloudflared tunnel run fortis                 # test
+cloudflared service install                   # run on boot
 ```
 
-Wallet users on your tailnet point the app's service URL at
-`https://<machine>.<tailnet>.ts.net`. Or skip `serve` and use plain
-`http://100.x.y.z:8098` from other tailnet devices.
+Cloudflare sets `X-Forwarded-For`, so the edge runs with `--trust-forwarded-for`
+for real client IPs — safe here because the tunnel is the only way in.
 
-### Public domain + Caddy
-
-Point `api.fortis.example` at the host, then:
+### Tailscale — private, your own devices only
 
 ```sh
-caddy run --config deploy/Caddyfile        # or `--profile tls` in compose
+tailscale serve --bg https / http://127.0.0.1:8098   # https on your tailnet
 ```
 
-Caddy gets a Let's Encrypt cert and reverse-proxies `:443 → 127.0.0.1:8098`,
-forwarding `X-Forwarded-For` (which is why the edge runs with
-`--trust-forwarded-for` — only enable that behind a proxy you control).
+Point the app at `https://<machine>.<tailnet>.ts.net`. No DNS, no public
+exposure. Good for solo dogfooding; `tailscale funnel` makes it public without a
+domain if you need that.
 
-Lock `--allow-origin` to your wallet's origin(s) in production.
+### VPS + Caddy — the production path
+
+On a Linux VPS running the node + services, point `api.<domain>` at it and
+`caddy run --config deploy/Caddyfile` (or `--profile tls` in compose) — Caddy
+gets a Let's Encrypt cert and reverse-proxies `:443 → 127.0.0.1:8098`.
+
+Lock `--allow-origin` to your wallet's origin(s) once the web app has a home.
 
 ## 4. Point the wallet at it
 
