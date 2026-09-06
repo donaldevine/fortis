@@ -89,16 +89,16 @@ struct Args {
     /// `--service-fee-floor-sat` to this address. Unset → no fee, `/pricing` 404s.
     #[arg(long)]
     service_fee_address: Option<String>,
-    /// Service fee, basis points of the amount sent (advertised; the client adds
-    /// the output, the edge only enforces the floor).
-    #[arg(long, default_value_t = 25)]
+    /// Service fee, basis points of the amount sent — default 100 (1%).
+    /// Advertised; the client adds the output, the edge enforces the floor.
+    #[arg(long, default_value_t = 100)]
     service_fee_bps: u32,
     /// Minimum service fee per transaction, satoshis. This is what the edge
     /// enforces on broadcast.
     #[arg(long, default_value_t = 200)]
     service_fee_floor_sat: u64,
     /// Maximum service fee per transaction, satoshis (0 = uncapped). Advertised only.
-    #[arg(long, default_value_t = 5000)]
+    #[arg(long, default_value_t = 0)]
     service_fee_cap_sat: u64,
 }
 

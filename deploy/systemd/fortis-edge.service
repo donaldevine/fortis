@@ -19,7 +19,7 @@ ExecStart=/usr/local/bin/fortis-edge \
   --allow-origin https://wallet.fortis.example \
   --crash-log /var/log/fortis/crashes.ndjson \
   --service-fee-address bc1qYOUR_FEE_ADDRESS_HERE \
-  --service-fee-bps 25 --service-fee-floor-sat 200 --service-fee-cap-sat 5000
+  --service-fee-bps 100 --service-fee-floor-sat 200
 Restart=on-failure
 RestartSec=5
 StateDirectory=fortis

@@ -44,8 +44,8 @@ Without the flag `/crash` is 404. Rotate the file yourself (logrotate / a cron).
 advertises `{address, bps, floor_sat, cap_sat}` (the client reads it and adds the
 percentage output) and `POST /<chain>/tx` is rejected `402` unless the
 transaction pays at least `--service-fee-floor-sat` (default 200) to that
-address. `--service-fee-bps` (default 25) and `--service-fee-cap-sat` (default
-5000, 0 = uncapped) are advertised only. `--network` (default `bitcoin`)
+address. `--service-fee-bps` (default 100 = 1%) and `--service-fee-cap-sat`
+(default 0 = uncapped) are advertised only. `--network` (default `bitcoin`)
 validates the address. Unset → no fee, `/pricing` 404s.
 
 The wallet points its BTCB2 explorer URL at `https://<host>/btcb2` and its BTC one at
