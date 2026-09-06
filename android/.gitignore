@@ -8,3 +8,8 @@
 .externalNativeBuild
 .cxx
 /app/src/main/kotlin/uniffi/
+
+# release signing — never commit
+/keystore.properties
+*.jks
+*.keystore

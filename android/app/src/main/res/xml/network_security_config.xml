@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- HTTPS is enforced everywhere except a few local dev hosts, so the wallet can
-     reach a plaintext fortisd on regtest while public explorers stay TLS-only. -->
+<!-- Release: HTTPS only. The debug source set overrides this with a config that
+     also allows cleartext to localhost / the emulator host / the dev LAN. -->
 <network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">10.0.2.2</domain>   <!-- emulator → host -->
-        <domain includeSubdomains="true">127.0.0.1</domain>
-        <domain includeSubdomains="true">localhost</domain>
-        <domain includeSubdomains="true">192.168.0.34</domain>  <!-- this PC on the LAN; update if DHCP changes it -->
-    </domain-config>
+    <base-config cleartextTrafficPermitted="false" />
 </network-security-config>
