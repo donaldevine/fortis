@@ -38,7 +38,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.fortis.wallet.BuildConfig
 import com.fortis.wallet.PlanPreview
 import com.fortis.wallet.WalletViewModel
 import com.fortis.wallet.ui.*
@@ -60,11 +59,14 @@ private fun copyToClipboard(ctx: Context, label: String, text: String) {
 
 @Composable
 fun OnboardScreen(vm: WalletViewModel) = Screen {
+    val adding = vm.wallets.isNotEmpty()
     Spacer(Modifier.weight(1f))
-    BrandMark("a non-custodial wallet for Bitcoin and its BLAKE2b fork")
+    if (adding) Text("Add a wallet", style = MaterialTheme.typography.titleMedium, color = Fx.text)
+    else BrandMark("a non-custodial wallet for Bitcoin and its BLAKE2b fork")
     Spacer(Modifier.weight(1f))
     PrimaryButton("Create a new wallet") { vm.goCreate() }
     GhostButton("Restore from a recovery phrase") { vm.goRestore() }
+    if (adding) GhostButton("Cancel", tint = Fx.textDim) { vm.cancelOnboard() }
     Spacer(Modifier.weight(1f))
 }
 
@@ -130,7 +132,7 @@ fun GenScreen(vm: WalletViewModel) {
         )
         ErrorText(vm.error)
         Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
-            GhostButton("Back", Modifier.weight(1f)) { vm.goOnboard() }
+            GhostButton("Back", Modifier.weight(1f)) { vm.cancelOnboard() }
             PrimaryButton("Generate wallet", Modifier.weight(1f)) { vm.generateSeed(collector.bytes(), words) }
         }
     }
@@ -138,8 +140,8 @@ fun GenScreen(vm: WalletViewModel) {
 
 @Composable
 fun CreateScreen(vm: WalletViewModel) {
+    var name by remember { mutableStateOf("") }
     var chain by remember { mutableStateOf("btcb2") }
-    var network by remember { mutableStateOf("mainnet") }
     var passphrase by remember { mutableStateOf("") }
     var pw by remember { mutableStateOf("") }
     var pw2 by remember { mutableStateOf("") }
@@ -162,7 +164,8 @@ fun CreateScreen(vm: WalletViewModel) {
                 }
             }
         }
-        ChainNetworkRow(chain, { chain = it }, network, { network = it })
+        Field(name, { name = it }, "Wallet name")
+        ChainRow(chain) { chain = it }
         Field(passphrase, { passphrase = it }, "BIP-39 passphrase (optional)", password = true)
         Text(
             "A \"25th word\" — an extra secret, not stored. If you set one you need both " +
@@ -177,9 +180,9 @@ fun CreateScreen(vm: WalletViewModel) {
         }
         ErrorText(vm.error)
         Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
-            GhostButton("Back", Modifier.weight(1f)) { vm.goOnboard() }
+            GhostButton("Back", Modifier.weight(1f)) { vm.cancelOnboard() }
             PrimaryButton("Continue", Modifier.weight(1f), enabled = ack && pw.length >= 8 && pw == pw2) {
-                vm.createWallet(chain, network, passphrase, pw)
+                vm.createWallet(name, chain, "mainnet", passphrase, pw)
             }
         }
     }
@@ -187,37 +190,32 @@ fun CreateScreen(vm: WalletViewModel) {
 
 @Composable
 fun RestoreScreen(vm: WalletViewModel) {
+    var name by remember { mutableStateOf("") }
     var phrase by remember { mutableStateOf("") }
     var passphrase by remember { mutableStateOf("") }
     var chain by remember { mutableStateOf("btcb2") }
-    var network by remember { mutableStateOf("mainnet") }
     var pw by remember { mutableStateOf("") }
     Screen(scroll = true) {
         Text("Restore wallet", style = MaterialTheme.typography.titleMedium, color = Fx.text)
         Text("Enter your 12 or 24 words, separated by spaces.", color = Fx.textDim)
+        Field(name, { name = it }, "Wallet name")
         MnemonicField(phrase, { phrase = it })
         Field(passphrase, { passphrase = it }, "BIP-39 passphrase (optional)", password = true)
-        ChainNetworkRow(chain, { chain = it }, network, { network = it })
+        ChainRow(chain) { chain = it }
         Field(pw, { pw = it }, "Encryption password for this device", password = true)
         ErrorText(vm.error)
         Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
-            GhostButton("Back", Modifier.weight(1f)) { vm.goOnboard() }
+            GhostButton("Back", Modifier.weight(1f)) { vm.cancelOnboard() }
             PrimaryButton("Restore", Modifier.weight(1f), enabled = pw.length >= 8 && phrase.isNotBlank()) {
-                vm.restoreWallet(phrase, passphrase, chain, network, pw)
+                vm.restoreWallet(name, phrase, passphrase, chain, "mainnet", pw)
             }
         }
     }
 }
 
 @Composable
-private fun ChainNetworkRow(chain: String, onChain: (String) -> Unit, net: String, onNet: (String) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
-        Segmented(listOf("btcb2" to "BTCB2", "btc" to "BTC"), chain, onChain, Modifier.weight(1f))
-        // regtest is a dev-only target — release builds are mainnet-only.
-        if (BuildConfig.DEBUG) {
-            Segmented(listOf("mainnet" to "mainnet", "regtest" to "regtest"), net, onNet, Modifier.weight(1f))
-        }
-    }
+private fun ChainRow(chain: String, onChain: (String) -> Unit) {
+    Segmented(listOf("btcb2" to "BTCB2", "btc" to "BTC"), chain, onChain)
 }
 
 @Composable
@@ -236,42 +234,85 @@ fun Segmented(options: List<Pair<String, String>>, selected: String, onSelect: (
     }
 }
 
+/** The wallet picker: every wallet on this device, prefixed by its chain. */
+@Composable
+fun WalletListScreen(vm: WalletViewModel) = Screen(scroll = true) {
+    val anyUnlocked = vm.wallets.any { vm.isUnlocked(it.id) }
+    Text("Wallets", style = MaterialTheme.typography.titleMedium, color = Fx.text)
+    GlassCard {
+        vm.wallets.forEach { w ->
+            val current = w.id == vm.selectedId
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(Fx.rSm))
+                    .background(if (current) Fx.glass2 else Fx.glass1)
+                    .clickable { vm.selectWallet(w.id) }
+                    .padding(Fx.s3),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(w.display, color = Fx.text, fontWeight = FontWeight.Medium)
+                    Text(
+                        listOfNotNull(
+                            w.network.takeIf { it != "mainnet" },
+                            if (vm.isUnlocked(w.id)) "unlocked" else "locked",
+                        ).joinToString(" · "),
+                        color = Fx.textFaint, fontSize = 12.sp,
+                    )
+                }
+                if (current) Text("current", color = Fx.accent, fontSize = 12.sp)
+            }
+        }
+    }
+    if (vm.canAddWallet) PrimaryButton("Add wallet") { vm.addWallet() }
+    else Text("Maximum of ${com.fortis.wallet.MAX_WALLETS} wallets reached.", color = Fx.textFaint, fontSize = 12.sp)
+    ErrorText(vm.error)
+    if (anyUnlocked) GhostButton("Lock all", tint = Fx.textDim) { vm.lock() }
+}
+
 @Composable
 fun UnlockScreen(vm: WalletViewModel) {
     var pw by remember { mutableStateOf("") }
+    val c = vm.config
     Screen {
         Spacer(Modifier.weight(1f))
         BrandMark()
         GlassCard {
+            if (c != null) Text(c.display, color = Fx.textDim, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth())
             Field(pw, { pw = it }, "Password", password = true)
             ErrorText(vm.error)
             PrimaryButton("Unlock", enabled = pw.isNotEmpty()) { vm.unlock(pw) }
         }
+        if (vm.wallets.size > 1) GhostButton("‹ Wallets", tint = Fx.textDim) { vm.goWalletList() }
         Spacer(Modifier.weight(1f))
         ForgetWalletButton(vm)
     }
 }
 
-/** "Forget this wallet" with a confirmation dialog — it wipes the encrypted seed
- *  from this device, recoverable only from the written-down phrase. */
+/** "Forget this wallet" with a confirmation dialog — it wipes this wallet's
+ *  encrypted seed from the device, recoverable only from the written-down phrase.
+ *  Other wallets on the device are untouched. */
 @Composable
 fun ForgetWalletButton(vm: WalletViewModel, modifier: Modifier = Modifier) {
     var confirm by remember { mutableStateOf(false) }
+    val name = vm.config?.display ?: "this wallet"
     GhostButton("Forget this wallet", modifier, tint = Fx.bad) { confirm = true }
     if (confirm) {
         AlertDialog(
             onDismissRequest = { confirm = false },
             containerColor = Fx.bg1,
-            title = { Text("Forget this wallet?", color = Fx.text) },
+            title = { Text("Forget $name?", color = Fx.text) },
             text = {
                 Text(
-                    "This deletes the wallet from this device. You can only restore it " +
-                        "with your recovery phrase (and passphrase, if you set one). Make " +
-                        "sure it's written down.",
+                    "This deletes this wallet from this device. You can only restore it " +
+                        "with its recovery phrase (and passphrase, if you set one). Make " +
+                        "sure it's written down. Your other wallets are not affected.",
                     color = Fx.textDim,
                 )
             },
-            confirmButton = { TextButton({ confirm = false; vm.wipe() }) { Text("Forget wallet", color = Fx.bad) } },
+            confirmButton = { TextButton({ confirm = false; vm.forgetWallet() }) { Text("Forget wallet", color = Fx.bad) } },
             dismissButton = { TextButton({ confirm = false }) { Text("Cancel", color = Fx.text) } },
         )
     }
@@ -283,7 +324,7 @@ fun HomeScreen(vm: WalletViewModel) {
     val unit = if (vm.config?.chain == "btc") "BTC" else "BTCB2"
     val b = vm.balances
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(vm.selectedId) {
         while (true) {
             vm.refresh()
             kotlinx.coroutines.delay(20_000)
@@ -300,6 +341,13 @@ fun HomeScreen(vm: WalletViewModel) {
             GlassCard(fill = Fx.glassHero, corner = Fx.rLg) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
+                        vm.config?.let { c ->
+                            Text(
+                                (if (vm.wallets.size > 1) "$unit · ${c.name}  ▾" else "$unit · ${c.name}"),
+                                color = Fx.textDim, fontSize = 12.sp,
+                                modifier = Modifier.clickable(enabled = vm.wallets.size > 1) { vm.goWalletList() },
+                            )
+                        }
                         Row(verticalAlignment = Alignment.Bottom) {
                             Text(if (b != null) fmt(b.confirmedSat) else "—",
                                 fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, fontSize = 32.sp,
@@ -558,22 +606,36 @@ fun SettingsScreen(vm: WalletViewModel) {
             Text("Settings", style = MaterialTheme.typography.titleMedium, color = Fx.text)
         }
 
-        // --- wallets (one for now) ---
+        // --- wallets ---
         GlassCard {
             Text("Wallets", color = Fx.text, fontWeight = FontWeight.SemiBold)
-            if (c != null && s != null) {
+            vm.wallets.forEach { w ->
+                val current = w.id == vm.selectedId
                 Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(Fx.rSm)).background(Fx.glass1)
-                        .clickable { copyToClipboard(ctx, "xpub", s.xpub) }.padding(Fx.s3),
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(Fx.rSm))
+                        .background(if (current) Fx.glass2 else Fx.glass1)
+                        .clickable {
+                            if (current && s != null) copyToClipboard(ctx, "xpub", s.xpub) else vm.selectWallet(w.id)
+                        }
+                        .padding(Fx.s3),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Text("${c.chain.uppercase()} · ${c.network}", color = Fx.text, fontWeight = FontWeight.Medium)
-                    Text(s.xpub, color = Fx.textDim, fontFamily = FontFamily.Monospace, fontSize = 11.sp, maxLines = 2)
-                    Text("fp ${s.fingerprint}  ·  receive #${c.nextReceive}  ·  change #${c.nextChange}  ·  tap to copy xpub",
-                        color = Fx.textFaint, fontSize = 11.sp)
+                    Text(w.display + if (current) "  ·  current" else "", color = Fx.text, fontWeight = FontWeight.Medium)
+                    if (current && s != null) {
+                        Text(s.xpub, color = Fx.textDim, fontFamily = FontFamily.Monospace, fontSize = 11.sp, maxLines = 2)
+                        Text("fp ${s.fingerprint}  ·  receive #${w.nextReceive}  ·  change #${w.nextChange}  ·  tap to copy xpub",
+                            color = Fx.textFaint, fontSize = 11.sp)
+                    } else {
+                        Text(
+                            listOfNotNull(w.network.takeIf { it != "mainnet" },
+                                if (vm.isUnlocked(w.id)) "unlocked" else "locked", "tap to switch").joinToString(" · "),
+                            color = Fx.textFaint, fontSize = 11.sp,
+                        )
+                    }
                 }
             }
-            Text("Multiple wallets: not yet — one seed per install.", color = Fx.textFaint, fontSize = 12.sp)
+            if (vm.canAddWallet) GhostButton("Add wallet") { vm.addWallet() }
+            else Text("Maximum of ${com.fortis.wallet.MAX_WALLETS} wallets reached.", color = Fx.textFaint, fontSize = 12.sp)
         }
 
         // --- connection ---

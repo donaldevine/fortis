@@ -41,6 +41,7 @@ fun FortisApp(vm: WalletViewModel = viewModel()) {
                     AmbientBackground()
                     CircularProgressIndicator(Modifier.align(Alignment.Center))
                 }
+                Phase.WalletList -> WalletListScreen(vm)
                 Phase.Onboard -> OnboardScreen(vm)
                 Phase.Gen -> GenScreen(vm)
                 Phase.Create -> CreateScreen(vm)

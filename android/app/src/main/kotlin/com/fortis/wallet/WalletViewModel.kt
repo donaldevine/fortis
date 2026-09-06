@@ -2,6 +2,7 @@ package com.fortis.wallet
 
 import android.app.Application
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
@@ -15,10 +16,14 @@ import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import uniffi.wallet_ffi.FundingPlan
 import java.net.Proxy
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToLong
 
-enum class Phase { Loading, Onboard, Gen, Create, Restore, Locked, Home, Settings }
+enum class Phase { Loading, WalletList, Onboard, Gen, Create, Restore, Locked, Home, Settings }
+
+/** How many wallets one install can hold. */
+const val MAX_WALLETS = 10
 
 /** The one backend the mobile app talks to. Not user-configurable, not shown. */
 const val HOSTED_EDGE = "https://api.fortis.rest"
@@ -41,10 +46,21 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         .build()
 
     var phase by mutableStateOf(Phase.Loading); private set
-    var config by mutableStateOf<WalletConfig?>(null); private set
-    var session by mutableStateOf<WalletSession?>(null); private set
+
+    // --- wallets ---
+    var wallets by mutableStateOf<List<WalletConfig>>(emptyList()); private set
+    var selectedId by mutableStateOf<String?>(null); private set
+    private val sessions = mutableStateMapOf<String, WalletSession>()
+
+    /** The wallet currently in view (selected + its config). */
+    val config: WalletConfig? get() = wallets.firstOrNull { it.id == selectedId }
+    /** The unlocked session for the selected wallet, or null if it's locked. */
+    val session: WalletSession? get() = selectedId?.let { sessions[it] }
+    fun isUnlocked(id: String) = sessions.containsKey(id)
+
+    // --- the selected wallet's backends + view state ---
     var backend: Backend? = null; private set          // the hosted edge (primary)
-    private var fallback: Backend? = null              // public explorer, btc only
+    private var fallback: Backend? = null              // public explorer
     private var usingFallback by mutableStateOf(false)
 
     /** Whichever backend last answered — what sends and coin queries must use. */
@@ -60,15 +76,45 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     var lastSentTxid by mutableStateOf<String?>(null); private set
     var error by mutableStateOf<String?>(null)
 
-    init { viewModelScope.launch { config = store.load(); resolvePhase() } }
+    init {
+        viewModelScope.launch {
+            val s = store.load()
+            wallets = s.wallets
+            selectedId = s.selectedId
+            resolvePhase()
+        }
+    }
 
     private fun resolvePhase() {
         phase = when {
-            config == null -> Phase.Onboard
+            wallets.isEmpty() -> Phase.Onboard
+            selectedId == null -> Phase.WalletList
             session == null -> Phase.Locked
             else -> { ensureBackend(); Phase.Home }
         }
         if (phase == Phase.Home) refresh()
+    }
+
+    /** Drop every in-view backend + derived state — call when the selected wallet changes. */
+    private fun resetView() {
+        backend = null; fallback = null; usingFallback = false
+        status = null; balances = null; history = emptyList(); feerates = emptyMap()
+        pending = null; lastSentTxid = null
+    }
+
+    // --- navigation ---
+
+    fun goWalletList() { error = null; draftMnemonic = null; phase = Phase.WalletList }
+    val canAddWallet: Boolean get() = wallets.size < MAX_WALLETS
+    /** Start the add-a-wallet flow. */
+    fun addWallet() {
+        if (!canAddWallet) { error = "You can keep up to $MAX_WALLETS wallets on one device."; return }
+        error = null; draftMnemonic = null; phase = Phase.Onboard
+    }
+    /** Back out of the add-a-wallet flow. */
+    fun cancelOnboard() {
+        draftMnemonic = null
+        phase = if (wallets.isEmpty()) Phase.Onboard else Phase.WalletList
     }
 
     fun goCreate() {
@@ -81,14 +127,24 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         phase = Phase.Create
     }
     fun goRestore() { phase = Phase.Restore }
-    fun goOnboard() { draftMnemonic = null; phase = Phase.Onboard }
     fun goSettings() { phase = Phase.Settings }
     fun goHome() { resolvePhase() }
 
+    /** Pick a wallet from the list. Unlocked → straight home; locked → the password screen. */
+    fun selectWallet(id: String) {
+        if (id != selectedId) {
+            selectedId = id
+            viewModelScope.launch { store.setSelected(id) }
+            resetView()
+        }
+        resolvePhase()
+    }
+
     /** Drop the stored token and mint a fresh one (Settings → Reconnect). */
     fun reconnect() = wrap {
+        val id = selectedId ?: return@wrap
         val token = edgeRegister(http, HOSTED_EDGE)
-        persistToken(token)
+        updateConfig(id) { it.copy(backendToken = token) }
         backend = edgeBackend(token)
         usingFallback = false
         backend!!.status()
@@ -96,45 +152,59 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         resolvePhase()
     }
 
-    fun createWallet(chain: String, network: String, passphrase: String, password: String) = wrap {
-        finishOnboard(chain, network, draftMnemonic!!, passphrase, password)
+    fun createWallet(name: String, chain: String, network: String, passphrase: String, password: String) = wrap {
+        finishOnboard(name, chain, network, draftMnemonic!!, passphrase, password)
     }
 
-    fun restoreWallet(phrase: String, passphrase: String, chain: String, network: String, password: String) = wrap {
+    fun restoreWallet(name: String, phrase: String, passphrase: String, chain: String, network: String, password: String) = wrap {
         val words = phrase.trim().split(Regex("\\s+")).joinToString(" ")
         // constructing a session validates the words
-        finishOnboard(chain, network, words, passphrase, password)
+        finishOnboard(name, chain, network, words, passphrase, password)
     }
 
-    private suspend fun finishOnboard(chain: String, network: String, mnemonic: String, passphrase: String, password: String) {
+    private suspend fun finishOnboard(
+        name: String, chain: String, network: String,
+        mnemonic: String, passphrase: String, password: String,
+    ) {
         val s = WalletSession(chain, network, mnemonic, passphrase)
         val sealed = sealSeed(mnemonic, passphrase, password)
-        val c = WalletConfig(chain, network, sealed.blobHex, sealed.saltHex)
-        store.save(c)
-        config = c; session = s; draftMnemonic = null
+        val id = UUID.randomUUID().toString()
+        val c = WalletConfig(id, name.trim().ifBlank { "Wallet" }, chain, network, sealed.blobHex, sealed.saltHex)
+        store.save(c); store.setSelected(id)
+        wallets = wallets + c
+        selectedId = id
+        resetView()
+        sessions[id] = s
+        draftMnemonic = null
         resolvePhase()
     }
 
     fun unlock(password: String) = wrap {
         val c = config!!
         val (mnemonic, passphrase) = unsealSeed(c.sealed, c.salt, password)
-        session = WalletSession(c.chain, c.network, mnemonic, passphrase)
-        session!!.setIndices(c.nextReceive, c.nextChange)
+        val s = WalletSession(c.chain, c.network, mnemonic, passphrase)
+        s.setIndices(c.nextReceive, c.nextChange)
+        sessions[c.id] = s
         resolvePhase()
     }
 
+    /** Lock every wallet — clears all seeds from memory. */
     fun lock() {
-        session?.close(); session = null
-        backend = null; fallback = null; usingFallback = false
-        lastSentTxid = null; pending = null
-        phase = Phase.Locked
+        sessions.values.forEach { it.close() }
+        sessions.clear()
+        resetView()
+        phase = if (selectedId != null) Phase.Locked else Phase.WalletList
     }
 
-    fun wipe() = viewModelScope.launch {
-        store.wipe(); session?.close(); session = null
-        backend = null; fallback = null; usingFallback = false
-        lastSentTxid = null; pending = null
-        config = null; phase = Phase.Onboard
+    /** Forget just the selected wallet — its encrypted seed leaves this device. */
+    fun forgetWallet() = viewModelScope.launch {
+        val id = selectedId ?: return@launch
+        sessions.remove(id)?.close()
+        val remaining = store.remove(id)
+        wallets = remaining.wallets
+        selectedId = remaining.selectedId
+        resetView()
+        resolvePhase()
     }
 
     /** The hosted fortis-edge as an Esplora backend at `{HOSTED_EDGE}/{chain}`.
@@ -142,21 +212,24 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
      *  into a `POST /register` + retry — so no explicit sign-up step. */
     private fun edgeBackend(token: String): EsploraBackend {
         val c = config!!
+        val id = c.id
         return EsploraBackend(
             http, "$HOSTED_EDGE/${c.chain}", session!!.view,
-            { config!!.nextReceive to config!!.nextChange },
+            { (wallets.firstOrNull { it.id == id } ?: c).let { w -> w.nextReceive to w.nextChange } },
             token,
             "$HOSTED_EDGE/pricing",
         ) {
             val fresh = edgeRegister(http, HOSTED_EDGE)
-            persistToken(fresh)
+            updateConfig(id) { it.copy(backendToken = fresh) }
             fresh
         }
     }
 
-    private suspend fun persistToken(token: String) {
-        val c = config!!.copy(backendKind = "edge", backendUrl = HOSTED_EDGE, backendToken = token)
-        store.save(c); config = c
+    private suspend fun updateConfig(id: String, f: (WalletConfig) -> WalletConfig) {
+        val cur = wallets.firstOrNull { it.id == id } ?: return
+        val next = f(cur)
+        store.save(next)
+        wallets = wallets.map { if (it.id == id) next else it }
     }
 
     private fun ensureBackend() {
@@ -179,16 +252,15 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
             if (feerates.isEmpty()) feerates = listOf(1, 6, 144).associateWith { b.feerateSatVb(it).toLong() }
         }
         // Always try the hosted service first, so we recover automatically when
-        // it comes back; drop to the public explorer (btc only) meanwhile.
+        // it comes back; drop to the public explorer meanwhile.
         runCatching { load(edge, false) }
             .recoverCatching { e -> fallback?.let { load(it, true) } ?: throw e }
             .onFailure { status = null }
     }
 
     fun newReceiveAddress() = viewModelScope.launch {
-        val c = config ?: return@launch
-        val updated = c.copy(nextReceive = c.nextReceive + 1)
-        store.save(updated); config = updated
+        val id = selectedId ?: return@launch
+        updateConfig(id) { it.copy(nextReceive = it.nextReceive + 1) }
     }
 
     fun buildPayment(
@@ -222,8 +294,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         val signed = s.sign(p.plan.txHex, p.plan.selected)
         val txid = b.broadcast(signed)
         val idx = s.view.nextIndices()
-        val updated = c.copy(nextChange = maxOf(c.nextChange, idx.nextChange.toInt()))
-        store.save(updated); config = updated
+        updateConfig(c.id) { it.copy(nextChange = maxOf(it.nextChange, idx.nextChange.toInt())) }
         pending = null
         lastSentTxid = txid.trim().ifBlank { null }
         refresh()
