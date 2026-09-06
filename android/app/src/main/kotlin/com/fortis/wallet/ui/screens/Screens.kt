@@ -412,7 +412,7 @@ private fun SettingsTab(vm: WalletViewModel) {
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
                         GhostButton("Rename", Modifier.weight(1f), dense = true) { renaming = w.id }
-                        GhostButton("Copy key", Modifier.weight(1f), dense = true) {
+                        GhostButton("Copy xpub", Modifier.weight(1f), dense = true) {
                             val xpub = vm.accountKey(w.id)
                             if (xpub != null) copyToClipboard(ctx, "xpub", xpub)
                             else Toast.makeText(ctx, "still loading — try again", Toast.LENGTH_SHORT).show()
