@@ -48,7 +48,10 @@ Two shells sit on the same [`fortis-node`](crates/fortis-node) gateway logic:
 
 The full send path — coin selection, `SIGHASH_UNIFIED` signing, fee estimation,
 broadcast — is exercised against a real regtest node with BLAKE2b active in
-`crates/wallet-cli/tests/regtest_e2e.rs`.
+`crates/wallet-cli/tests/regtest_e2e.rs` (the CLI) and
+`crates/fortis-edge/tests/regtest_e2e.rs` (the hosted stack:
+`fortis-edge` → `fortis-index` → node, including token auth and the mempool
+overlay). Both are opt-in via `FORTIS_BITCOIND`.
 
 ## What it is *not*
 

@@ -48,6 +48,20 @@ The wallet points its BLK explorer URL at `https://<host>/blk` and its BTC one a
 | `GET /metrics` | Prometheus text |
 | `GET /` | health + which chains are served |
 
+## Test
+
+`tests/regtest_e2e.rs` drives a wallet's whole flow through
+`fortis-edge → fortis-index → a regtest Knots BLAKE2b node`: register a token,
+derive + fund an address, see the confirmed UTXO through the edge, build and
+`SIGHASH_UNIFIED`-sign a payment with `wallet-core`, broadcast via `POST
+/blk/tx`, watch the change output appear unconfirmed (mempool overlay) then
+confirm, and check the rate limiter rejects a burst. Opt-in:
+
+```sh
+cargo build --workspace
+FORTIS_BITCOIND="…/bitcoind.exe" cargo test -p fortis-edge --test regtest_e2e
+```
+
 ## Not yet
 
 Token revocation (would need a blocklist), distributed rate limiting / cache

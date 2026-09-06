@@ -586,6 +586,7 @@ dependencies = [
  "sha2",
  "tiny_http",
  "ureq",
+ "wallet-core",
 ]
 
 [[package]]
