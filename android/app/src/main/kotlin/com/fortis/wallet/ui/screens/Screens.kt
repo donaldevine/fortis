@@ -248,7 +248,32 @@ fun UnlockScreen(vm: WalletViewModel) {
             PrimaryButton("Unlock", enabled = pw.isNotEmpty()) { vm.unlock(pw) }
         }
         Spacer(Modifier.weight(1f))
-        GhostButton("Forget this wallet", tint = Fx.bad) { vm.wipe() }
+        ForgetWalletButton(vm)
+    }
+}
+
+/** "Forget this wallet" with a confirmation dialog — it wipes the encrypted seed
+ *  from this device, recoverable only from the written-down phrase. */
+@Composable
+fun ForgetWalletButton(vm: WalletViewModel, modifier: Modifier = Modifier) {
+    var confirm by remember { mutableStateOf(false) }
+    GhostButton("Forget this wallet", modifier, tint = Fx.bad) { confirm = true }
+    if (confirm) {
+        AlertDialog(
+            onDismissRequest = { confirm = false },
+            containerColor = Fx.bg1,
+            title = { Text("Forget this wallet?", color = Fx.text) },
+            text = {
+                Text(
+                    "This deletes the wallet from this device. You can only restore it " +
+                        "with your recovery phrase (and passphrase, if you set one). Make " +
+                        "sure it's written down.",
+                    color = Fx.textDim,
+                )
+            },
+            confirmButton = { TextButton({ confirm = false; vm.wipe() }) { Text("Forget wallet", color = Fx.bad) } },
+            dismissButton = { TextButton({ confirm = false }) { Text("Cancel", color = Fx.text) } },
+        )
     }
 }
 
@@ -577,7 +602,7 @@ fun SettingsScreen(vm: WalletViewModel) {
         GlassCard {
             Text("This wallet", color = Fx.text, fontWeight = FontWeight.SemiBold)
             GhostButton("Lock") { vm.lock() }
-            GhostButton("Forget this wallet", tint = Fx.bad) { vm.wipe() }
+            ForgetWalletButton(vm)
         }
         Text("fortis 0.1.0", color = Fx.textFaint, fontSize = 11.sp)
     }
