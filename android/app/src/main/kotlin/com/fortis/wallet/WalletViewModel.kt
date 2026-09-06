@@ -161,7 +161,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun buildPayment(
-        to: String, amountBlk: String, sweep: Boolean,
+        to: String, amountBtcb2: String, sweep: Boolean,
         feerateOverride: Long?, confTarget: Int, replayProtect: Boolean,
     ) = wrap {
         val b = backend!!; val s = session!!; val c = config!!
@@ -176,7 +176,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         }
         val plan = if (sweep) s.view.planSweep(utxos, to, feerate.toULong(), 1u, serviceFee)
         else {
-            val sat = (amountBlk.trim().toDouble() * 1e8).roundToLong()
+            val sat = (amountBtcb2.trim().toDouble() * 1e8).roundToLong()
             s.view.planPayment(
                 utxos, listOf(uniffi.wallet_ffi.PayTo(to, sat.toULong())), feerate.toULong(), 1u, opReturn, serviceFee,
             )

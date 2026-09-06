@@ -39,7 +39,7 @@ class Store(private val ctx: Context) {
         val p = ctx.dataStore.data.first()
         val sealed = p[K.sealed] ?: return null
         return WalletConfig(
-            chain = p[K.chain] ?: "blk",
+            chain = p[K.chain] ?: "btcb2",
             network = p[K.network] ?: "mainnet",
             sealed = sealed,
             salt = p[K.salt] ?: return null,

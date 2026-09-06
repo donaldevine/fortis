@@ -69,7 +69,7 @@ watch-only descriptor on the node.
 
 ### Serving both chains from one `fortisd`
 
-One process can serve BLK from a Knots node and BTC from a public explorer, and —
+One process can serve BTCB2 from a Knots node and BTC from a public explorer, and —
 when you also run a local Bitcoin Core — route BTC **broadcast + fee estimation**
 through your own node while address/history reads still come from the explorer:
 
@@ -80,7 +80,7 @@ cargo run -p fortisd -- \
   --btc-rpc-url http://127.0.0.1:8532 --btc-datadir "C:\Bitcoin\Core"
 ```
 
-- BLK wallet → gateway URL `http://<host>:8088`
+- BTCB2 wallet → gateway URL `http://<host>:8088`
 - BTC wallet → explorer URL `http://<host>:8088/esplora`
 
 `--btc-*` needs no address index (a pruned node is fine); it only does

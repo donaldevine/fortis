@@ -32,7 +32,7 @@ implementation, one audit.
 | Module | Role | State |
 |--------|------|-------|
 | `types` | `Preimage` alias; everything else comes from `bitcoin` | — |
-| `chain` | `Chain` + `ChainParams` — the few values that differ between BTC and BLK | done |
+| `chain` | `Chain` + `ChainParams` — the few values that differ between BTC and BTCB2 | done |
 | `keys` | BIP-32/39/84 HD keys, account xpubs, per-swap keys, ECDSA signing, P2WPKH funding-tx signing | done, BIP vector tests |
 | `wallet` | Per-chain view: BIP-84 address derivation, largest-first coin selection (`plan_payment` / `plan_htlc_funding`) | done, tested |
 | `htlc` | HTLC witness script (Decred/LN shape), funding output, redeem/refund txs, witness finalize | done, tested |
@@ -45,7 +45,7 @@ implementation, one audit.
 
 Everything except mobile bindings is implemented and tested. `cargo test -p
 wallet-core` — 24 passing (BIP-32/39 vectors, the 142 non-taproot `SIGHASH_UNIFIED`
-reference vectors, a BLK redeem round-trip, coin selection, seed sealing).
+reference vectors, a BTCB2 redeem round-trip, coin selection, seed sealing).
 
 `cargo test -p wallet-core --features consensus-verify` adds a full swap round-trip
 (`tests/swap_e2e.rs`) that drives both parties' `SwapMachine`s and checks the

@@ -221,7 +221,7 @@ fn run() -> Result<()> {
     Ok(())
 }
 
-/// The node RPC connections a request may need: the primary node (Knots for BLK,
+/// The node RPC connections a request may need: the primary node (Knots for BTCB2,
 /// or the single node in a one-chain deployment) and an optional local Bitcoin
 /// Core for the BTC broadcast + fee path.
 struct Nodes<'a> {

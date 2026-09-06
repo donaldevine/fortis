@@ -54,8 +54,8 @@ fn network() -> String {
 fn params(chain: &str) -> Result<ChainParams, JsError> {
     let c = match chain {
         "btc" => Chain::Btc,
-        "blk" => Chain::Blk,
-        _ => return Err(JsError::new("chain must be \"btc\" or \"blk\"")),
+        "btcb2" => Chain::Btcb2,
+        _ => return Err(JsError::new("chain must be \"btc\" or \"btcb2\"")),
     };
     ChainParams::resolve(c, &network()).ok_or_else(|| JsError::new("unknown network"))
 }
@@ -563,8 +563,8 @@ pub fn unseal_mnemonic_with_password(
 fn chain_enum(s: &str) -> Result<Chain, JsError> {
     match s {
         "btc" => Ok(Chain::Btc),
-        "blk" => Ok(Chain::Blk),
-        _ => Err(JsError::new("chain must be \"btc\" or \"blk\"")),
+        "btcb2" => Ok(Chain::Btcb2),
+        _ => Err(JsError::new("chain must be \"btc\" or \"btcb2\"")),
     }
 }
 

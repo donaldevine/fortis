@@ -141,7 +141,7 @@ mod tests {
 
     #[test]
     fn wallet_names_are_path_safe() {
-        assert_eq!(urlencode("fortis-blk"), "fortis-blk");
+        assert_eq!(urlencode("fortis-btcb2"), "fortis-btcb2");
         assert_eq!(urlencode("Bitcoin Blake2b Wallet"), "Bitcoin%20Blake2b%20Wallet");
         assert_eq!(urlencode("a/b"), "a%2Fb");
     }

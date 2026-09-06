@@ -35,8 +35,8 @@ type Result<T> = std::result::Result<T, FfiError>;
 fn params(chain: &str, network: &str) -> Result<ChainParams> {
     let c = match chain {
         "btc" => wallet_core::Chain::Btc,
-        "blk" => wallet_core::Chain::Blk,
-        _ => return Err(err("chain must be \"btc\" or \"blk\"")),
+        "btcb2" => wallet_core::Chain::Btcb2,
+        _ => return Err(err("chain must be \"btc\" or \"btcb2\"")),
     };
     ChainParams::resolve(c, network)
         .ok_or_else(|| err(format!("unknown chain/network {chain}/{network}")))

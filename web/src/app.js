@@ -11,8 +11,8 @@ import { ensureWasm, newMnemonic, validateMnemonic, seal, unseal, Session } from
 import { EntropyPool } from './entropy.js';
 import { el, mount, toast, copy, fmt, parseAmount, shortTxid, timeAgo, countUp, initParallax } from './ui.js';
 
-const UNIT = { blk: 'BLK', btc: 'BTC' };
-const DEFAULT_ESPLORA = { blk: 'https://mempool.guide/api', btc: 'https://mempool.space/api' };
+const UNIT = { btcb2: 'BTCB2', btc: 'BTC' };
+const DEFAULT_ESPLORA = { btcb2: 'https://mempool.guide/api', btc: 'https://mempool.space/api' };
 
 let state = null; // persisted config or null
 let backend = null; // Gateway | EsploraBackend | null
@@ -171,9 +171,9 @@ async function onGenerate() {
   }
 }
 
-function chainPicker(current = 'blk') {
+function chainPicker(current = 'btcb2') {
   return el('select', { id: 'chain' },
-    el('option', { value: 'blk', selected: current === 'blk' }, 'BLAKE2b fork (BLK)'),
+    el('option', { value: 'btcb2', selected: current === 'btcb2' }, 'BLAKE2b fork (BTCB2)'),
     el('option', { value: 'btc', selected: current === 'btc' }, 'Bitcoin (BTC)'));
 }
 function networkPicker(current = 'mainnet') {
@@ -274,7 +274,7 @@ function renderBackendPicker() {
       el('h2', {}, 'Public explorer'),
       el('p', {}, 'No node. The explorer sees which addresses you look up; it can never move your funds.'),
       el('label', {}, 'Esplora API URL'),
-      el('input', { id: 'esplora', value: DEFAULT_ESPLORA[state.chain] || DEFAULT_ESPLORA.blk }),
+      el('input', { id: 'esplora', value: DEFAULT_ESPLORA[state.chain] || DEFAULT_ESPLORA.btcb2 }),
       el('div', { class: 'hint' }, "If it can't connect (the explorer may not send CORS headers), run  fortisd --esplora-proxy <that URL>  and use  http://127.0.0.1:8088/esplora  here."),
       el('div', { id: 'err', class: 'err' }),
       el('button', { class: 'primary wide', onclick: onUseEsplora }, 'Use this explorer')),
@@ -481,7 +481,7 @@ function paneSend() {
       ? el('label', { class: 'row', style: 'align-items:center;gap:.5rem' },
           el('input', { type: 'checkbox', style: 'width:auto;flex:0', checked: d.replayProtect,
             onchange: (e) => (d.replayProtect = e.target.checked) }),
-          el('span', {}, 'BLK replay protection (100-byte OP_RETURN)'))
+          el('span', {}, 'BTCB2 replay protection (100-byte OP_RETURN)'))
       : null,
     state.chain === 'btc' && !d.sweep && d.replayProtect
       ? el('div', { class: 'hint' }, 'Adds ~110 vB of fee. Non-standard on default Bitcoin relay — broadcast via a node/service that accepts large OP_RETURN.')

@@ -98,7 +98,7 @@ mod tests {
 
     #[test]
     fn ttl_policy() {
-        assert!(ttl_for("/blk/blocks/tip/height").is_some());
+        assert!(ttl_for("/btcb2/blocks/tip/height").is_some());
         assert!(ttl_for("/btc/address/bc1.../utxo").is_some());
         assert!(ttl_for("/btc/v1/fees/recommended").is_some());
         assert!(ttl_for("/btc/tx").is_none());

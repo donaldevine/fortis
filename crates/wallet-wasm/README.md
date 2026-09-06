@@ -68,7 +68,7 @@ trading app's bundler at `pkg/`.
 | `session.finalizeRedeem(txHex, sigHex, redeemPkHex, preimageHex) → txHex` | |
 | `session.onCounterpartyFunded(confs)` / `onCounterpartyRedeemed(preimageHex)` / `onOurFundingBroadcast(txid)` / `onOurOutputConfirmed(confs)` / `onTimelockExpired()` → state | advance the machine |
 
-`chain` is `"btc"` or `"blk"`. `"blk"` spends sign with `SIGHASH_UNIFIED`
+`chain` is `"btc"` or `"btcb2"`. `"btcb2"` spends sign with `SIGHASH_UNIFIED`
 (`ALL | UNIFIED = 0x21`, Knots PR #357) automatically.
 
 ### `JsSwapParams`
@@ -76,7 +76,7 @@ trading app's bundler at `pkg/`.
 ```ts
 {
   swap_id_hex, role: "initiator" | "participant",
-  send_chain: "btc" | "blk", recv_chain: "btc" | "blk",
+  send_chain: "btc" | "btcb2", recv_chain: "btc" | "btcb2",
   send_amount_sat, recv_amount_sat, hashlock_hex,
   our_pubkey_send_hex, their_pubkey_send_hex,
   our_pubkey_recv_hex, their_pubkey_recv_hex,
@@ -118,7 +118,7 @@ const refundHex = htlc.finalizeRefund(refund, 0, sig, ourPk);
 // broadcast refundHex once nLockTime passes
 ```
 
-## Full swap with `SwapSession` (initiator, sends BLK for BTC)
+## Full swap with `SwapSession` (initiator, sends BTCB2 for BTC)
 
 ```ts
 import init, {
@@ -133,20 +133,20 @@ localStorage.blob = sealMnemonicWithPassword(phrase, pw, salt, nonce);   // back
 const SWAP = 12;
 const session = new SwapSession({
   swap_id_hex, role: "initiator",
-  send_chain: "blk", recv_chain: "btc",
+  send_chain: "btcb2", recv_chain: "btc",
   send_amount_sat: 2_000_000, recv_amount_sat: 1_000_000, hashlock_hex,
-  our_pubkey_send_hex: wallet.swapPubkey("blk", 0, SWAP),
+  our_pubkey_send_hex: wallet.swapPubkey("btcb2", 0, SWAP),
   their_pubkey_send_hex, 
   our_pubkey_recv_hex: wallet.swapPubkey("btc", 0, SWAP),
   their_pubkey_recv_hex,
   our_contract_locktime, their_contract_locktime, required_incoming_confs: 100,
 });
 
-// 1. fund our BLK HTLC
+// 1. fund our BTCB2 HTLC
 const c = session.ourContract();
-const view = new WalletView("blk", wallet.accountXpub("blk", 0));
-const plan = view.planHtlcFunding(blkUtxos, c.script_pubkey_hex, 2_000_000, feerate, 100);
-const fundingHex = wallet.signFundingTx("blk", 0, plan.tx_hex, plan.selected);   // SIGHASH_UNIFIED
+const view = new WalletView("btcb2", wallet.accountXpub("btcb2", 0));
+const plan = view.planHtlcFunding(btcb2Utxos, c.script_pubkey_hex, 2_000_000, feerate, 100);
+const fundingHex = wallet.signFundingTx("btcb2", 0, plan.tx_hex, plan.selected);   // SIGHASH_UNIFIED
 // broadcast; tell the platform the funding txid
 
 // 2. once their BTC funding is buried deep enough, verify + redeem it
@@ -154,9 +154,9 @@ const { txid, vout } = session.verifyTheirFunding(theirFundingTxHex);
 const r = session.buildRedeem(txid, vout, myBtcPayoutSpkHex, 300);
 const sig = wallet.signSwap("btc", 0, SWAP, r.sighash_hex);
 const redeemHex = session.finalizeRedeem(r.tx_hex, sig, wallet.swapPubkey("btc", 0, SWAP), preimageHex);
-// broadcast redeemHex — this reveals the preimage on Bitcoin; the counterparty then redeems our BLK
+// broadcast redeemHex — this reveals the preimage on Bitcoin; the counterparty then redeems our BTCB2
 
-// refund path if it stalls: session.buildRefund(...) → signSwap("blk",...) → session.finalizeRefund(...)
+// refund path if it stalls: session.buildRefund(...) → signSwap("btcb2",...) → session.finalizeRefund(...)
 ```
 
 `plan` (from `planPayment` / `planSweep` / `planHtlcFunding`) is a plain object:

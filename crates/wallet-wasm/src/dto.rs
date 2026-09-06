@@ -119,7 +119,7 @@ pub struct JsSwapParams {
     pub network: String,
     /// `"initiator"` or `"participant"`.
     pub role: String,
-    /// `"btc"` or `"blk"` — the chain we send on.
+    /// `"btc"` or `"btcb2"` — the chain we send on.
     pub send_chain: String,
     /// The chain we receive on.
     pub recv_chain: String,

@@ -45,7 +45,7 @@ fortis utxos
 
 # spending
 fortis import-seed              # seal the seed at <home>/seed.enc (prompts for a password)
-fortis send bc1q... 0.5         # amount in BLK; --sats for satoshis
+fortis send bc1q... 0.5         # amount in BTCB2; --sats for satoshis
 fortis send bc1q... --sweep     # whole confirmed balance, fee deducted
 fortis send bc1q... 0.5 --dry-run          # print the signed hex, don't broadcast
 fortis send bc1q... 0.5 --phrase-stdin     # sign from a piped mnemonic instead of seed.enc
@@ -68,7 +68,7 @@ to type `yes` before broadcasting — `--yes` skips that, `--dry-run` stops befo
 `$FORTIS_SEED_PASSWORD`, if set, is used instead of prompting — for scripting.
 
 On the node, `fortis connect` creates a private-keys-disabled descriptor wallet
-named `fortis-<chain>` (e.g. `fortis-blk`).
+named `fortis-<chain>` (e.g. `fortis-btcb2`).
 
 ## Layout
 

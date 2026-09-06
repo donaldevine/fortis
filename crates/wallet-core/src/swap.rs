@@ -1,6 +1,6 @@
 //! Client side of the HTLC atomic-swap protocol.
 //!
-//! The BLK holder always [`SwapRole::Initiator`]s, so the preimage is revealed by a
+//! The BTCB2 holder always [`SwapRole::Initiator`]s, so the preimage is revealed by a
 //! redeem on Bitcoin — the chain where a reversal is hardest.
 
 use bitcoin::hashes::sha256;
@@ -265,7 +265,7 @@ mod tests {
             swap_id: [0u8; 16],
             role: SwapRole::Participant,
             send_chain: Chain::Btc,
-            recv_chain: Chain::Blk,
+            recv_chain: Chain::Btcb2,
             send_amount: Amount::from_sat(1_000_000),
             recv_amount: Amount::from_sat(2_000_000),
             hashlock: sha256::Hash::hash(b"x"),
@@ -282,8 +282,8 @@ mod tests {
     #[test]
     fn verify_their_contract_matches_expected_output() {
         let mut m = SwapMachine::new(params());
-        let blk = ChainParams::blake2b();
-        let expected = m.expected_their_contract(&blk);
+        let btcb2 = ChainParams::blake2b();
+        let expected = m.expected_their_contract(&btcb2);
 
         let funding = Transaction {
             version: transaction::Version::TWO,
@@ -294,7 +294,7 @@ mod tests {
                 TxOut { value: Amount::from_sat(2_000_000), script_pubkey: expected.script_pubkey.clone() },
             ],
         };
-        let op = m.verify_their_contract(&serialize(&funding), &blk).unwrap();
+        let op = m.verify_their_contract(&serialize(&funding), &btcb2).unwrap();
         assert_eq!(op.vout, 1);
         assert!(m.their_contract.is_some());
     }
@@ -302,8 +302,8 @@ mod tests {
     #[test]
     fn verify_rejects_short_funding() {
         let mut m = SwapMachine::new(params());
-        let blk = ChainParams::blake2b();
-        let expected = m.expected_their_contract(&blk);
+        let btcb2 = ChainParams::blake2b();
+        let expected = m.expected_their_contract(&btcb2);
         let funding = Transaction {
             version: transaction::Version::TWO,
             lock_time: bitcoin::absolute::LockTime::ZERO,
@@ -313,7 +313,7 @@ mod tests {
                 script_pubkey: expected.script_pubkey,
             }],
         };
-        assert!(m.verify_their_contract(&serialize(&funding), &blk).is_err());
+        assert!(m.verify_their_contract(&serialize(&funding), &btcb2).is_err());
     }
 
     #[test]

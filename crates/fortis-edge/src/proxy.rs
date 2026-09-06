@@ -1,4 +1,4 @@
-//! Forward a request to a chain's upstream (a `fortis-index` instance for BLK, an
+//! Forward a request to a chain's upstream (a `fortis-index` instance for BTCB2, an
 //! Esplora API for BTC) and return the raw response.
 
 use anyhow::Result;

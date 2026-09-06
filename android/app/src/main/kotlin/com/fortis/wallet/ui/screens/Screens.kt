@@ -125,7 +125,7 @@ fun GenScreen(vm: WalletViewModel) {
 
 @Composable
 fun CreateScreen(vm: WalletViewModel) {
-    var chain by remember { mutableStateOf("blk") }
+    var chain by remember { mutableStateOf("btcb2") }
     var network by remember { mutableStateOf("mainnet") }
     var pw by remember { mutableStateOf("") }
     var pw2 by remember { mutableStateOf("") }
@@ -169,7 +169,7 @@ fun CreateScreen(vm: WalletViewModel) {
 fun RestoreScreen(vm: WalletViewModel) {
     var phrase by remember { mutableStateOf("") }
     var passphrase by remember { mutableStateOf("") }
-    var chain by remember { mutableStateOf("blk") }
+    var chain by remember { mutableStateOf("btcb2") }
     var network by remember { mutableStateOf("mainnet") }
     var pw by remember { mutableStateOf("") }
     Screen(scroll = true) {
@@ -191,7 +191,7 @@ fun RestoreScreen(vm: WalletViewModel) {
 @Composable
 private fun ChainNetworkRow(chain: String, onChain: (String) -> Unit, net: String, onNet: (String) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
-        Segmented(listOf("blk" to "BLK", "btc" to "BTC"), chain, onChain, Modifier.weight(1f))
+        Segmented(listOf("btcb2" to "BTCB2", "btc" to "BTC"), chain, onChain, Modifier.weight(1f))
         Segmented(listOf("mainnet" to "mainnet", "regtest" to "regtest"), net, onNet, Modifier.weight(1f))
     }
 }
@@ -266,7 +266,7 @@ fun BackendPickerScreen(vm: WalletViewModel) {
 @Composable
 fun HomeScreen(vm: WalletViewModel) {
     var tab by remember { mutableStateOf(0) }
-    val unit = if (vm.config?.chain == "btc") "BTC" else "BLK"
+    val unit = if (vm.config?.chain == "btc") "BTC" else "BTCB2"
     val b = vm.balances
 
     LaunchedEffect(Unit) {
@@ -378,7 +378,7 @@ private fun SendTab(vm: WalletViewModel) {
         if (isBtc && !sweep) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(replayProtect, { replayProtect = it })
-                Text("BLK replay protection (100-byte OP_RETURN)", color = Fx.text)
+                Text("BTCB2 replay protection (100-byte OP_RETURN)", color = Fx.text)
             }
             if (replayProtect) Text(
                 "Adds ~110 vB of fee. Non-standard on default Bitcoin relay — " +
