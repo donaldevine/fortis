@@ -120,10 +120,17 @@ const TARGET_BITS = 128;
 
 function renderGen() {
   const pool = ui.entropyPool || (ui.entropyPool = new EntropyPool());
+  ui.genWords ||= 24;
   if (!ui.jitterStarted) {
     ui.jitterStarted = true;
     pool.collectJitter(400).then(() => { if (ui.screen === 'gen') paintBar(); });
   }
+
+  const wordsSeg = el('div', { class: 'seg' },
+    [12, 24].map((n) => el('button', {
+      class: ui.genWords === n ? 'on' : '',
+      onclick: () => { ui.genWords = n; renderGen(); },
+    }, `${n} words`)));
 
   const pad = el('div', {
     style:
@@ -149,6 +156,9 @@ function renderGen() {
   mount(el('div', { class: 'screen' },
     el('h2', {}, 'Add some randomness'),
     el('p', {}, 'Your device already generated a secure seed. Drag your pointer around to stir in extra entropy from your own motion and your machine’s timing jitter — belt and braces.'),
+    el('label', {}, 'Recovery phrase length'),
+    wordsSeg,
+    el('div', { class: 'hint' }, '24 words = 256-bit, 12 = 128-bit. Both are secure; 12 is easier to write down.'),
     pad,
     bar,
     label,
@@ -176,7 +186,7 @@ async function onGenerate() {
   const err = document.getElementById('err');
   err.textContent = 'generating…';
   try {
-    ui.draftMnemonic = newMnemonic(ui.entropyPool ? ui.entropyPool.bytes() : undefined);
+    ui.draftMnemonic = newMnemonic(ui.entropyPool ? ui.entropyPool.bytes() : undefined, ui.genWords || 24);
     ui.entropyPool = null;
     ui.jitterStarted = false;
     go('create');
@@ -197,14 +207,17 @@ function networkPicker(current = 'mainnet') {
 }
 
 function renderCreate() {
-  const mnemonic = ui.draftMnemonic || (ui.draftMnemonic = newMnemonic());
+  const mnemonic = ui.draftMnemonic || (ui.draftMnemonic = newMnemonic(undefined, 24));
   const words = mnemonic.split(/\s+/);
   mount(el('div', { class: 'screen' },
     el('h2', {}, 'Your recovery phrase'),
-    el('p', {}, 'Write these 24 words down on paper and keep them offline. Anyone with them controls your funds.'),
+    el('p', {}, `Write these ${words.length} words down on paper and keep them offline. Anyone with them controls your funds.`),
     el('ol', { class: 'words card' }, words.map((w, i) => el('li', {}, el('b', {}, i + 1), w))),
     el('label', {}, 'Chain'), chainPicker(),
     el('label', {}, 'Network'), networkPicker(),
+    el('label', {}, 'BIP-39 passphrase (optional — an extra secret)'),
+    el('input', { id: 'bip39pass', type: 'password', autocomplete: 'off' }),
+    el('div', { class: 'hint' }, 'A "25th word". Not stored anywhere — if you set one, you need both the phrase and this to restore. Leave blank if unsure.'),
     el('label', {}, 'Encryption password (protects the seed on this device)'),
     el('input', { id: 'pw', type: 'password', autocomplete: 'new-password' }),
     el('label', {}, 'Confirm password'),
@@ -226,7 +239,7 @@ async function onCreate() {
   if (pw.length < 8) return (err.textContent = 'use a password of at least 8 characters');
   if (pw !== pw2) return (err.textContent = 'passwords do not match');
   try {
-    await finishOnboard(val('chain'), val('network'), ui.draftMnemonic, '', pw);
+    await finishOnboard(val('chain'), val('network'), ui.draftMnemonic, val('bip39pass'), pw);
   } catch (e) {
     err.textContent = String(e.message || e);
   }

@@ -19,10 +19,10 @@ const rand = (n) => crypto.getRandomValues(new Uint8Array(n));
 const toHex = (u8) => [...u8].map((b) => b.toString(16).padStart(2, '0')).join('');
 const fromHex = (h) => new Uint8Array(h.match(/../g).map((x) => parseInt(x, 16)));
 
-/** `extra` (optional Uint8Array from `EntropyPool.bytes()`) is folded into the
- *  CSPRNG bytes inside wasm — it can only strengthen the seed. */
-export function newMnemonic(extra) {
-  return generateMnemonic(rand(32), extra && extra.length ? extra : undefined);
+/** `words` is 12 or 24. `extra` (optional Uint8Array from `EntropyPool.bytes()`)
+ *  is folded into the CSPRNG bytes inside wasm — it can only strengthen the seed. */
+export function newMnemonic(extra, words = 24) {
+  return generateMnemonic(rand(32), extra && extra.length ? extra : undefined, words);
 }
 
 /** Validate a phrase (+ passphrase) by constructing a wallet; throws on bad input. */

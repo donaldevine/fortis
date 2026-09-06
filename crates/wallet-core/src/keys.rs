@@ -25,18 +25,32 @@ impl MasterKey {
         Ok((mnemonic, key))
     }
 
-    /// Like [`generate`](Self::generate) but folds shell-collected `extra` entropy
-    /// (pointer/touch jitter, device-motion noise, dice, …) into the CSPRNG bytes
-    /// first — see [`crate::entropy`]. `csprng` must still be ≥ 32 fresh bytes
-    /// from the OS RNG; `extra` supplements it, never replaces it.
-    pub fn generate_mixed(csprng: &[u8], extra: &[&[u8]]) -> Result<(Mnemonic, MasterKey)> {
+    /// Like [`generate`](Self::generate) but for `words` (12 or 24) and folding
+    /// shell-collected `extra` entropy (pointer/touch jitter, device-motion
+    /// noise, dice, …) into the CSPRNG bytes first — see [`crate::entropy`].
+    /// `csprng` must still be ≥ 32 fresh bytes from the OS RNG; `extra`
+    /// supplements it, never replaces it.
+    pub fn generate_mixed(
+        csprng: &[u8],
+        extra: &[&[u8]],
+        words: u8,
+    ) -> Result<(Mnemonic, MasterKey)> {
+        let entropy_bytes = match words {
+            12 => 16usize,
+            24 => 32usize,
+            _ => return Err(WalletError::InvalidMnemonic),
+        };
         if csprng.len() < 32 {
             return Err(WalletError::InvalidMnemonic);
         }
         let mut sources: Vec<&[u8]> = Vec::with_capacity(extra.len() + 1);
         sources.push(csprng);
         sources.extend_from_slice(extra);
-        Self::generate(&crate::entropy::mix_entropy(&sources))
+        let mixed = crate::entropy::mix_entropy(&sources);
+        let mnemonic = Mnemonic::from_entropy(&mixed[..entropy_bytes])
+            .map_err(|_| WalletError::InvalidMnemonic)?;
+        let key = Self::from_mnemonic(&mnemonic, "")?;
+        Ok((mnemonic, key))
     }
 
     pub fn from_mnemonic(mnemonic: &Mnemonic, passphrase: &str) -> Result<MasterKey> {
@@ -218,16 +232,29 @@ mod tests {
     #[test]
     fn generate_mixed_folds_in_extra_and_rejects_short_csprng() {
         let csprng = [3u8; 32];
-        let (plain, _) = MasterKey::generate_mixed(&csprng, &[]).unwrap();
-        let (with_dice, _) = MasterKey::generate_mixed(&csprng, &[b"6 1 4 4 2 5 3 1"]).unwrap();
+        let (plain, _) = MasterKey::generate_mixed(&csprng, &[], 24).unwrap();
+        let (with_dice, _) = MasterKey::generate_mixed(&csprng, &[b"6 1 4 4 2 5 3 1"], 24).unwrap();
         assert_ne!(plain.to_string(), with_dice.to_string());
         assert_eq!(plain.to_string().split(' ').count(), 24);
 
         // same inputs -> same phrase
-        let (again, _) = MasterKey::generate_mixed(&csprng, &[b"6 1 4 4 2 5 3 1"]).unwrap();
+        let (again, _) = MasterKey::generate_mixed(&csprng, &[b"6 1 4 4 2 5 3 1"], 24).unwrap();
         assert_eq!(with_dice.to_string(), again.to_string());
 
-        assert!(MasterKey::generate_mixed(&[0u8; 16], &[]).is_err());
+        assert!(MasterKey::generate_mixed(&[0u8; 16], &[], 24).is_err());
+    }
+
+    #[test]
+    fn generate_mixed_word_count() {
+        let csprng = [7u8; 32];
+        assert_eq!(MasterKey::generate_mixed(&csprng, &[], 12).unwrap().0.to_string().split(' ').count(), 12);
+        assert_eq!(MasterKey::generate_mixed(&csprng, &[], 24).unwrap().0.to_string().split(' ').count(), 24);
+        assert!(MasterKey::generate_mixed(&csprng, &[], 18).is_err());
+        // 12 and 24 from the same csprng share the first 128 bits but differ as phrases
+        assert_ne!(
+            MasterKey::generate_mixed(&csprng, &[], 12).unwrap().0.to_string(),
+            MasterKey::generate_mixed(&csprng, &[], 24).unwrap().0.to_string(),
+        );
     }
 
     // BIP-32 test vector 1: seed 000102...0f, chain m/0H extended private key.

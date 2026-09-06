@@ -63,6 +63,7 @@ fun GenScreen(vm: WalletViewModel) {
     val ctx = LocalContext.current
     val collector = remember { EntropyCollector() }
     var bits by remember { mutableStateOf(0) }
+    var words by remember { mutableStateOf(24) }
 
     // Motion-sensor noise while the user shakes the phone — the novel source.
     DisposableEffect(Unit) {
@@ -92,6 +93,8 @@ fun GenScreen(vm: WalletViewModel) {
                 "to stir in extra entropy from the motion sensors and timing jitter. Belt and braces.",
             color = Fx.textDim,
         )
+        Segmented(listOf("24" to "24 words", "12" to "12 words"), words.toString(), { words = it.toInt() })
+        Text("Both are secure; 12 is easier to write down.", color = Fx.textFaint, fontSize = 12.sp)
         Box(
             Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(Fx.rLg)).background(Fx.glass1)
                 .pointerInput(Unit) {
@@ -118,7 +121,7 @@ fun GenScreen(vm: WalletViewModel) {
         ErrorText(vm.error)
         Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
             GhostButton("Back", Modifier.weight(1f)) { vm.goOnboard() }
-            PrimaryButton("Generate wallet", Modifier.weight(1f)) { vm.generateSeed(collector.bytes()) }
+            PrimaryButton("Generate wallet", Modifier.weight(1f)) { vm.generateSeed(collector.bytes(), words) }
         }
     }
 }
@@ -127,6 +130,7 @@ fun GenScreen(vm: WalletViewModel) {
 fun CreateScreen(vm: WalletViewModel) {
     var chain by remember { mutableStateOf("btcb2") }
     var network by remember { mutableStateOf("mainnet") }
+    var passphrase by remember { mutableStateOf("") }
     var pw by remember { mutableStateOf("") }
     var pw2 by remember { mutableStateOf("") }
     var ack by remember { mutableStateOf(false) }
@@ -134,7 +138,7 @@ fun CreateScreen(vm: WalletViewModel) {
 
     Screen(scroll = true) {
         Text("Your recovery phrase", style = MaterialTheme.typography.titleMedium, color = Fx.text)
-        Text("Write these 24 words on paper, offline. Anyone with them controls your funds.", color = Fx.textDim)
+        Text("Write these ${words.size} words on paper, offline. Anyone with them controls your funds.", color = Fx.textDim)
         GlassCard {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 words.chunked(3).forEachIndexed { row, three ->
@@ -149,6 +153,12 @@ fun CreateScreen(vm: WalletViewModel) {
             }
         }
         ChainNetworkRow(chain, { chain = it }, network, { network = it })
+        Field(passphrase, { passphrase = it }, "BIP-39 passphrase (optional)", password = true)
+        Text(
+            "A \"25th word\" — an extra secret, not stored. If you set one you need both " +
+                "the phrase and this to restore. Leave blank if unsure.",
+            color = Fx.textFaint, fontSize = 12.sp,
+        )
         Field(pw, { pw = it }, "Encryption password", password = true)
         Field(pw2, { pw2 = it }, "Confirm password", password = true)
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -159,7 +169,7 @@ fun CreateScreen(vm: WalletViewModel) {
         Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
             GhostButton("Back", Modifier.weight(1f)) { vm.goOnboard() }
             PrimaryButton("Continue", Modifier.weight(1f), enabled = ack && pw.length >= 8 && pw == pw2) {
-                vm.createWallet(chain, network, pw)
+                vm.createWallet(chain, network, passphrase, pw)
             }
         }
     }

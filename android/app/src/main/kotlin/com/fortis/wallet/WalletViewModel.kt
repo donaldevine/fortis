@@ -65,8 +65,8 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         phase = if (draftMnemonic != null) Phase.Create else Phase.Gen
     }
     /** Finish the entropy step: mix `extra` into the CSPRNG and show the phrase. */
-    fun generateSeed(extra: ByteArray) = wrap {
-        draftMnemonic = newMnemonic(extra)
+    fun generateSeed(extra: ByteArray, words: Int) = wrap {
+        draftMnemonic = newMnemonic(extra, words)
         phase = Phase.Create
     }
     fun goRestore() { phase = Phase.Restore }
@@ -84,8 +84,8 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         resolvePhase()
     }
 
-    fun createWallet(chain: String, network: String, password: String) = wrap {
-        finishOnboard(chain, network, draftMnemonic!!, "", password)
+    fun createWallet(chain: String, network: String, passphrase: String, password: String) = wrap {
+        finishOnboard(chain, network, draftMnemonic!!, passphrase, password)
     }
 
     fun restoreWallet(phrase: String, passphrase: String, chain: String, network: String, password: String) = wrap {

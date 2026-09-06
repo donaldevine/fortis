@@ -97,6 +97,9 @@ struct InitArgs {
     /// Also apply a BIP-39 passphrase (read from stdin after the phrase).
     #[arg(long)]
     passphrase: bool,
+    /// Word count for a generated phrase: 12 or 24.
+    #[arg(long, default_value_t = 24)]
+    words: u8,
     /// Chain this wallet tracks.
     #[arg(long, value_enum, default_value_t = ChainArg::Btcb2)]
     chain: ChainArg,
@@ -265,6 +268,9 @@ fn cmd_init(home: &Path, a: &InitArgs) -> Result<()> {
         }
         Zeroizing::new(words.join(" "))
     } else {
+        if !matches!(a.words, 12 | 24) {
+            bail!("--words must be 12 or 24");
+        }
         let mut csprng = Zeroizing::new([0u8; 32]);
         getrandom::getrandom(&mut csprng[..]).map_err(|e| anyhow!("CSPRNG failed: {e}"))?;
         let extra: Zeroizing<Vec<u8>> = match a.extra_entropy.as_deref() {
@@ -282,7 +288,7 @@ fn cmd_init(home: &Path, a: &InitArgs) -> Result<()> {
             }
         };
         let sources: &[&[u8]] = if extra.is_empty() { &[] } else { &[extra.as_slice()] };
-        let (mnemonic, _key) = MasterKey::generate_mixed(csprng.as_slice(), sources)?;
+        let (mnemonic, _key) = MasterKey::generate_mixed(csprng.as_slice(), sources, a.words)?;
         Zeroizing::new(mnemonic.to_string())
     };
 
