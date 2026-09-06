@@ -17,8 +17,6 @@ Fill the placeholders in `privacy.html`:
 - `[DATE]` — the effective date.
 - `[Legal entity name and registered address]` — the operator. Play's crypto
   policy needs a real identity here.
-- Section 5 (crash diagnostics) — keep it if the self-hosted crash reporter
-  ships, otherwise delete the section.
 
 ## Deploy — Cloudflare Pages
 
