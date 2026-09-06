@@ -34,7 +34,6 @@ fun FortisApp(vm: WalletViewModel = viewModel()) {
                 Phase.Create -> CreateScreen(vm)
                 Phase.Restore -> RestoreScreen(vm)
                 Phase.Locked -> UnlockScreen(vm)
-                Phase.BackendPicker -> BackendPickerScreen(vm)
                 Phase.Home -> HomeScreen(vm)
                 Phase.Settings -> SettingsScreen(vm)
             }

@@ -17,7 +17,9 @@ data class WalletConfig(
     val salt: String,
     val nextReceive: Int = 0,
     val nextChange: Int = 0,
-    val backendKind: String? = null,   // "edge" | "esplora" | "gateway"
+    // The mobile app only talks to the hosted edge; `backendToken` is the
+    // per-install token, `backendKind`/`backendUrl` are vestigial.
+    val backendKind: String? = null,
     val backendUrl: String? = null,
     val backendToken: String? = null,
 )

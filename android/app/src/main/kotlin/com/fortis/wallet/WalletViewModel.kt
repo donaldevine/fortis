@@ -18,7 +18,10 @@ import java.net.Proxy
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToLong
 
-enum class Phase { Loading, Onboard, Gen, Create, Restore, Locked, BackendPicker, Home, Settings }
+enum class Phase { Loading, Onboard, Gen, Create, Restore, Locked, Home, Settings }
+
+/** The one backend the mobile app talks to. Not user-configurable. */
+const val HOSTED_EDGE = "https://api.fortis.rest"
 
 data class PlanPreview(
     val plan: FundingPlan, val feerate: ULong, val to: String,
@@ -52,7 +55,6 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         phase = when {
             config == null -> Phase.Onboard
             session == null -> Phase.Locked
-            config!!.backendKind == null -> Phase.BackendPicker
             else -> { ensureBackend(); Phase.Home }
         }
         if (phase == Phase.Home) refresh()
@@ -72,11 +74,12 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     fun goSettings() { phase = Phase.Settings }
     fun goHome() { resolvePhase() }
 
-    /** Forget the current backend and return to the picker (wallet + seed kept). */
-    fun changeBackend() = viewModelScope.launch {
-        val c = config ?: return@launch
-        val updated = c.copy(backendKind = null, backendUrl = null, backendToken = null)
-        store.save(updated); config = updated; backend = null
+    /** Drop the stored token and mint a fresh one (Settings → Reconnect). */
+    fun reconnect() = wrap {
+        val token = edgeRegister(http, HOSTED_EDGE)
+        persistToken(token)
+        backend = edgeBackend(token)
+        backend!!.status()
         status = null; balances = null; history = emptyList()
         resolvePhase()
     }
@@ -114,59 +117,32 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         store.wipe(); session?.close(); session = null; backend = null; config = null; phase = Phase.Onboard
     }
 
-    fun useEsplora(url: String) = wrap {
-        val b = EsploraBackend(http, url, session!!.view, { config!!.nextReceive to config!!.nextChange })
-        b.status() // probe
-        persistBackend("esplora", url, null)
-        backend = b; resolvePhase()
-    }
-
-    /** The hosted fortis-edge: register a per-install token, then use it as an
-     *  Esplora backend at `{edgeBase}/{chain}` with the bearer token. */
-    fun useEdge(edgeBase: String) = wrap {
-        val base = edgeBase.trimEnd('/')
-        val token = edgeRegister(http, base)
-        val b = edgeBackend(base, token)
-        b.status() // probe
-        persistBackend("edge", base, token)
-        backend = b; resolvePhase()
-    }
-
-    private fun edgeBackend(base: String, token: String): EsploraBackend {
+    /** The hosted fortis-edge as an Esplora backend at `{HOSTED_EDGE}/{chain}`.
+     *  An empty token 401s on the first call, which the `refresh` callback turns
+     *  into a `POST /register` + retry — so no explicit sign-up step. */
+    private fun edgeBackend(token: String): EsploraBackend {
         val c = config!!
         return EsploraBackend(
-            http, "$base/${c.chain}", session!!.view,
+            http, "$HOSTED_EDGE/${c.chain}", session!!.view,
             { config!!.nextReceive to config!!.nextChange },
             token,
         ) {
-            val fresh = edgeRegister(http, base)
-            persistBackend("edge", base, fresh)
+            val fresh = edgeRegister(http, HOSTED_EDGE)
+            persistToken(fresh)
             fresh
         }
     }
 
-    fun useGateway(url: String, token: String) = wrap {
-        val b = GatewayBackend(http, url, token)
-        b.status()
-        b.connect(config!!.chain, config!!.network, session!!.xpub, session!!.fingerprint)
-        persistBackend("gateway", url, token)
-        backend = b; resolvePhase()
-    }
-
-    private suspend fun persistBackend(kind: String, url: String, token: String?) {
-        val c = config!!.copy(backendKind = kind, backendUrl = url, backendToken = token)
+    private suspend fun persistToken(token: String) {
+        val c = config!!.copy(backendKind = "edge", backendUrl = HOSTED_EDGE, backendToken = token)
         store.save(c); config = c
     }
 
     private fun ensureBackend() {
         if (backend != null) return
         val c = config ?: return
-        val s = session ?: return
-        backend = when (c.backendKind) {
-            "gateway" -> GatewayBackend(http, c.backendUrl!!, c.backendToken ?: "")
-            "edge" -> edgeBackend(c.backendUrl!!, c.backendToken ?: "")
-            else -> EsploraBackend(http, c.backendUrl!!, s.view, { c.nextReceive to c.nextChange })
-        }
+        session ?: return
+        backend = edgeBackend(c.backendToken ?: "")
     }
 
     fun refresh() = viewModelScope.launch {
