@@ -169,7 +169,7 @@ class EsploraBackend(
                     txid = id,
                     send = send,
                     amountSat = if (send) delta + fee else delta,
-                    confirmations = if (confirmed) maxOf(1L, tipH - stTx!!.optLong("block_height") + 1) else 0L,
+                    confirmations = if (confirmed) maxOf(1L, tipH - stTx.optLong("block_height") + 1) else 0L,
                     time = stTx?.optLong("block_time") ?: (System.currentTimeMillis() / 1000),
                 )
             }

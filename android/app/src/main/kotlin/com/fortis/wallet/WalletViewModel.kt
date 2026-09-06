@@ -115,7 +115,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun useEsplora(url: String) = wrap {
-        val b = EsploraBackend(http, url, session!!.view) { config!!.nextReceive to config!!.nextChange }
+        val b = EsploraBackend(http, url, session!!.view, { config!!.nextReceive to config!!.nextChange })
         b.status() // probe
         persistBackend("esplora", url, null)
         backend = b; resolvePhase()
@@ -165,7 +165,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         backend = when (c.backendKind) {
             "gateway" -> GatewayBackend(http, c.backendUrl!!, c.backendToken ?: "")
             "edge" -> edgeBackend(c.backendUrl!!, c.backendToken ?: "")
-            else -> EsploraBackend(http, c.backendUrl!!, s.view) { c.nextReceive to c.nextChange }
+            else -> EsploraBackend(http, c.backendUrl!!, s.view, { c.nextReceive to c.nextChange })
         }
     }
 
