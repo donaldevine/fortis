@@ -56,11 +56,14 @@ struct Args {
     /// CORS `Access-Control-Allow-Origin`.
     #[arg(long, default_value = "*")]
     allow_origin: String,
-    /// Sustained requests per minute, per token (or per IP if untokened).
-    #[arg(long, default_value_t = 120)]
+    /// Sustained requests per minute, per token (or per IP if untokened). One
+    /// wallet sync fans out to ~1 + 2·(addresses within the gap limit) requests,
+    /// and repeats on every refresh, so this is generous per install.
+    #[arg(long, default_value_t = 600)]
     rate_per_min: u32,
-    /// Rate-limit bucket capacity (burst).
-    #[arg(long, default_value_t = 60)]
+    /// Rate-limit bucket capacity (burst). Must cover a whole gap-limit scan
+    /// (tip + utxo + txs per address) landing at once.
+    #[arg(long, default_value_t = 300)]
     rate_burst: u32,
     /// `POST /register` calls allowed per hour, per client IP.
     #[arg(long, default_value_t = 10)]
@@ -272,14 +275,8 @@ fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query
         }
     }
 
-    let rl_key = tok
-        .clone()
-        .unwrap_or_else(|| format!("ip:{}", client_ip(req, st.trust_forwarded_for)));
-    if !st.limiter.check(&rl_key) {
-        Metrics::inc(&st.metrics.rate_limited);
-        return err(429, "rate limit exceeded");
-    }
-
+    // Cache hits never touch the upstream, so they don't spend rate budget —
+    // check the cache before the limiter.
     let cache_key = format!("{chain}/{rest}?{query}");
     let ttl = if method == &Method::Get { cache::ttl_for(path) } else { None };
     if ttl.is_some() {
@@ -287,6 +284,14 @@ fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query
             Metrics::inc(&st.metrics.cache_hits);
             return Reply::Raw(hit.status, hit.content_type, hit.body);
         }
+    }
+
+    let rl_key = tok
+        .clone()
+        .unwrap_or_else(|| format!("ip:{}", client_ip(req, st.trust_forwarded_for)));
+    if !st.limiter.check(&rl_key) {
+        Metrics::inc(&st.metrics.rate_limited);
+        return err(429, "rate limit exceeded");
     }
 
     let mut body = Vec::new();

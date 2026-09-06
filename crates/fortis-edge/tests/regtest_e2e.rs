@@ -367,8 +367,14 @@ fn wallet_flow_through_the_edge() {
     assert!(spend["vout"][0]["value"].is_u64());
     assert!(spend["fee"].as_u64().unwrap() > 0);
 
-    // --- rate limit: burst 100, fire 160 in a tight loop -> some 429s ---
+    // --- cache hits are free: hammering one cached URL never trips the limiter ---
     let tip_url = format!("{edge}/btcb2/blocks/tip/height");
-    let limited = (0..160).filter(|_| req(&a, "GET", &tip_url, Some(&token), None).0 == 429).count();
-    assert!(limited > 0, "expected the limiter to reject some of a 160-request burst");
+    let limited_cached = (0..300).filter(|_| req(&a, "GET", &tip_url, Some(&token), None).0 == 429).count();
+    assert_eq!(limited_cached, 0, "cached responses must not spend rate budget");
+
+    // --- distinct uncached requests do: burst 100, fire 160 -> some 429s ---
+    let limited = (0..160)
+        .filter(|i| req(&a, "GET", &format!("{edge}/btcb2/address/{recv0}/txs?x={i}"), Some(&token), None).0 == 429)
+        .count();
+    assert!(limited > 0, "expected the limiter to reject some of a 160-request burst of distinct queries");
 }
