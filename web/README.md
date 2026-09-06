@@ -40,7 +40,15 @@ python -m http.server 5173 --directory web      # or: npx serve web
 
 Open `http://localhost:5173`, create or restore a wallet, then choose a backend.
 
-### Backend A — public explorer (no node)
+### Backend A — fortis (hosted)
+
+The default. A [`fortis-edge`](../crates/fortis-edge) URL — the app does
+`POST {url}/register` for a per-install token on first use, stores it, and sends
+it as `Authorization: Bearer` on every request (re-registering once on a 401).
+Requests go to `{url}/btcb2/…` or `{url}/btc/…`. Runs a local edge by default
+(`http://127.0.0.1:8098`); point it at the deployed service once there is one.
+
+### Backend B — public explorer (no node)
 
 Point it at an Esplora API. **Caveat:** browsers enforce CORS, and mempool.guide /
 mempool.space do **not** send `Access-Control-Allow-Origin` on their address
@@ -57,7 +65,7 @@ endpoints, so a direct connection is usually blocked. Two ways around it:
 
   and use `http://127.0.0.1:8088/esplora` as the explorer URL.
 
-### Backend B — your own node
+### Backend C — your own node
 
 ```sh
 cargo run -p fortisd -- --datadir "C:\Bitcoin\Knots"

@@ -17,12 +17,24 @@ async function chunked(items, n, fn) {
   return out;
 }
 
+/** Mint a per-install token at a fortis-edge base URL (`POST {base}/register`). */
+export async function edgeRegister(base) {
+  const r = await fetch(String(base).replace(/\/+$/, '') + '/register', { method: 'POST' });
+  const t = (await r.json())?.token;
+  if (!r.ok || !t) throw new Error(`register failed at ${base} (${r.status})`);
+  return t;
+}
+
 export class EsploraBackend {
-  constructor(url, session, network) {
-    this.kind = 'esplora';
+  // `auth` (optional): `{ token, refresh: async () => newToken }` for a
+  // fortis-edge that requires `Authorization: Bearer`. A 401 triggers one
+  // `refresh()` + retry.
+  constructor(url, session, network, auth) {
+    this.kind = auth ? 'edge' : 'esplora';
     this.base = String(url || '').replace(/\/+$/, '');
     this.session = session;
     this.network = network || 'mainnet';
+    this.auth = auth || null;
     this._snap = null;
     this._snapAt = 0;
     this._hist = null;
@@ -30,13 +42,26 @@ export class EsploraBackend {
     this._fees = null;
   }
 
-  async get(path) {
+  async _fetch(path, init = {}) {
+    const withAuth = () => ({
+      ...init,
+      headers: { ...(init.headers || {}), ...(this.auth?.token ? { authorization: 'Bearer ' + this.auth.token } : {}) },
+    });
     let r;
     try {
-      r = await fetch(this.base + path);
+      r = await fetch(this.base + path, withAuth());
     } catch {
       throw new Error(`cannot reach the explorer at ${this.base}`);
     }
+    if (r.status === 401 && this.auth?.refresh) {
+      this.auth.token = await this.auth.refresh();
+      r = await fetch(this.base + path, withAuth());
+    }
+    return r;
+  }
+
+  async get(path) {
+    const r = await this._fetch(path);
     const text = await r.text();
     if (!r.ok) throw new Error(`explorer ${r.status} on ${path}: ${text.slice(0, 120)}`);
     return text && text.trimStart()[0] !== '<' ? JSON.parse(text) : text;
@@ -176,16 +201,11 @@ export class EsploraBackend {
   }
 
   async broadcast(hex) {
-    let r;
-    try {
-      r = await fetch(this.base + '/tx', {
-        method: 'POST',
-        headers: { 'content-type': 'text/plain' },
-        body: hex,
-      });
-    } catch {
-      throw new Error(`cannot reach the explorer at ${this.base}`);
-    }
+    const r = await this._fetch('/tx', {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain' },
+      body: hex,
+    });
     const text = (await r.text()).trim();
     if (!r.ok) throw new Error(text || `explorer rejected the transaction (${r.status})`);
     if (!/^[0-9a-fA-F]{64}$/.test(text)) throw new Error(text || 'unexpected broadcast response');

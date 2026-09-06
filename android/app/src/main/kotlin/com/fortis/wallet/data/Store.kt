@@ -17,7 +17,7 @@ data class WalletConfig(
     val salt: String,
     val nextReceive: Int = 0,
     val nextChange: Int = 0,
-    val backendKind: String? = null,   // "esplora" | "gateway"
+    val backendKind: String? = null,   // "edge" | "esplora" | "gateway"
     val backendUrl: String? = null,
     val backendToken: String? = null,
 )

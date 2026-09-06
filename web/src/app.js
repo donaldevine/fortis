@@ -6,13 +6,16 @@
 
 import { loadState, saveState, wipeState } from './store.js';
 import { Gateway } from './gateway.js';
-import { EsploraBackend } from './esplora.js';
+import { EsploraBackend, edgeRegister } from './esplora.js';
 import { ensureWasm, newMnemonic, validateMnemonic, seal, unseal, Session } from './wallet.js';
 import { EntropyPool } from './entropy.js';
 import { el, mount, toast, copy, fmt, parseAmount, shortTxid, timeAgo, countUp, initParallax } from './ui.js';
 
 const UNIT = { btcb2: 'BTCB2', btc: 'BTC' };
 const DEFAULT_ESPLORA = { btcb2: 'https://mempool.guide/api', btc: 'https://mempool.space/api' };
+// The hosted fortis-edge. A local instance by default; becomes a fixed
+// production URL once deployed.
+const DEFAULT_EDGE = 'http://127.0.0.1:8098';
 
 let state = null; // persisted config or null
 let backend = null; // Gateway | EsploraBackend | null
@@ -51,12 +54,24 @@ function syncSession() {
 
 function makeBackend() {
   if (!state?.backend) return null;
-  if (state.backend.kind === 'esplora') {
+  const b = state.backend;
+  if (b.kind === 'esplora' || b.kind === 'edge') {
     if (!session) return null;
     syncSession();
-    return new EsploraBackend(state.backend.url, session, state.network);
+    if (b.kind === 'edge') {
+      const auth = {
+        token: b.token,
+        refresh: async () => {
+          b.token = await edgeRegister(b.url);
+          await saveState(state);
+          return b.token;
+        },
+      };
+      return new EsploraBackend(`${b.url.replace(/\/+$/, '')}/${state.chain}`, session, state.network, auth);
+    }
+    return new EsploraBackend(b.url, session, state.network);
   }
-  return new Gateway(state.backend.url, state.backend.token);
+  return new Gateway(b.url, b.token);
 }
 
 function render() {
@@ -264,20 +279,24 @@ async function finishOnboard(chain, network, mnemonic, passphrase, password) {
 /* ------------------------------------------------------------------ backend picker */
 
 function renderBackendPicker() {
-  // regtest has no public explorer — go straight to a local gateway
-  if (state.network === 'regtest') return renderGateway();
-
+  const cur = state.backend?.kind === 'edge' ? state.backend : {};
   mount(el('div', { class: 'screen' },
     el('div', { class: 'spacer' }),
     el('h2', {}, 'How should fortis see the chain?'),
     el('div', { class: 'card stack' },
+      el('h2', {}, 'fortis (hosted)'),
+      el('p', {}, 'The fortis service. It sees which addresses you look up; it can never move your funds. No node to run.'),
+      el('label', {}, 'Service URL'),
+      el('input', { id: 'edge', value: cur.url || DEFAULT_EDGE }),
+      el('div', { id: 'err', class: 'err' }),
+      el('button', { class: 'primary wide', onclick: onUseEdge }, 'Use fortis')),
+    state.network === 'regtest' ? null : el('div', { class: 'card stack' },
       el('h2', {}, 'Public explorer'),
-      el('p', {}, 'No node. The explorer sees which addresses you look up; it can never move your funds.'),
+      el('p', {}, 'A third-party Esplora API, directly.'),
       el('label', {}, 'Esplora API URL'),
       el('input', { id: 'esplora', value: DEFAULT_ESPLORA[state.chain] || DEFAULT_ESPLORA.btcb2 }),
-      el('div', { class: 'hint' }, "If it can't connect (the explorer may not send CORS headers), run  fortisd --esplora-proxy <that URL>  and use  http://127.0.0.1:8088/esplora  here."),
-      el('div', { id: 'err', class: 'err' }),
-      el('button', { class: 'primary wide', onclick: onUseEsplora }, 'Use this explorer')),
+      el('div', { class: 'hint' }, "If it can't connect (missing CORS headers), run  fortisd --esplora-proxy <that URL>  and use  http://127.0.0.1:8088/esplora  here."),
+      el('button', { class: 'ghost wide', onclick: onUseEsplora }, 'Use this explorer')),
     el('div', { class: 'card stack' },
       el('h2', {}, 'Your own node'),
       el('p', {}, 'Private. Run the fortisd gateway against your Bitcoin Knots node.'),
@@ -299,6 +318,25 @@ async function onUseEsplora() {
     backend = probe;
     render();
   } catch (e) {
+    err.textContent = String(e.message || e);
+  }
+}
+
+async function onUseEdge() {
+  const err = document.getElementById('err');
+  const url = val('edge').replace(/\/+$/, '');
+  err.textContent = 'connecting…';
+  try {
+    const token = await edgeRegister(url);
+    state.backend = { kind: 'edge', url, token };
+    syncSession();
+    const probe = makeBackend();
+    await probe.ping();
+    await saveState(state);
+    backend = probe;
+    render();
+  } catch (e) {
+    state.backend = null;
     err.textContent = String(e.message || e);
   }
 }
@@ -402,7 +440,10 @@ function renderHome() {
     else if (st.node?.ibd || p < 0.999) { dot = 'warn'; hint = `syncing ${(p * 100).toFixed(2)}%`; }
     else { dot = 'ok'; hint = `block ${st.node?.blocks}`; }
   }
-  const via = state.backend.kind === 'esplora' ? new URL(state.backend.url).host : 'your node';
+  const via =
+    state.backend.kind === 'edge' ? 'fortis'
+    : state.backend.kind === 'esplora' ? new URL(state.backend.url).host
+    : 'your node';
 
   const top = el('div', { class: 'topbar' },
     el('div', {},
@@ -628,7 +669,7 @@ function renderHomeIfIdle() {
 
 function startPolling() {
   if (ui.poll) return;
-  const every = state.backend?.kind === 'esplora' ? 25_000 : 15_000;
+  const every = state.backend?.kind === 'gateway' ? 15_000 : 25_000;
   refresh().then(renderHomeIfIdle);
   ui.poll = setInterval(() => refresh().then(renderHomeIfIdle), every);
 }

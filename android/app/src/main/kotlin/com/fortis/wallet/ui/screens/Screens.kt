@@ -228,35 +228,55 @@ fun UnlockScreen(vm: WalletViewModel) {
     }
 }
 
+private const val DEFAULT_EDGE = "http://10.0.2.2:8098"
+
 @Composable
 fun BackendPickerScreen(vm: WalletViewModel) {
-    val default = if (vm.config?.chain == "btc") "https://mempool.space/api" else "https://mempool.guide/api"
-    var esploraUrl by remember { mutableStateOf(default) }
-    var gwUrl by remember { mutableStateOf("http://127.0.0.1:8088") }
+    val esploraDefault = if (vm.config?.chain == "btc") "https://mempool.space/api" else "https://mempool.guide/api"
+    var mode by remember { mutableStateOf("edge") } // edge | explorer | gateway
+    var edgeUrl by remember { mutableStateOf(vm.config?.let { if (it.backendKind == "edge") it.backendUrl else null } ?: DEFAULT_EDGE) }
+    var esploraUrl by remember { mutableStateOf(esploraDefault) }
+    var gwUrl by remember { mutableStateOf("http://10.0.2.2:8088") }
     var gwToken by remember { mutableStateOf("") }
-    var showGateway by remember { mutableStateOf(vm.config?.network == "regtest") }
+    val regtest = vm.config?.network == "regtest"
+
     Screen {
         Spacer(Modifier.weight(1f))
         Text("How should fortis see the chain?", style = MaterialTheme.typography.titleMedium, color = Fx.text)
-        if (!showGateway) {
-            GlassCard {
-                Text("Public explorer", color = Fx.text, fontWeight = FontWeight.SemiBold)
-                Text("No node. The explorer sees which addresses you look up; it can never move funds.", color = Fx.textDim)
-                Field(esploraUrl, { esploraUrl = it }, "Esplora API URL")
-                Text("If it can't connect (no CORS on the phone matters less, but a proxy may still be needed), run fortisd --esplora-proxy.", color = Fx.textFaint, fontSize = 12.sp)
-                ErrorText(vm.error)
-                PrimaryButton("Use this explorer") { vm.useEsplora(esploraUrl) }
+        when (mode) {
+            "edge" -> {
+                GlassCard {
+                    Text("fortis (hosted)", color = Fx.text, fontWeight = FontWeight.SemiBold)
+                    Text("The fortis service. It sees which addresses you look up; it can never move funds. No node to run.", color = Fx.textDim)
+                    Field(edgeUrl, { edgeUrl = it }, "Service URL")
+                    ErrorText(vm.error)
+                    PrimaryButton("Use fortis") { vm.useEdge(edgeUrl) }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
+                    if (!regtest) GhostButton("Public explorer", Modifier.weight(1f)) { mode = "explorer" }
+                    GhostButton("My own node", Modifier.weight(1f)) { mode = "gateway" }
+                }
             }
-            GhostButton("Connect my own node instead") { showGateway = true }
-        } else {
-            GlassCard {
-                Text("Your own node (fortisd)", color = Fx.text, fontWeight = FontWeight.SemiBold)
-                Field(gwUrl, { gwUrl = it }, "Gateway URL")
-                Field(gwToken, { gwToken = it }, "API token")
-                ErrorText(vm.error)
-                PrimaryButton("Connect", enabled = gwToken.isNotBlank()) { vm.useGateway(gwUrl, gwToken) }
+            "explorer" -> {
+                GlassCard {
+                    Text("Public explorer", color = Fx.text, fontWeight = FontWeight.SemiBold)
+                    Text("A third-party Esplora API, directly.", color = Fx.textDim)
+                    Field(esploraUrl, { esploraUrl = it }, "Esplora API URL")
+                    ErrorText(vm.error)
+                    PrimaryButton("Use this explorer") { vm.useEsplora(esploraUrl) }
+                }
+                GhostButton("Back") { mode = "edge" }
             }
-            if (vm.config?.network != "regtest") GhostButton("Back") { showGateway = false }
+            else -> {
+                GlassCard {
+                    Text("Your own node (fortisd)", color = Fx.text, fontWeight = FontWeight.SemiBold)
+                    Field(gwUrl, { gwUrl = it }, "Gateway URL")
+                    Field(gwToken, { gwToken = it }, "API token")
+                    ErrorText(vm.error)
+                    PrimaryButton("Connect", enabled = gwToken.isNotBlank()) { vm.useGateway(gwUrl, gwToken) }
+                }
+                GhostButton("Back") { mode = "edge" }
+            }
         }
         Spacer(Modifier.weight(1f))
         GhostButton("Lock") { vm.lock() }
@@ -487,12 +507,18 @@ fun SettingsScreen(vm: WalletViewModel) {
             Text("Multiple wallets: not yet — one seed per install.", color = Fx.textFaint, fontSize = 12.sp)
         }
 
-        // --- backend / fortisd ---
+        // --- backend ---
         GlassCard {
-            Text(if (c?.backendKind == "gateway") "Node gateway (fortisd)" else "Public explorer",
-                color = Fx.text, fontWeight = FontWeight.SemiBold)
+            Text(
+                when (c?.backendKind) {
+                    "gateway" -> "Node gateway (fortisd)"
+                    "edge" -> "fortis (hosted)"
+                    else -> "Public explorer"
+                },
+                color = Fx.text, fontWeight = FontWeight.SemiBold,
+            )
             kv("URL", c?.backendUrl ?: "—")
-            if (c?.backendKind == "gateway") {
+            if (c?.backendKind == "gateway" || c?.backendKind == "edge") {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Token", color = Fx.textDim)
                     Text(

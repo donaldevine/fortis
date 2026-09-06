@@ -121,6 +121,30 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         backend = b; resolvePhase()
     }
 
+    /** The hosted fortis-edge: register a per-install token, then use it as an
+     *  Esplora backend at `{edgeBase}/{chain}` with the bearer token. */
+    fun useEdge(edgeBase: String) = wrap {
+        val base = edgeBase.trimEnd('/')
+        val token = edgeRegister(http, base)
+        val b = edgeBackend(base, token)
+        b.status() // probe
+        persistBackend("edge", base, token)
+        backend = b; resolvePhase()
+    }
+
+    private fun edgeBackend(base: String, token: String): EsploraBackend {
+        val c = config!!
+        return EsploraBackend(
+            http, "$base/${c.chain}", session!!.view,
+            { config!!.nextReceive to config!!.nextChange },
+            token,
+        ) {
+            val fresh = edgeRegister(http, base)
+            persistBackend("edge", base, fresh)
+            fresh
+        }
+    }
+
     fun useGateway(url: String, token: String) = wrap {
         val b = GatewayBackend(http, url, token)
         b.status()
@@ -140,6 +164,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         val s = session ?: return
         backend = when (c.backendKind) {
             "gateway" -> GatewayBackend(http, c.backendUrl!!, c.backendToken ?: "")
+            "edge" -> edgeBackend(c.backendUrl!!, c.backendToken ?: "")
             else -> EsploraBackend(http, c.backendUrl!!, s.view) { c.nextReceive to c.nextChange }
         }
     }

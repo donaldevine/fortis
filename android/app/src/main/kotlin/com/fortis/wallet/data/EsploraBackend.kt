@@ -13,19 +13,47 @@ import uniffi.wallet_ffi.WalletView
 
 private const val GAP = 20
 
+/** Mint a per-install token at a fortis-edge base URL (`POST {base}/register`). */
+suspend fun edgeRegister(http: OkHttpClient, base: String): String = withContext(Dispatchers.IO) {
+    val url = base.trimEnd('/') + "/register"
+    val req = Request.Builder().url(url).post(ByteArray(0).toRequestBody()).build()
+    http.newCall(req).execute().use { r ->
+        val body = r.body?.string().orEmpty()
+        check(r.isSuccessful) { "register failed at $base (${r.code})" }
+        JSONObject(body).getString("token")
+    }
+}
+
 /**
  * Esplora / mempool.space REST backend — no node. Esplora is address-based, so
  * the wallet derives its own addresses (via wallet-ffi's WalletView) and this
  * scans them with a gap limit. Port of web/src/esplora.js.
+ *
+ * `token` + `refresh` back a fortis-edge that requires `Authorization: Bearer`;
+ * a 401 triggers one `refresh()` + retry.
  */
 class EsploraBackend(
     private val http: OkHttpClient,
     baseUrl: String,
     private val view: WalletView,
     private val counters: () -> Pair<Int, Int>,
+    private var token: String? = null,
+    private val refresh: (suspend () -> String)? = null,
 ) : Backend {
     private val base = baseUrl.trimEnd('/')
     override val label: String = Regex("https?://([^/]+)").find(base)?.groupValues?.get(1) ?: base
+
+    /** Execute `build()`, adding the bearer token; on 401 re-register once and retry. */
+    private suspend fun send(build: () -> Request.Builder): okhttp3.Response {
+        fun withAuth() = build().apply { token?.let { header("Authorization", "Bearer $it") } }.build()
+        var resp = http.newCall(withAuth()).execute()
+        if (resp.code == 401 && refresh != null) {
+            resp.close()
+            token = refresh.invoke()
+            resp = http.newCall(withAuth()).execute()
+        }
+        return resp
+    }
 
     private class WatchAddr(val address: String, val spk: String, val branch: UInt, val index: UInt)
 
@@ -42,7 +70,7 @@ class EsploraBackend(
     }
 
     private suspend fun get(path: String): String = withContext(Dispatchers.IO) {
-        http.newCall(Request.Builder().url(base + path).build()).execute().use { r ->
+        send { Request.Builder().url(base + path) }.use { r ->
             val body = r.body?.string().orEmpty()
             check(r.isSuccessful) { "explorer ${r.code} on $path" }
             body
@@ -150,9 +178,10 @@ class EsploraBackend(
     }
 
     override suspend fun broadcast(rawHex: String): String = withContext(Dispatchers.IO) {
-        val req = Request.Builder().url("$base/tx")
-            .post(rawHex.toRequestBody("text/plain".toMediaTypeOrNull())).build()
-        http.newCall(req).execute().use { r ->
+        send {
+            Request.Builder().url("$base/tx")
+                .post(rawHex.toRequestBody("text/plain".toMediaTypeOrNull()))
+        }.use { r ->
             val body = r.body?.string()?.trim().orEmpty()
             check(r.isSuccessful) { body.ifBlank { "explorer rejected the transaction (${r.code})" } }
             cachedUtxos = null
