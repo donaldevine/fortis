@@ -14,6 +14,7 @@ mod metrics;
 mod proxy;
 mod token;
 
+use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -74,6 +75,10 @@ struct Args {
     /// HTTP worker threads.
     #[arg(long, default_value_t = 4)]
     workers: usize,
+    /// Append `POST /crash` reports to this file as NDJSON (one JSON object per
+    /// line). Unset → `/crash` returns 404.
+    #[arg(long)]
+    crash_log: Option<PathBuf>,
 }
 
 struct State {
@@ -85,6 +90,8 @@ struct State {
     btc: Option<Upstream>,
     limiter: RateLimiter,
     register_limiter: RateLimiter,
+    crash_limiter: RateLimiter,
+    crash_log: Option<PathBuf>,
     cache: Cache,
     metrics: Metrics,
 }
@@ -130,6 +137,9 @@ fn run() -> Result<()> {
         btc: args.btc_upstream.as_deref().map(Upstream::new),
         limiter: RateLimiter::new(args.rate_per_min, args.rate_burst),
         register_limiter: RateLimiter::new(args.register_per_hour, args.register_per_hour.max(1)),
+        // crashes are rare per device; this just caps a crash-looping client or abuse
+        crash_limiter: RateLimiter::new(2, 8),
+        crash_log: args.crash_log.clone(),
         cache: Cache::new(args.cache_entries),
         metrics: Metrics::default(),
     });
@@ -143,6 +153,7 @@ fn run() -> Result<()> {
     eprintln!("  btc upstream   {}", args.btc_upstream.as_deref().unwrap_or("(none)"));
     eprintln!("  token auth     {}", if args.require_token { "required" } else { "optional" });
     eprintln!("  rate limit     {}/min, burst {}", args.rate_per_min, args.rate_burst);
+    eprintln!("  crash log      {}", args.crash_log.as_deref().map(|p| p.display().to_string()).unwrap_or_else(|| "(disabled)".into()));
 
     let mut handles = Vec::new();
     for _ in 0..args.workers.max(1) {
@@ -246,11 +257,48 @@ fn handle(req: &mut Request, st: &State) -> Reply {
                 Err(e) => err(500, &e.to_string()),
             }
         }
+        (Method::Post, "/crash") => crash_report(req, st),
         (_, p) if p.starts_with("/btcb2/") || p.starts_with("/btc/") => {
             proxy_chain(req, st, &method, p, query)
         }
         _ => err(404, "no such route"),
     }
+}
+
+/// Append one crash report to the NDJSON log. Body is opaque client JSON, capped
+/// at 64 KiB; the line adds a server timestamp and the client IP.
+fn crash_report(req: &mut Request, st: &State) -> Reply {
+    let Some(path) = st.crash_log.as_ref() else {
+        return err(404, "no such route");
+    };
+    let ip = client_ip(req, st.trust_forwarded_for);
+    if !st.crash_limiter.check(&ip) {
+        Metrics::inc(&st.metrics.rate_limited);
+        return err(429, "slow down");
+    }
+
+    let mut body = Vec::new();
+    let _ = req.as_reader().take(64 * 1024).read_to_end(&mut body);
+    let report: serde_json::Value = serde_json::from_slice(&body)
+        .unwrap_or_else(|_| json!({ "raw": String::from_utf8_lossy(&body) }));
+
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let line = json!({ "ts": ts, "ip": ip, "report": report });
+
+    let ok = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+        .and_then(|mut f| writeln!(f, "{line}"))
+        .is_ok();
+    if !ok {
+        return err(500, "could not record");
+    }
+    Metrics::inc(&st.metrics.crash_reports);
+    Reply::Empty(204)
 }
 
 fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query: &str) -> Reply {

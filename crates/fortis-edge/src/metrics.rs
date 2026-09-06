@@ -10,6 +10,7 @@ pub struct Metrics {
     pub rate_limited: AtomicU64,
     pub unauthorized: AtomicU64,
     pub upstream_errors: AtomicU64,
+    pub crash_reports: AtomicU64,
 }
 
 impl Metrics {
@@ -27,6 +28,7 @@ impl Metrics {
             ("fortis_edge_rate_limited_total", "requests rejected by the limiter", g(&self.rate_limited)),
             ("fortis_edge_unauthorized_total", "requests with a missing/bad token", g(&self.unauthorized)),
             ("fortis_edge_upstream_errors_total", "failed upstream calls", g(&self.upstream_errors)),
+            ("fortis_edge_crash_reports_total", "crash reports accepted", g(&self.crash_reports)),
         ] {
             s.push_str(&format!("# HELP {name} {help}\n# TYPE {name} counter\n{name} {val}\n"));
         }

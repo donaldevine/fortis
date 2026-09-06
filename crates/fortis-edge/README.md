@@ -32,8 +32,13 @@ cargo run -p fortis-edge -- \
   --bind 0.0.0.0:8098 \
   --btcb2-upstream http://127.0.0.1:8094 \
   --btc-upstream https://mempool.space/api \
-  --require-token --trust-forwarded-for
+  --require-token --trust-forwarded-for \
+  --crash-log /var/log/fortis/crashes.ndjson
 ```
+
+`--crash-log <file>` enables `POST /crash`, which appends one JSON object per
+line (`{ts, ip, report}`) — the app's uncaught-exception reporter posts there.
+Without the flag `/crash` is 404. Rotate the file yourself (logrotate / a cron).
 
 The wallet points its BTCB2 explorer URL at `https://<host>/btcb2` and its BTC one at
 `https://<host>/btc`, sending `Authorization: Bearer <token>` (or `?token=<t>`).
@@ -45,6 +50,7 @@ The wallet points its BTCB2 explorer URL at `https://<host>/btcb2` and its BTC o
 | `POST /register` | `{ "token": "<id>.<hmac>" }` |
 | `GET \| POST /btcb2/<esplora path>` | → BTCB2 upstream |
 | `GET \| POST /btc/<esplora path>` | → BTC upstream |
+| `POST /crash` | `204`; appends the body to `--crash-log` (else `404`) |
 | `GET /metrics` | Prometheus text |
 | `GET /` | health + which chains are served |
 
