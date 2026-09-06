@@ -47,6 +47,7 @@ import com.fortis.wallet.wallet.entropyProgress
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private fun fmt(sat: Long) = "%.8f".format(sat / 1e8)
@@ -143,10 +144,12 @@ fun CreateScreen(vm: WalletViewModel) {
     var name by remember { mutableStateOf("") }
     var chain by remember { mutableStateOf("btcb2") }
     var passphrase by remember { mutableStateOf("") }
-    var pw by remember { mutableStateOf("") }
-    var pw2 by remember { mutableStateOf("") }
     var ack by remember { mutableStateOf(false) }
     val words = (vm.draftMnemonic ?: "").split(" ")
+    val settingUp = vm.settingUp
+    val choice = rememberLockChoice()
+    val act = rememberFragmentActivity()
+    val scope = rememberCoroutineScope()
 
     Screen(scroll = true) {
         Text("Your recovery phrase", style = MaterialTheme.typography.titleMedium, color = Fx.text)
@@ -172,8 +175,7 @@ fun CreateScreen(vm: WalletViewModel) {
                 "the phrase and this to restore. Leave blank if unsure.",
             color = Fx.textFaint, fontSize = 12.sp,
         )
-        Field(pw, { pw = it }, "Encryption password", password = true)
-        Field(pw2, { pw2 = it }, "Confirm password", password = true)
+        if (settingUp) LockChoiceFields(choice)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(ack, { ack = it })
             Text("I've written the phrase down", color = Fx.text)
@@ -181,8 +183,14 @@ fun CreateScreen(vm: WalletViewModel) {
         ErrorText(vm.error)
         Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
             GhostButton("Back", Modifier.weight(1f)) { vm.cancelOnboard() }
-            PrimaryButton("Continue", Modifier.weight(1f), enabled = ack && pw.length >= 8 && pw == pw2) {
-                vm.createWallet(name, chain, "mainnet", passphrase, pw)
+            PrimaryButton("Continue", Modifier.weight(1f), enabled = ack && (!settingUp || choice.ready)) {
+                scope.launch {
+                    val lock = if (settingUp) {
+                        runCatching { choice.resolve(act) }
+                            .getOrElse { vm.error = it.message ?: "app-lock setup failed"; null } ?: return@launch
+                    } else null
+                    vm.createWallet(name, chain, "mainnet", passphrase, lock)
+                }
             }
         }
     }
@@ -194,7 +202,10 @@ fun RestoreScreen(vm: WalletViewModel) {
     var phrase by remember { mutableStateOf("") }
     var passphrase by remember { mutableStateOf("") }
     var chain by remember { mutableStateOf("btcb2") }
-    var pw by remember { mutableStateOf("") }
+    val settingUp = vm.settingUp
+    val choice = rememberLockChoice()
+    val act = rememberFragmentActivity()
+    val scope = rememberCoroutineScope()
     Screen(scroll = true) {
         Text("Restore wallet", style = MaterialTheme.typography.titleMedium, color = Fx.text)
         Text("Enter your 12 or 24 words, separated by spaces.", color = Fx.textDim)
@@ -202,12 +213,23 @@ fun RestoreScreen(vm: WalletViewModel) {
         MnemonicField(phrase, { phrase = it })
         Field(passphrase, { passphrase = it }, "BIP-39 passphrase (optional)", password = true)
         ChainRow(chain) { chain = it }
-        Field(pw, { pw = it }, "Encryption password for this device", password = true)
+        Text(
+            "After it's added you can also list this wallet on ${if (chain == "btc") "BTCB2" else "BTC"} " +
+                "from Manage wallets — same phrase, same addresses.",
+            color = Fx.textFaint, fontSize = 12.sp,
+        )
+        if (settingUp) LockChoiceFields(choice)
         ErrorText(vm.error)
         Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
             GhostButton("Back", Modifier.weight(1f)) { vm.cancelOnboard() }
-            PrimaryButton("Restore", Modifier.weight(1f), enabled = pw.length >= 8 && phrase.isNotBlank()) {
-                vm.restoreWallet(name, phrase, passphrase, chain, "mainnet", pw)
+            PrimaryButton("Restore", Modifier.weight(1f), enabled = phrase.isNotBlank() && (!settingUp || choice.ready)) {
+                scope.launch {
+                    val lock = if (settingUp) {
+                        runCatching { choice.resolve(act) }
+                            .getOrElse { vm.error = it.message ?: "app-lock setup failed"; null } ?: return@launch
+                    } else null
+                    vm.restoreWallet(name, phrase, passphrase, chain, "mainnet", lock)
+                }
             }
         }
     }
@@ -269,51 +291,96 @@ fun WalletListScreen(vm: WalletViewModel) = Screen(scroll = true) {
     if (vm.canAddWallet) PrimaryButton("Add wallet") { vm.addWallet() }
     else Text("Maximum of ${com.fortis.wallet.MAX_WALLETS} wallets reached.", color = Fx.textFaint, fontSize = 12.sp)
     ErrorText(vm.error)
-    if (anyUnlocked) GhostButton("Lock all", tint = Fx.textDim) { vm.lock() }
+    Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
+        GhostButton("Manage wallets", Modifier.weight(1f), tint = Fx.textDim) { vm.goManageWallets() }
+        if (anyUnlocked) GhostButton("Lock", Modifier.weight(1f), tint = Fx.textDim) { vm.lock() }
+    }
 }
 
+/** The one gate into the app — fingerprint / device PIN, or a password. */
 @Composable
-fun UnlockScreen(vm: WalletViewModel) {
+fun AppLockScreen(vm: WalletViewModel) {
     var pw by remember { mutableStateOf("") }
-    val c = vm.config
     Screen {
         Spacer(Modifier.weight(1f))
         BrandMark()
         GlassCard {
-            if (c != null) Text(c.display, color = Fx.textDim, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            Field(pw, { pw = it }, "Password", password = true)
-            ErrorText(vm.error)
-            PrimaryButton("Unlock", enabled = pw.isNotEmpty()) { vm.unlock(pw) }
+            if (vm.lockMode == com.fortis.wallet.data.LOCK_BIOMETRIC) {
+                BiometricAppUnlock(vm)
+            } else {
+                Text("Enter your app password.", color = Fx.textDim)
+                Field(pw, { pw = it }, "App password", password = true)
+                ErrorText(vm.error)
+                PrimaryButton("Unlock", enabled = pw.isNotEmpty()) { vm.appUnlockWithPassword(pw) }
+            }
         }
-        if (vm.wallets.size > 1) GhostButton("‹ Wallets", tint = Fx.textDim) { vm.goWalletList() }
         Spacer(Modifier.weight(1f))
-        ForgetWalletButton(vm)
     }
 }
 
-/** "Forget this wallet" with a confirmation dialog — it wipes this wallet's
- *  encrypted seed from the device, recoverable only from the written-down phrase.
- *  Other wallets on the device are untouched. */
+/** Add / rename / remove wallets, and list a wallet on the other chain. */
 @Composable
-fun ForgetWalletButton(vm: WalletViewModel, modifier: Modifier = Modifier) {
-    var confirm by remember { mutableStateOf(false) }
-    val name = vm.config?.display ?: "this wallet"
-    GhostButton("Forget this wallet", modifier, tint = Fx.bad) { confirm = true }
-    if (confirm) {
+fun ManageWalletsScreen(vm: WalletViewModel) {
+    var renaming by remember { mutableStateOf<String?>(null) }
+    var removing by remember { mutableStateOf<String?>(null) }
+    Screen(scroll = true) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton({ vm.goWalletList() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Fx.text) }
+            Text("Manage wallets", style = MaterialTheme.typography.titleMedium, color = Fx.text)
+        }
+        vm.wallets.forEach { w ->
+            GlassCard {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(w.display, color = Fx.text, fontWeight = FontWeight.Medium)
+                        Text(if (w.id == vm.selectedId) "current" else "tap Switch to use", color = Fx.textFaint, fontSize = 12.sp)
+                    }
+                    if (w.id != vm.selectedId) TextButton({ vm.selectWallet(w.id) }) { Text("Switch", color = Fx.accent) }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
+                    GhostButton("Rename", Modifier.weight(1f)) { renaming = w.id }
+                    GhostButton("Remove", Modifier.weight(1f), tint = Fx.bad) { removing = w.id }
+                }
+                val hasOther = vm.wallets.any { it.name == w.name && it.chain == w.otherChain }
+                if (!hasOther && vm.canAddWallet) GhostButton("Also add on ${w.otherChain.uppercase()}") {
+                    vm.cloneToOtherChain(w.id)
+                }
+            }
+        }
+        if (vm.canAddWallet) PrimaryButton("Add another wallet") { vm.addWallet() }
+        else Text("Maximum of ${com.fortis.wallet.MAX_WALLETS} wallets reached.", color = Fx.textFaint, fontSize = 12.sp)
+        ErrorText(vm.error)
+    }
+
+    renaming?.let { id ->
+        val w = vm.wallets.firstOrNull { it.id == id }
+        var text by remember(id) { mutableStateOf(w?.name ?: "") }
         AlertDialog(
-            onDismissRequest = { confirm = false },
+            onDismissRequest = { renaming = null },
             containerColor = Fx.bg1,
-            title = { Text("Forget $name?", color = Fx.text) },
+            title = { Text("Rename wallet", color = Fx.text) },
+            text = { Field(text, { text = it }, "Wallet name") },
+            confirmButton = { TextButton({ vm.renameWallet(id, text); renaming = null }) { Text("Save", color = Fx.accent) } },
+            dismissButton = { TextButton({ renaming = null }) { Text("Cancel", color = Fx.text) } },
+        )
+    }
+
+    removing?.let { id ->
+        val w = vm.wallets.firstOrNull { it.id == id }
+        AlertDialog(
+            onDismissRequest = { removing = null },
+            containerColor = Fx.bg1,
+            title = { Text("Remove ${w?.display ?: "wallet"}?", color = Fx.text) },
             text = {
                 Text(
-                    "This deletes this wallet from this device. You can only restore it " +
-                        "with its recovery phrase (and passphrase, if you set one). Make " +
-                        "sure it's written down. Your other wallets are not affected.",
+                    "This only removes the wallet from this app. Nothing on the blockchain " +
+                        "changes, and you can add it back any time with its recovery phrase " +
+                        "(and passphrase, if you set one). Make sure the phrase is written down.",
                     color = Fx.textDim,
                 )
             },
-            confirmButton = { TextButton({ confirm = false; vm.forgetWallet() }) { Text("Forget wallet", color = Fx.bad) } },
-            dismissButton = { TextButton({ confirm = false }) { Text("Cancel", color = Fx.text) } },
+            confirmButton = { TextButton({ vm.removeWallet(id); removing = null }) { Text("Remove", color = Fx.bad) } },
+            dismissButton = { TextButton({ removing = null }) { Text("Cancel", color = Fx.text) } },
         )
     }
 }
@@ -606,36 +673,32 @@ fun SettingsScreen(vm: WalletViewModel) {
             Text("Settings", style = MaterialTheme.typography.titleMedium, color = Fx.text)
         }
 
-        // --- wallets ---
+        // --- wallet ---
         GlassCard {
-            Text("Wallets", color = Fx.text, fontWeight = FontWeight.SemiBold)
-            vm.wallets.forEach { w ->
-                val current = w.id == vm.selectedId
+            Text("Wallet", color = Fx.text, fontWeight = FontWeight.SemiBold)
+            if (c != null) {
                 Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(Fx.rSm))
-                        .background(if (current) Fx.glass2 else Fx.glass1)
-                        .clickable {
-                            if (current && s != null) copyToClipboard(ctx, "xpub", s.xpub) else vm.selectWallet(w.id)
-                        }
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(Fx.rSm)).background(Fx.glass1)
+                        .clickable(enabled = s != null) { s?.let { copyToClipboard(ctx, "xpub", it.xpub) } }
                         .padding(Fx.s3),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Text(w.display + if (current) "  ·  current" else "", color = Fx.text, fontWeight = FontWeight.Medium)
-                    if (current && s != null) {
+                    Text(c.display, color = Fx.text, fontWeight = FontWeight.Medium)
+                    if (s != null) {
                         Text(s.xpub, color = Fx.textDim, fontFamily = FontFamily.Monospace, fontSize = 11.sp, maxLines = 2)
-                        Text("fp ${s.fingerprint}  ·  receive #${w.nextReceive}  ·  change #${w.nextChange}  ·  tap to copy xpub",
+                        Text("fp ${s.fingerprint}  ·  receive #${c.nextReceive}  ·  change #${c.nextChange}  ·  tap to copy xpub",
                             color = Fx.textFaint, fontSize = 11.sp)
-                    } else {
-                        Text(
-                            listOfNotNull(w.network.takeIf { it != "mainnet" },
-                                if (vm.isUnlocked(w.id)) "unlocked" else "locked", "tap to switch").joinToString(" · "),
-                            color = Fx.textFaint, fontSize = 11.sp,
-                        )
                     }
                 }
             }
-            if (vm.canAddWallet) GhostButton("Add wallet") { vm.addWallet() }
-            else Text("Maximum of ${com.fortis.wallet.MAX_WALLETS} wallets reached.", color = Fx.textFaint, fontSize = 12.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
+                if (vm.wallets.size > 1) GhostButton("Switch wallet", Modifier.weight(1f)) { vm.goWalletList() }
+                GhostButton("Manage wallets", Modifier.weight(1f)) { vm.goManageWallets() }
+            }
+            Text(
+                "App lock: ${if (vm.lockMode == com.fortis.wallet.data.LOCK_BIOMETRIC) "fingerprint / device PIN" else "password"}",
+                color = Fx.textFaint, fontSize = 11.sp,
+            )
         }
 
         // --- connection ---
@@ -660,12 +723,7 @@ fun SettingsScreen(vm: WalletViewModel) {
             }
         }
 
-        // --- danger ---
-        GlassCard {
-            Text("This wallet", color = Fx.text, fontWeight = FontWeight.SemiBold)
-            GhostButton("Lock") { vm.lock() }
-            ForgetWalletButton(vm)
-        }
+        GhostButton("Lock app", tint = Fx.bad) { vm.lock() }
         Text("fortis 0.1.0", color = Fx.textFaint, fontSize = 11.sp)
     }
 }

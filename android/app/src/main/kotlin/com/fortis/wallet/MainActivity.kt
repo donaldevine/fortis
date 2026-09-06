@@ -1,11 +1,13 @@
 package com.fortis.wallet
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.fragment.app.FragmentActivity
 
-class MainActivity : ComponentActivity() {
+// FragmentActivity (not ComponentActivity) so androidx.biometric's BiometricPrompt
+// can attach — it needs a FragmentManager.
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)

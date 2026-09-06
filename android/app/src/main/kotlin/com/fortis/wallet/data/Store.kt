@@ -4,17 +4,20 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
-import androidx.datastore.preferences.preferencesDataStore
 
 private val Context.dataStore by preferencesDataStore("fortis")
 
-/** One wallet on this device. `sealed` is the seed, already encrypted — safe at
- *  rest. Each wallet has its own seed, passphrase, encryption password and
- *  per-install edge token; they're fully independent. */
+const val LOCK_BIOMETRIC = "biometric"
+const val LOCK_PASSWORD = "password"
+
+/** One wallet on this device. `sealed` is the seed, already encrypted under the
+ *  app secret — safe at rest. Chain-independent: the same seed can be listed on
+ *  both chains (addresses are identical), so a "clone" just copies `sealed`. */
 data class WalletConfig(
     val id: String,
     val name: String,
@@ -29,6 +32,7 @@ data class WalletConfig(
 ) {
     /** e.g. `BTCB2 · Savings` — the label the picker shows. */
     val display: String get() = "${chain.uppercase()} · $name"
+    val otherChain: String get() = if (chain == "btc") "btcb2" else "btc"
 
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id); put("name", name); put("chain", chain); put("network", network)
@@ -52,13 +56,25 @@ data class WalletConfig(
     }
 }
 
-/** The whole persisted picture: every wallet plus which one is selected. */
-data class WalletState(val wallets: List<WalletConfig>, val selectedId: String?)
+/**
+ * The whole persisted picture.
+ *
+ * @param lockMode      [LOCK_BIOMETRIC] or [LOCK_PASSWORD] — how the app is unlocked.
+ * @param appWrapped    biometric mode: the app secret wrapped by the Keystore key.
+ */
+data class WalletState(
+    val wallets: List<WalletConfig>,
+    val selectedId: String?,
+    val lockMode: String?,
+    val appWrapped: String?,
+)
 
 class Store(private val ctx: Context) {
     private object K {
         val wallets = stringPreferencesKey("wallets")
         val selected = stringPreferencesKey("selected")
+        val lockMode = stringPreferencesKey("lock_mode")
+        val appWrapped = stringPreferencesKey("app_wrapped")
         // legacy single-wallet keys (pre multi-wallet) — migrated on first load
         val chain = stringPreferencesKey("chain")
         val network = stringPreferencesKey("network")
@@ -75,13 +91,13 @@ class Store(private val ctx: Context) {
         val p = ctx.dataStore.data.first()
 
         p[K.wallets]?.let { raw ->
-            val arr = JSONArray(raw)
-            val list = (0 until arr.length()).map { WalletConfig.fromJson(arr.getJSONObject(it)) }
-            val sel = p[K.selected]?.takeIf { id -> list.any { it.id == id } }
-            return WalletState(list, sel ?: list.firstOrNull()?.id)
+            val list = decode(raw)
+            val sel = p[K.selected]?.takeIf { id -> list.any { it.id == id } } ?: list.firstOrNull()?.id
+            val lock = p[K.lockMode] ?: if (list.isNotEmpty()) LOCK_PASSWORD else null
+            return WalletState(list, sel, lock, p[K.appWrapped])
         }
 
-        // Migrate a legacy single wallet into the list, then drop the old keys.
+        // Migrate a legacy single wallet (password-locked) into the list.
         val legacySealed = p[K.sealed]
         val legacySalt = p[K.salt]
         if (legacySealed != null && legacySalt != null) {
@@ -97,44 +113,57 @@ class Store(private val ctx: Context) {
                 backendToken = p[K.backendToken],
             )
             ctx.dataStore.edit { e ->
-                e[K.wallets] = JSONArray().put(w.toJson()).toString()
+                e[K.wallets] = encode(listOf(w))
                 e[K.selected] = w.id
+                e[K.lockMode] = LOCK_PASSWORD
                 listOf(K.chain, K.network, K.sealed, K.salt, K.backendToken, K.backendKind, K.backendUrl)
                     .forEach { e.remove(it) }
                 e.remove(K.nextReceive); e.remove(K.nextChange)
             }
-            return WalletState(listOf(w), w.id)
+            return WalletState(listOf(w), w.id, LOCK_PASSWORD, null)
         }
 
-        return WalletState(emptyList(), null)
+        return WalletState(emptyList(), null, null, null)
+    }
+
+    /** Record how the app is unlocked (set once, when the first wallet is made). */
+    suspend fun setLock(mode: String, appWrapped: String?) = ctx.dataStore.edit { p ->
+        p[K.lockMode] = mode
+        if (appWrapped == null) p.remove(K.appWrapped) else p[K.appWrapped] = appWrapped
     }
 
     /** Insert or replace a wallet by id. */
     suspend fun save(w: WalletConfig) = ctx.dataStore.edit { p ->
-        val list = readList(p[K.wallets]).filter { it.id != w.id } + w
-        p[K.wallets] = encode(list)
+        p[K.wallets] = encode(decode(p[K.wallets]).filter { it.id != w.id } + w)
     }
 
     suspend fun setSelected(id: String?) = ctx.dataStore.edit { p ->
         if (id == null) p.remove(K.selected) else p[K.selected] = id
     }
 
-    /** Forget a single wallet. Returns the state that remains. */
+    /** Remove one wallet from the app (the seed is not destroyed — the phrase
+     *  still restores it). Returns what's left. */
     suspend fun remove(id: String): WalletState {
         lateinit var out: WalletState
         ctx.dataStore.edit { p ->
-            val list = readList(p[K.wallets]).filter { it.id != id }
-            p[K.wallets] = encode(list)
+            val list = decode(p[K.wallets]).filter { it.id != id }
             val sel = p[K.selected]?.takeIf { s -> list.any { it.id == s } } ?: list.firstOrNull()?.id
-            if (sel == null) p.remove(K.selected) else p[K.selected] = sel
-            out = WalletState(list, sel)
+            val lock = if (list.isEmpty()) null else p[K.lockMode]
+            val wrapped = if (list.isEmpty()) null else p[K.appWrapped]
+            if (list.isEmpty()) {
+                p.remove(K.wallets); p.remove(K.selected); p.remove(K.lockMode); p.remove(K.appWrapped)
+            } else {
+                p[K.wallets] = encode(list)
+                if (sel == null) p.remove(K.selected) else p[K.selected] = sel
+            }
+            out = WalletState(list, sel, lock, wrapped)
         }
         return out
     }
 
     suspend fun wipeAll() = ctx.dataStore.edit { it.clear() }
 
-    private fun readList(raw: String?): List<WalletConfig> {
+    private fun decode(raw: String?): List<WalletConfig> {
         raw ?: return emptyList()
         val arr = JSONArray(raw)
         return (0 until arr.length()).map { WalletConfig.fromJson(arr.getJSONObject(it)) }
