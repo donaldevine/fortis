@@ -174,6 +174,13 @@ pub fn generate_mnemonic(csprng: Vec<u8>, extra: Option<Vec<u8>>, words: u8) -> 
     Ok(mnemonic.to_string())
 }
 
+/// The 2048-word BIP-39 English wordlist, standard order — for a recovery-phrase
+/// autocomplete in the shell.
+#[uniffi::export]
+pub fn bip39_wordlist() -> Vec<String> {
+    wallet_core::bip39_wordlist().iter().map(|w| w.to_string()).collect()
+}
+
 /// Seal a mnemonic under a password (Argon2id → XChaCha20-Poly1305). `salt` ≥ 8
 /// bytes, `nonce` exactly 24 fresh random bytes — both stored beside the blob.
 #[uniffi::export]

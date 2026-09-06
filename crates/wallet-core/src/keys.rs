@@ -16,6 +16,12 @@ pub struct MasterKey {
     xpriv: Xpriv,
 }
 
+/// The 2048-word BIP-39 English wordlist, in standard order. Frontends use it to
+/// offer word completions while the user types a recovery phrase.
+pub fn bip39_wordlist() -> &'static [&'static str; 2048] {
+    bip39::Language::English.word_list()
+}
+
 impl MasterKey {
     /// Build a fresh 24-word mnemonic from 256 bits of platform entropy, plus the
     /// derived key. The caller shows the words to the user for backup.

@@ -99,6 +99,13 @@ pub fn generate_mnemonic(csprng: &[u8], extra: Option<Vec<u8>>, words: u8) -> Re
     Ok(mnemonic.to_string())
 }
 
+/// The 2048-word BIP-39 English wordlist, standard order — for a recovery-phrase
+/// autocomplete in the UI.
+#[wasm_bindgen(js_name = bip39Wordlist)]
+pub fn bip39_wordlist() -> Vec<String> {
+    wallet_core::bip39_wordlist().iter().map(|w| w.to_string()).collect()
+}
+
 /// Holds the master key in wasm memory. JS never sees the seed.
 #[wasm_bindgen]
 pub struct Wallet {
