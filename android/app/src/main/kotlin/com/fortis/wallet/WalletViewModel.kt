@@ -20,7 +20,10 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToLong
 
-enum class Phase { Loading, AppLock, WalletList, ManageWallets, Onboard, Gen, Create, Restore, Home, Settings }
+enum class Phase { Loading, AppLock, Onboard, Gen, Create, Restore, Shell }
+
+/** The three top-level destinations inside [Phase.Shell]'s nav bar. */
+enum class NavTab { Home, Wallet, Settings }
 
 /** How many wallets one install can hold. */
 const val MAX_WALLETS = 10
@@ -49,6 +52,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         .build()
 
     var phase by mutableStateOf(Phase.Loading); private set
+    var nav by mutableStateOf(NavTab.Home); private set
 
     // --- wallets ---
     var wallets by mutableStateOf<List<WalletConfig>>(emptyList()); private set
@@ -100,11 +104,19 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         phase = when {
             wallets.isEmpty() -> Phase.Onboard
             appSecret == null -> Phase.AppLock
-            selectedId == null -> Phase.WalletList
-            ensureSession(selectedId!!) == null -> Phase.WalletList
-            else -> { ensureBackend(); Phase.Home }
+            else -> Phase.Shell
         }
-        if (phase == Phase.Home) refresh()
+        if (phase == Phase.Shell) enterTab()
+    }
+
+    /** Prepare state for the nav tab currently in view. The Wallet tab's
+     *  composable drives the actual refresh loop. */
+    private fun enterTab() {
+        if (nav == NavTab.Wallet) {
+            val id = selectedId
+            if (id == null || ensureSession(id) == null) { nav = NavTab.Home; return }
+            ensureBackend()
+        }
     }
 
     /** Unseal a wallet with the in-memory app secret (no extra prompt). */
@@ -133,8 +145,18 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
 
     // --- navigation ---
 
-    fun goWalletList() { error = null; draftMnemonic = null; phase = Phase.WalletList }
-    fun goManageWallets() { error = null; phase = Phase.ManageWallets }
+    /** Switch the Shell's top-nav tab. */
+    fun go(tab: NavTab) {
+        error = null
+        nav = tab
+        if (phase == Phase.Shell) enterTab()
+    }
+    fun goHome() = go(NavTab.Home)
+    fun goSettings() = go(NavTab.Settings)
+    /** Legacy call sites — the picker / manage screen are now the Home / Settings tabs. */
+    fun goWalletList() = go(NavTab.Home)
+    fun goManageWallets() = go(NavTab.Settings)
+
     val canAddWallet: Boolean get() = wallets.size < MAX_WALLETS
     fun addWallet() {
         if (!canAddWallet) { error = "You can keep up to $MAX_WALLETS wallets on one device."; return }
@@ -142,7 +164,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun cancelOnboard() {
         draftMnemonic = null
-        phase = if (wallets.isEmpty()) Phase.Onboard else Phase.WalletList
+        phase = if (wallets.isEmpty()) Phase.Onboard else Phase.Shell
     }
 
     fun goCreate() { phase = if (draftMnemonic != null) Phase.Create else Phase.Gen }
@@ -151,18 +173,18 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         phase = Phase.Create
     }
     fun goRestore() { phase = Phase.Restore }
-    fun goSettings() { phase = Phase.Settings }
-    fun goHome() { resolvePhase() }
 
     /** Is the first wallet still to be made? (The app lock is set up alongside it.) */
     val settingUp: Boolean get() = wallets.isEmpty()
 
+    /** Pick a wallet from the Home list — opens it on the Wallet tab. */
     fun selectWallet(id: String) {
         if (id != selectedId) {
             selectedId = id
             viewModelScope.launch { store.setSelected(id) }
             resetView()
         }
+        nav = NavTab.Wallet
         resolvePhase()
     }
 
@@ -188,6 +210,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         sessions.clear()
         appSecret = null
         resetView()
+        nav = NavTab.Home
         phase = if (wallets.isEmpty()) Phase.Onboard else Phase.AppLock
     }
 
@@ -224,6 +247,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         resetView()
         sessions[id] = s
         draftMnemonic = null
+        nav = NavTab.Wallet
         resolvePhase()
     }
 
@@ -262,10 +286,12 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         if (wallets.isEmpty()) {
             appSecret = null
             com.fortis.wallet.data.SeedKeystore.deleteKey()
+            nav = NavTab.Home
             resetView()
             resolvePhase()
         } else if (wasCurrent) {
             resetView()
+            nav = NavTab.Home
             resolvePhase()
         }
     }

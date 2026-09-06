@@ -18,9 +18,9 @@ import com.fortis.wallet.ui.SecureWindow
 import com.fortis.wallet.ui.screens.*
 import com.fortis.wallet.ui.theme.FortisTheme
 
-// Screens that show the recovery phrase, a password, or the account xpub.
+// Screens that show the recovery phrase or a password.
 private val SECURE_PHASES = setOf(
-    Phase.Gen, Phase.Create, Phase.Restore, Phase.AppLock, Phase.Settings, Phase.ManageWallets,
+    Phase.Gen, Phase.Create, Phase.Restore, Phase.AppLock,
 )
 
 @Composable
@@ -42,14 +42,11 @@ fun FortisApp(vm: WalletViewModel = viewModel()) {
                     CircularProgressIndicator(Modifier.align(Alignment.Center))
                 }
                 Phase.AppLock -> AppLockScreen(vm)
-                Phase.WalletList -> WalletListScreen(vm)
-                Phase.ManageWallets -> ManageWalletsScreen(vm)
                 Phase.Onboard -> OnboardScreen(vm)
                 Phase.Gen -> GenScreen(vm)
                 Phase.Create -> CreateScreen(vm)
                 Phase.Restore -> RestoreScreen(vm)
-                Phase.Home -> HomeScreen(vm)
-                Phase.Settings -> SettingsScreen(vm)
+                Phase.Shell -> Shell(vm)
             }
         }
     }

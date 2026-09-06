@@ -21,9 +21,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +37,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fortis.wallet.NavTab
 import com.fortis.wallet.PlanPreview
 import com.fortis.wallet.WalletViewModel
 import com.fortis.wallet.ui.*
@@ -256,45 +256,88 @@ fun Segmented(options: List<Pair<String, String>>, selected: String, onSelect: (
     }
 }
 
-/** The wallet picker: every wallet on this device, prefixed by its chain. */
+/**
+ * The unlocked app: a persistent top nav bar (Home · Wallet · Settings) over the
+ * three tab bodies.
+ */
 @Composable
-fun WalletListScreen(vm: WalletViewModel) = Screen(scroll = true) {
-    val anyUnlocked = vm.wallets.any { vm.isUnlocked(it.id) }
-    Text("Wallets", style = MaterialTheme.typography.titleMedium, color = Fx.text)
+fun Shell(vm: WalletViewModel) {
+    val unit = if (vm.config?.chain == "btc") "BTC" else "BTCB2"
+    Box(Modifier.fillMaxSize()) {
+        AmbientBackground()
+        Column(
+            Modifier.fillMaxSize().widthIn(max = 460.dp).align(Alignment.TopCenter)
+                .systemBarsPadding().padding(horizontal = Fx.s4).padding(top = Fx.s3),
+            verticalArrangement = Arrangement.spacedBy(Fx.s3),
+        ) {
+            NavBar(vm.nav) { vm.go(it) }
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                when (vm.nav) {
+                    NavTab.Home -> HomeTab(vm)
+                    NavTab.Wallet -> WalletTab(vm)
+                    NavTab.Settings -> SettingsTab(vm)
+                }
+            }
+        }
+    }
+    vm.pending?.let { ConfirmSheet(vm, it, unit) }
+}
+
+@Composable
+private fun NavBar(current: NavTab, onSelect: (NavTab) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().background(Fx.glass1, RoundedCornerShape(Fx.pill)).padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        listOf(NavTab.Home to "Home", NavTab.Wallet to "Wallet", NavTab.Settings to "Settings").forEach { (t, label) ->
+            val on = current == t
+            Box(
+                Modifier.weight(1f).clip(RoundedCornerShape(Fx.pill))
+                    .background(
+                        if (on) Brush.linearGradient(listOf(Fx.accent, Fx.accent2))
+                        else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)),
+                    )
+                    .clickable { onSelect(t) }.padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    label, fontSize = 13.sp,
+                    fontWeight = if (on) FontWeight.Medium else FontWeight.Normal,
+                    color = if (on) Color(0xFF0A0C16) else Color.White.copy(alpha = 0.75f),
+                )
+            }
+        }
+    }
+}
+
+/** Home tab — the list of wallets; tap one to open it. */
+@Composable
+private fun HomeTab(vm: WalletViewModel) = Column(
+    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = Fx.s2),
+    verticalArrangement = Arrangement.spacedBy(Fx.s4),
+) {
+    Text("Your wallets", style = MaterialTheme.typography.titleMedium, color = Fx.text)
     GlassCard {
         vm.wallets.forEach { w ->
             val current = w.id == vm.selectedId
             Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(Fx.rSm))
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(Fx.rSm))
                     .background(if (current) Fx.glass2 else Fx.glass1)
-                    .clickable { vm.selectWallet(w.id) }
-                    .padding(Fx.s3),
+                    .clickable { vm.selectWallet(w.id) }.padding(Fx.s3),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(w.display, color = Fx.text, fontWeight = FontWeight.Medium)
-                    Text(
-                        listOfNotNull(
-                            w.network.takeIf { it != "mainnet" },
-                            if (vm.isUnlocked(w.id)) "unlocked" else "locked",
-                        ).joinToString(" · "),
-                        color = Fx.textFaint, fontSize = 12.sp,
-                    )
+                    Text(if (current) "open" else "tap to open", color = Fx.textFaint, fontSize = 12.sp)
                 }
-                if (current) Text("current", color = Fx.accent, fontSize = 12.sp)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Fx.textDim)
             }
         }
     }
     if (vm.canAddWallet) PrimaryButton("Add wallet") { vm.addWallet() }
     else Text("Maximum of ${com.fortis.wallet.MAX_WALLETS} wallets reached.", color = Fx.textFaint, fontSize = 12.sp)
     ErrorText(vm.error)
-    Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
-        GhostButton("Manage wallets", Modifier.weight(1f), tint = Fx.textDim) { vm.goManageWallets() }
-        if (anyUnlocked) GhostButton("Lock", Modifier.weight(1f), tint = Fx.textDim) { vm.lock() }
-    }
 }
 
 /** The one gate into the app — fingerprint / device PIN, or a password. */
@@ -318,38 +361,96 @@ fun AppLockScreen(vm: WalletViewModel) {
     }
 }
 
-/** Add / rename / remove wallets, and list a wallet on the other chain. */
+/** Settings tab — manage wallets, security, connection. */
 @Composable
-fun ManageWalletsScreen(vm: WalletViewModel) {
+private fun SettingsTab(vm: WalletViewModel) {
+    val ctx = LocalContext.current
+    val st = vm.status
     var renaming by remember { mutableStateOf<String?>(null) }
     var removing by remember { mutableStateOf<String?>(null) }
-    Screen(scroll = true) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton({ vm.goWalletList() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Fx.text) }
-            Text("Manage wallets", style = MaterialTheme.typography.titleMedium, color = Fx.text)
-        }
-        vm.wallets.forEach { w ->
-            GlassCard {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(w.display, color = Fx.text, fontWeight = FontWeight.Medium)
-                        Text(if (w.id == vm.selectedId) "current" else "tap Switch to use", color = Fx.textFaint, fontSize = 12.sp)
+
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = Fx.s2),
+        verticalArrangement = Arrangement.spacedBy(Fx.s4),
+    ) {
+        Text("Settings", style = MaterialTheme.typography.titleMedium, color = Fx.text)
+
+        GlassCard {
+            Text("Wallets", color = Fx.text, fontWeight = FontWeight.SemiBold)
+            vm.wallets.forEach { w ->
+                val current = w.id == vm.selectedId
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(Fx.rSm))
+                        .background(if (current) Fx.glass2 else Fx.glass1).padding(Fx.s3),
+                    verticalArrangement = Arrangement.spacedBy(Fx.s2),
+                ) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(w.display, color = Fx.text, fontWeight = FontWeight.Medium)
+                            Text(
+                                listOfNotNull(w.network.takeIf { it != "mainnet" }, if (current) "open" else null).joinToString(" · "),
+                                color = Fx.textFaint, fontSize = 12.sp,
+                            )
+                        }
+                        if (!current) TextButton({ vm.selectWallet(w.id) }) { Text("Open", color = Fx.accent) }
                     }
-                    if (w.id != vm.selectedId) TextButton({ vm.selectWallet(w.id) }) { Text("Switch", color = Fx.accent) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
+                        GhostButton("Rename", Modifier.weight(1f)) { renaming = w.id }
+                        GhostButton("Remove", Modifier.weight(1f), tint = Fx.bad) { removing = w.id }
+                    }
+                    val hasOther = vm.wallets.any { it.name == w.name && it.chain == w.otherChain }
+                    if (!hasOther && vm.canAddWallet) GhostButton("Also add on ${w.otherChain.uppercase()}") {
+                        vm.cloneToOtherChain(w.id)
+                    }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
-                    GhostButton("Rename", Modifier.weight(1f)) { renaming = w.id }
-                    GhostButton("Remove", Modifier.weight(1f), tint = Fx.bad) { removing = w.id }
-                }
-                val hasOther = vm.wallets.any { it.name == w.name && it.chain == w.otherChain }
-                if (!hasOther && vm.canAddWallet) GhostButton("Also add on ${w.otherChain.uppercase()}") {
-                    vm.cloneToOtherChain(w.id)
+            }
+            if (vm.canAddWallet) PrimaryButton("Add wallet") { vm.addWallet() }
+            else Text("Maximum of ${com.fortis.wallet.MAX_WALLETS} wallets reached.", color = Fx.textFaint, fontSize = 12.sp)
+            ErrorText(vm.error)
+        }
+
+        vm.session?.let { s ->
+            vm.config?.let { c ->
+                GlassCard {
+                    Text("Account key", color = Fx.text, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        "${c.display}  ·  fp ${s.fingerprint}  ·  receive #${c.nextReceive}  ·  change #${c.nextChange}",
+                        color = Fx.textFaint, fontSize = 11.sp,
+                    )
+                    GhostButton("Copy account key (xpub)") { copyToClipboard(ctx, "xpub", s.xpub) }
                 }
             }
         }
-        if (vm.canAddWallet) PrimaryButton("Add another wallet") { vm.addWallet() }
-        else Text("Maximum of ${com.fortis.wallet.MAX_WALLETS} wallets reached.", color = Fx.textFaint, fontSize = 12.sp)
-        ErrorText(vm.error)
+
+        GlassCard {
+            Text("Security", color = Fx.text, fontWeight = FontWeight.SemiBold)
+            kv("App lock", if (vm.lockMode == com.fortis.wallet.data.LOCK_BIOMETRIC) "Fingerprint / device PIN" else "Password")
+            Text("One unlock opens every wallet in the app.", color = Fx.textFaint, fontSize = 12.sp)
+        }
+
+        GlassCard {
+            Text("Connection", color = Fx.text, fontWeight = FontWeight.SemiBold)
+            kv("Status", when {
+                st == null -> "offline"
+                st.scanningPct != null -> "rescanning ${st.scanningPct}%"
+                st.degraded -> "limited service"
+                st.synced -> "connected"
+                else -> "syncing"
+            })
+            kv("Chain height", st?.blocks?.toString() ?: "—")
+            if (st?.degraded == true) Text(
+                "The fortis service is unreachable — using public block data for now. " +
+                    "It'll switch back automatically.",
+                color = Fx.textFaint, fontSize = 12.sp,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
+                GhostButton("Refresh", Modifier.weight(1f)) { vm.refresh() }
+                GhostButton("Reconnect", Modifier.weight(1f)) { vm.reconnect() }
+            }
+        }
+
+        GhostButton("Lock app", tint = Fx.bad) { vm.lock() }
+        Text("fortis 0.1.0", color = Fx.textFaint, fontSize = 11.sp)
     }
 
     renaming?.let { id ->
@@ -385,10 +486,23 @@ fun ManageWalletsScreen(vm: WalletViewModel) {
     }
 }
 
+/** Wallet tab — the selected wallet's balance, Receive / Send / History. */
 @Composable
-fun HomeScreen(vm: WalletViewModel) {
+private fun WalletTab(vm: WalletViewModel) {
+    val c = vm.config
+    if (c == null) {
+        Column(
+            Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("No wallet open", color = Fx.textDim)
+            Spacer(Modifier.height(Fx.s3))
+            GhostButton("Choose a wallet", Modifier.widthIn(max = 240.dp)) { vm.goHome() }
+        }
+        return
+    }
     var tab by remember { mutableStateOf(0) }
-    val unit = if (vm.config?.chain == "btc") "BTC" else "BTCB2"
+    val unit = if (c.chain == "btc") "BTC" else "BTCB2"
     val b = vm.balances
 
     LaunchedEffect(vm.selectedId) {
@@ -398,70 +512,55 @@ fun HomeScreen(vm: WalletViewModel) {
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
-        AmbientBackground()
-        Column(
-            Modifier.fillMaxSize().widthIn(max = 460.dp).align(Alignment.TopCenter).systemBarsPadding().padding(Fx.s4),
-            verticalArrangement = Arrangement.spacedBy(Fx.s4),
-        ) {
-            // hero
-            GlassCard(fill = Fx.glassHero, corner = Fx.rLg) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Column {
-                        vm.config?.let { c ->
-                            Text(
-                                (if (vm.wallets.size > 1) "$unit · ${c.name}  ▾" else "$unit · ${c.name}"),
-                                color = Fx.textDim, fontSize = 12.sp,
-                                modifier = Modifier.clickable(enabled = vm.wallets.size > 1) { vm.goWalletList() },
-                            )
+    Column(
+        Modifier.fillMaxSize().padding(top = Fx.s2),
+        verticalArrangement = Arrangement.spacedBy(Fx.s4),
+    ) {
+        GlassCard(fill = Fx.glassHero, corner = Fx.rLg) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column {
+                    Text(c.display, color = Fx.textDim, fontSize = 12.sp)
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(if (b != null) fmt(b.confirmedSat) else "—",
+                            fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, fontSize = 32.sp,
+                            color = Fx.text)
+                        Spacer(Modifier.width(6.dp))
+                        Text(unit, color = Fx.textDim, fontSize = 12.sp)
+                    }
+                    val hint = vm.status?.let {
+                        val head = when {
+                            it.scanningPct != null -> "rescanning ${it.scanningPct}%"
+                            it.synced -> "block ${it.blocks}"
+                            else -> "syncing"
                         }
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text(if (b != null) fmt(b.confirmedSat) else "—",
-                                fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, fontSize = 32.sp,
-                                color = Fx.text)
-                            Spacer(Modifier.width(6.dp))
-                            Text(unit, color = Fx.textDim, fontSize = 12.sp)
-                        }
-                        val hint = vm.status?.let {
-                            val head = when {
-                                it.scanningPct != null -> "rescanning ${it.scanningPct}%"
-                                it.synced -> "block ${it.blocks}"
-                                else -> "syncing"
-                            }
-                            if (it.degraded) "$head  ·  limited service" else head
-                        } ?: "connecting…"
-                        Text(hint, color = Fx.textFaint, fontSize = 12.sp)
-                    }
-                    Row {
-                        IconButton({ vm.goSettings() }) { Icon(Icons.Outlined.Settings, "Settings", tint = Fx.textDim) }
-                        TextButton({ vm.lock() }) { Text("Lock", color = Fx.textDim) }
-                    }
+                        if (it.degraded) "$head  ·  limited service" else head
+                    } ?: "connecting…"
+                    Text(hint, color = Fx.textFaint, fontSize = 12.sp)
                 }
+                TextButton({ vm.lock() }) { Text("Lock", color = Fx.textDim) }
             }
-            // tabs
-            Row(Modifier.background(Fx.glass1, RoundedCornerShape(Fx.pill)).padding(3.dp)) {
-                listOf("Receive", "Send", "History").forEachIndexed { i, label ->
-                    Box(Modifier.weight(1f).clip(RoundedCornerShape(Fx.pill))
-                        .background(if (tab == i) Brush.linearGradient(listOf(Fx.accent, Fx.accent2)) else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)))
-                        .clickable { tab = i }.padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-                        Text(label, color = if (tab == i) Color(0xFF0A0C16) else Color.White.copy(alpha = 0.75f), fontSize = 13.sp)
-                    }
-                }
-            }
-            vm.lastSentTxid?.let { txid -> SentBanner(vm, txid) }
-            Column(
-                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(Fx.s4),
-            ) {
-                when (tab) {
-                    0 -> ReceiveTab(vm)
-                    1 -> SendTab(vm)
-                    else -> HistoryTab(vm, unit)
+        }
+        Row(Modifier.background(Fx.glass1, RoundedCornerShape(Fx.pill)).padding(3.dp)) {
+            listOf("Receive", "Send", "History").forEachIndexed { i, label ->
+                Box(Modifier.weight(1f).clip(RoundedCornerShape(Fx.pill))
+                    .background(if (tab == i) Brush.linearGradient(listOf(Fx.accent, Fx.accent2)) else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)))
+                    .clickable { tab = i }.padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+                    Text(label, color = if (tab == i) Color(0xFF0A0C16) else Color.White.copy(alpha = 0.75f), fontSize = 13.sp)
                 }
             }
         }
+        vm.lastSentTxid?.let { txid -> SentBanner(vm, txid) }
+        Column(
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(Fx.s4),
+        ) {
+            when (tab) {
+                0 -> ReceiveTab(vm)
+                1 -> SendTab(vm)
+                else -> HistoryTab(vm, unit)
+            }
+        }
     }
-    vm.pending?.let { ConfirmSheet(vm, it, unit) }
 }
 
 @Composable
@@ -658,72 +757,4 @@ private fun ConfirmSheet(vm: WalletViewModel, p: PlanPreview, unit: String) {
 private fun kv(k: String, v: String) = Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
     Text(k, color = Fx.textDim)
     Text(v, color = Fx.text, modifier = Modifier.padding(start = Fx.s4), textAlign = androidx.compose.ui.text.style.TextAlign.End)
-}
-
-@Composable
-fun SettingsScreen(vm: WalletViewModel) {
-    val ctx = LocalContext.current
-    val c = vm.config
-    val s = vm.session
-    val st = vm.status
-
-    Screen(scroll = true) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton({ vm.goHome() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Fx.text) }
-            Text("Settings", style = MaterialTheme.typography.titleMedium, color = Fx.text)
-        }
-
-        // --- wallet ---
-        GlassCard {
-            Text("Wallet", color = Fx.text, fontWeight = FontWeight.SemiBold)
-            if (c != null) {
-                Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(Fx.rSm)).background(Fx.glass1)
-                        .clickable(enabled = s != null) { s?.let { copyToClipboard(ctx, "xpub", it.xpub) } }
-                        .padding(Fx.s3),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Text(c.display, color = Fx.text, fontWeight = FontWeight.Medium)
-                    if (s != null) {
-                        Text(s.xpub, color = Fx.textDim, fontFamily = FontFamily.Monospace, fontSize = 11.sp, maxLines = 2)
-                        Text("fp ${s.fingerprint}  ·  receive #${c.nextReceive}  ·  change #${c.nextChange}  ·  tap to copy xpub",
-                            color = Fx.textFaint, fontSize = 11.sp)
-                    }
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
-                if (vm.wallets.size > 1) GhostButton("Switch wallet", Modifier.weight(1f)) { vm.goWalletList() }
-                GhostButton("Manage wallets", Modifier.weight(1f)) { vm.goManageWallets() }
-            }
-            Text(
-                "App lock: ${if (vm.lockMode == com.fortis.wallet.data.LOCK_BIOMETRIC) "fingerprint / device PIN" else "password"}",
-                color = Fx.textFaint, fontSize = 11.sp,
-            )
-        }
-
-        // --- connection ---
-        GlassCard {
-            Text("Connection", color = Fx.text, fontWeight = FontWeight.SemiBold)
-            kv("Status", when {
-                st == null -> "offline"
-                st.scanningPct != null -> "rescanning ${st.scanningPct}%"
-                st.degraded -> "limited service"
-                st.synced -> "connected"
-                else -> "syncing"
-            })
-            kv("Chain height", st?.blocks?.toString() ?: "—")
-            if (st?.degraded == true) Text(
-                "The fortis service is unreachable — using public block data for now. " +
-                    "It'll switch back automatically.",
-                color = Fx.textFaint, fontSize = 12.sp,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
-                GhostButton("Refresh", Modifier.weight(1f)) { vm.refresh() }
-                GhostButton("Reconnect", Modifier.weight(1f)) { vm.reconnect() }
-            }
-        }
-
-        GhostButton("Lock app", tint = Fx.bad) { vm.lock() }
-        Text("fortis 0.1.0", color = Fx.textFaint, fontSize = 11.sp)
-    }
 }
