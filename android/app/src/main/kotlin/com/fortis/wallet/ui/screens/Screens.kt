@@ -313,13 +313,16 @@ fun Segmented(options: List<Pair<String, String>>, selected: String, onSelect: (
 fun Shell(vm: WalletViewModel) {
     val unit = if (vm.config?.chain == "btc") "BTC" else "BTCB2"
     LaunchedEffect(vm.nav, vm.wallets.map { it.id }) {
-        if (vm.nav == NavTab.Home || vm.nav == NavTab.Settings) vm.refreshAllBalances()
+        while (vm.nav == NavTab.Home || vm.nav == NavTab.Settings) {
+            vm.refreshAllBalances()
+            kotlinx.coroutines.delay(45_000)
+        }
     }
     Box(Modifier.fillMaxSize()) {
         AmbientBackground()
         Column(
             Modifier.fillMaxSize().widthIn(max = 460.dp).align(Alignment.TopCenter)
-                .systemBarsPadding().padding(horizontal = Fx.s4).padding(top = Fx.s3),
+                .systemBarsPadding().imePadding().padding(horizontal = Fx.s4).padding(top = Fx.s3),
             verticalArrangement = Arrangement.spacedBy(Fx.s3),
         ) {
             NavBar(vm.nav) { vm.go(it) }
@@ -606,6 +609,10 @@ private fun WalletTab(vm: WalletViewModel) {
                         Spacer(Modifier.width(6.dp))
                         Text(unit, color = Fx.textDim, fontSize = 12.sp)
                     }
+                    if (b != null && b.pendingSat != 0L) Text(
+                        "${if (b.pendingSat > 0) "+" else ""}${fmt(b.pendingSat)} $unit pending",
+                        color = Fx.warn, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
+                    )
                     val hint = vm.status?.let {
                         val head = when {
                             it.scanningPct != null -> "rescanning ${it.scanningPct}%"
