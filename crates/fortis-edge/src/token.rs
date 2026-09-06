@@ -74,7 +74,9 @@ mod tests {
         assert!(!verify(b"a-different-secret-of-good-length", &t));
 
         let (id, tag) = t.split_once('.').unwrap();
-        let flipped = format!("{id}.{}0", &tag[..tag.len() - 1]);
+        let last = tag.chars().last().unwrap();
+        let repl = if last == '0' { '1' } else { '0' };
+        let flipped = format!("{id}.{}{repl}", &tag[..tag.len() - 1]);
         assert!(!verify(secret, &flipped));
 
         assert!(!verify(secret, "garbage"));
