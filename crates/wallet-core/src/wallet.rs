@@ -51,7 +51,13 @@ impl ServiceFee {
 
     fn output(&self, send_amount_sat: u64) -> Option<TxOut> {
         let sat = self.amount_sat(send_amount_sat);
-        (sat > 0).then(|| TxOut { value: Amount::from_sat(sat), script_pubkey: self.fee_spk.clone() })
+        if sat == 0 {
+            return None;
+        }
+        // A fee below the dust threshold for the fee address makes the whole
+        // transaction non-standard — bump it up to a spendable output.
+        let value = Amount::from_sat(sat).max(self.fee_spk.minimal_non_dust());
+        Some(TxOut { value, script_pubkey: self.fee_spk.clone() })
     }
 }
 
@@ -462,6 +468,16 @@ mod tests {
     fn service_fee_uncapped_when_cap_is_zero() {
         let sf = ServiceFee { bps: 25, floor_sat: 0, cap_sat: 0, fee_spk: fee_addr_spk() };
         assert_eq!(sf.amount_sat(10_000_000), 25_000);
+    }
+
+    #[test]
+    fn service_fee_output_is_never_dust() {
+        // 1% of a small send (and even a low floor) would be a dust output that
+        // makes the whole tx non-standard — the output must be bumped up.
+        let sf = ServiceFee { bps: 100, floor_sat: 100, cap_sat: 0, fee_spk: fee_addr_spk() };
+        let out = sf.output(5_000).unwrap();
+        assert!(out.value >= fee_addr_spk().minimal_non_dust());
+        assert!(out.value.to_sat() > 100);
     }
 
     #[test]
