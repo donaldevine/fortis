@@ -12,7 +12,7 @@ Group=fortis
 ExecStart=/usr/local/bin/fortis-edge \
   --bind 127.0.0.1:8098 \
   --btcb2-upstream http://127.0.0.1:8094 \
-  --btc-upstream https://blockstream.info/api \
+  --btc-upstream https://mempool.space/api \
   --secret-file /var/lib/fortis/fortis-edge.secret \
   --require-token \
   --trust-forwarded-for \
