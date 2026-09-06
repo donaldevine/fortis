@@ -395,16 +395,16 @@ private fun SettingsTab(vm: WalletViewModel) {
                         if (!current) TextButton({ vm.selectWallet(w.id) }) { Text("Open", color = Fx.accent) }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
-                        GhostButton("Rename", Modifier.weight(1f)) { renaming = w.id }
-                        GhostButton("Remove", Modifier.weight(1f), tint = Fx.bad) { removing = w.id }
+                        GhostButton("Rename", Modifier.weight(1f), dense = true) { renaming = w.id }
+                        GhostButton("Remove", Modifier.weight(1f), tint = Fx.bad, dense = true) { removing = w.id }
                     }
                     val hasOther = vm.wallets.any { it.name == w.name && it.chain == w.otherChain }
-                    if (!hasOther && vm.canAddWallet) GhostButton("Also add on ${w.otherChain.uppercase()}") {
+                    if (!hasOther && vm.canAddWallet) GhostButton("Also add on ${w.otherChain.uppercase()}", dense = true) {
                         vm.cloneToOtherChain(w.id)
                     }
                 }
             }
-            if (vm.canAddWallet) PrimaryButton("Add wallet") { vm.addWallet() }
+            if (vm.canAddWallet) PrimaryButton("Add wallet", dense = true) { vm.addWallet() }
             else Text("Maximum of ${com.fortis.wallet.MAX_WALLETS} wallets reached.", color = Fx.textFaint, fontSize = 12.sp)
             ErrorText(vm.error)
         }
@@ -417,7 +417,7 @@ private fun SettingsTab(vm: WalletViewModel) {
                         "${c.display}  ·  fp ${s.fingerprint}  ·  receive #${c.nextReceive}  ·  change #${c.nextChange}",
                         color = Fx.textFaint, fontSize = 11.sp,
                     )
-                    GhostButton("Copy account key (xpub)") { copyToClipboard(ctx, "xpub", s.xpub) }
+                    GhostButton("Copy account key (xpub)", dense = true) { copyToClipboard(ctx, "xpub", s.xpub) }
                 }
             }
         }
@@ -444,12 +444,12 @@ private fun SettingsTab(vm: WalletViewModel) {
                 color = Fx.textFaint, fontSize = 12.sp,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
-                GhostButton("Refresh", Modifier.weight(1f)) { vm.refresh() }
-                GhostButton("Reconnect", Modifier.weight(1f)) { vm.reconnect() }
+                GhostButton("Refresh", Modifier.weight(1f), dense = true) { vm.refresh() }
+                GhostButton("Reconnect", Modifier.weight(1f), dense = true) { vm.reconnect() }
             }
         }
 
-        GhostButton("Lock app", tint = Fx.bad) { vm.lock() }
+        GhostButton("Lock app", tint = Fx.bad, dense = true) { vm.lock() }
         Text("fortis 0.1.0", color = Fx.textFaint, fontSize = 11.sp)
     }
 

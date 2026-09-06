@@ -92,31 +92,38 @@ fun GlassCard(
 }
 
 @Composable
-fun PrimaryButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
+fun PrimaryButton(
+    text: String, modifier: Modifier = Modifier, enabled: Boolean = true,
+    dense: Boolean = false, onClick: () -> Unit,
+) {
     Box(
         modifier
             .fillMaxWidth()
             .background(Brush.linearGradient(listOf(Fx.accent, Fx.accent2)), RoundedCornerShape(Fx.pill))
             .clickable(enabled = enabled) { onClick() }
-            .padding(vertical = 14.dp),
+            .padding(vertical = if (dense) 9.dp else 14.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = Color(0xFF0A0C16), fontWeight = FontWeight.SemiBold)
+        Text(text, color = Color(0xFF0A0C16), fontWeight = FontWeight.SemiBold,
+            fontSize = if (dense) 13.sp else 14.sp)
     }
 }
 
 @Composable
-fun GhostButton(text: String, modifier: Modifier = Modifier, tint: Color = Fx.text, onClick: () -> Unit) {
+fun GhostButton(
+    text: String, modifier: Modifier = Modifier, tint: Color = Fx.text,
+    dense: Boolean = false, onClick: () -> Unit,
+) {
     Box(
         modifier
             .fillMaxWidth()
             .background(Fx.glass2, RoundedCornerShape(Fx.pill))
             .border(1.dp, Fx.hair, RoundedCornerShape(Fx.pill))
             .clickable { onClick() }
-            .padding(vertical = 13.dp),
+            .padding(vertical = if (dense) 8.dp else 13.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = tint)
+        Text(text, color = tint, fontSize = if (dense) 13.sp else 14.sp)
     }
 }
 
