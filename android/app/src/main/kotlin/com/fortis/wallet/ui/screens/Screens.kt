@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
@@ -154,19 +155,7 @@ fun CreateScreen(vm: WalletViewModel) {
     Screen(scroll = true) {
         Text("Your recovery phrase", style = MaterialTheme.typography.titleMedium, color = Fx.text)
         Text("Write these ${words.size} words on paper, offline. Anyone with them controls your funds.", color = Fx.textDim)
-        GlassCard {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                words.chunked(3).forEachIndexed { row, three ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        three.forEachIndexed { col, w ->
-                            Text("${row * 3 + col + 1}  $w", color = Fx.text,
-                                fontFamily = FontFamily.Monospace, fontSize = 13.sp,
-                                modifier = Modifier.weight(1f).background(Fx.glass1, RoundedCornerShape(8.dp)).padding(6.dp))
-                        }
-                    }
-                }
-            }
-        }
+        GlassCard { PhraseGrid(words) }
         Field(name, { name = it }, "Wallet name")
         ChainRow(chain) { chain = it }
         Field(passphrase, { passphrase = it }, "BIP-39 passphrase (optional)", password = true)
@@ -238,6 +227,66 @@ fun RestoreScreen(vm: WalletViewModel) {
 @Composable
 private fun ChainRow(chain: String, onChain: (String) -> Unit) {
     Segmented(listOf("btcb2" to "BTCB2", "btc" to "BTC"), chain, onChain)
+}
+
+/** Numbered 3-column grid of mnemonic words. Caller supplies the surrounding card. */
+@Composable
+fun PhraseGrid(words: List<String>) = Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    words.chunked(3).forEachIndexed { row, three ->
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            three.forEachIndexed { col, w ->
+                Text(
+                    "${row * 3 + col + 1}  $w", color = Fx.text,
+                    fontFamily = FontFamily.Monospace, fontSize = 13.sp,
+                    modifier = Modifier.weight(1f).background(Fx.glass1, RoundedCornerShape(8.dp)).padding(6.dp),
+                )
+            }
+        }
+    }
+}
+
+/** Screenshot-blocked view of one wallet's recovery phrase + passphrase. */
+@Composable
+fun RevealSeedScreen(vm: WalletViewModel) {
+    val id = vm.revealingId ?: return
+    val w = vm.wallets.firstOrNull { it.id == id }
+    var seed by remember(id) { mutableStateOf<Pair<List<String>, String>?>(null) }
+    var failed by remember(id) { mutableStateOf(false) }
+    LaunchedEffect(id) {
+        seed = runCatching { vm.seedFor(id) }.getOrNull()
+        if (seed == null) failed = true
+    }
+    Screen(scroll = true) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton({ vm.closeReveal() }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Back", tint = Fx.text) }
+            Text("Recovery phrase", style = MaterialTheme.typography.titleMedium, color = Fx.text)
+        }
+        if (w != null) Text(w.display, color = Fx.textDim)
+        Text(
+            "Anyone who sees these words — plus the passphrase, if set — can spend this wallet. " +
+                "Only look at them somewhere private. Never type them into a website or app. " +
+                "Screenshots are blocked here.",
+            color = Fx.bad, fontSize = 13.sp,
+        )
+        when {
+            failed -> Text("Couldn't decrypt this wallet.", color = Fx.bad)
+            seed == null -> CircularProgressIndicator(Modifier.align(Alignment.CenterHorizontally))
+            else -> {
+                val (words, passphrase) = seed!!
+                GlassCard { PhraseGrid(words) }
+                if (passphrase.isNotEmpty()) {
+                    Text("BIP-39 passphrase", color = Fx.textDim, style = MaterialTheme.typography.labelMedium)
+                    Text(
+                        passphrase, color = Fx.text, fontFamily = FontFamily.Monospace,
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(Fx.rSm)).background(Fx.glass1).padding(Fx.s4),
+                    )
+                } else {
+                    Text("No BIP-39 passphrase on this wallet.", color = Fx.textFaint, fontSize = 12.sp)
+                }
+            }
+        }
+        PrimaryButton("Done") { vm.closeReveal() }
+    }
 }
 
 @Composable
@@ -378,6 +427,7 @@ private fun SettingsTab(vm: WalletViewModel) {
     val st = vm.status
     var renaming by remember { mutableStateOf<String?>(null) }
     var removing by remember { mutableStateOf<String?>(null) }
+    var revealWarn by remember { mutableStateOf<String?>(null) }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = Fx.s2),
@@ -418,6 +468,7 @@ private fun SettingsTab(vm: WalletViewModel) {
                             else Toast.makeText(ctx, "still loading — try again", Toast.LENGTH_SHORT).show()
                         }
                     }
+                    GhostButton("Recovery phrase", dense = true) { revealWarn = w.id }
                     val hasOther = vm.wallets.any { it.name == w.name && it.chain == w.otherChain }
                     if (!hasOther && vm.canAddWallet) GhostButton("Also add on ${w.otherChain.uppercase()}", dense = true) {
                         vm.cloneToOtherChain(w.id)
@@ -471,6 +522,26 @@ private fun SettingsTab(vm: WalletViewModel) {
             text = { Field(text, { text = it }, "Wallet name") },
             confirmButton = { TextButton({ vm.renameWallet(id, text); renaming = null }) { Text("Save", color = Fx.accent) } },
             dismissButton = { TextButton({ renaming = null }) { Text("Cancel", color = Fx.text) } },
+        )
+    }
+
+    revealWarn?.let { id ->
+        val w = vm.wallets.firstOrNull { it.id == id }
+        AlertDialog(
+            onDismissRequest = { revealWarn = null },
+            containerColor = Fx.bg1,
+            title = { Text("Show ${w?.display ?: "wallet"}'s recovery phrase?", color = Fx.text) },
+            text = {
+                Text(
+                    "The recovery phrase (and passphrase, if you set one) is the only thing " +
+                        "that can restore this wallet — and anyone who has it can spend your " +
+                        "funds. Only reveal it somewhere private, with no one watching. The " +
+                        "next screen blocks screenshots.",
+                    color = Fx.textDim,
+                )
+            },
+            confirmButton = { TextButton({ vm.startReveal(id); revealWarn = null }) { Text("Show", color = Fx.accent) } },
+            dismissButton = { TextButton({ revealWarn = null }) { Text("Cancel", color = Fx.text) } },
         )
     }
 

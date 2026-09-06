@@ -20,7 +20,7 @@ import com.fortis.wallet.ui.theme.FortisTheme
 
 // Screens that show the recovery phrase or a password.
 private val SECURE_PHASES = setOf(
-    Phase.Gen, Phase.Create, Phase.Restore, Phase.AppLock,
+    Phase.Gen, Phase.Create, Phase.Restore, Phase.AppLock, Phase.RevealSeed,
 )
 
 @Composable
@@ -47,6 +47,7 @@ fun FortisApp(vm: WalletViewModel = viewModel()) {
                 Phase.Create -> CreateScreen(vm)
                 Phase.Restore -> RestoreScreen(vm)
                 Phase.Shell -> Shell(vm)
+                Phase.RevealSeed -> RevealSeedScreen(vm)
             }
         }
     }

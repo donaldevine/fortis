@@ -22,7 +22,7 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.math.roundToLong
 
-enum class Phase { Loading, AppLock, Onboard, Gen, Create, Restore, Shell }
+enum class Phase { Loading, AppLock, Onboard, Gen, Create, Restore, Shell, RevealSeed }
 
 /** The three top-level destinations inside [Phase.Shell]'s nav bar. */
 enum class NavTab { Home, Wallet, Settings }
@@ -267,6 +267,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         appSecret = null
         synchronized(balanceLock) { walletBalances = emptyMap() }
         overviewBackends.clear()
+        revealingId = null
         resetView()
         nav = NavTab.Home
         phase = if (wallets.isEmpty()) Phase.Onboard else Phase.AppLock
@@ -314,6 +315,25 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     fun renameWallet(id: String, name: String) = wrap {
         val clean = name.trim()
         if (clean.isNotEmpty()) updateConfig(id) { it.copy(name = clean) }
+    }
+
+    // --- reveal recovery phrase ---
+
+    var revealingId by mutableStateOf<String?>(null); private set
+
+    /** Go to the (screenshot-blocked) recovery-phrase screen for a wallet. */
+    fun startReveal(id: String) { error = null; revealingId = id; phase = Phase.RevealSeed }
+    fun closeReveal() { revealingId = null; resolvePhase() }
+
+    /** Decrypt a wallet's seed for display. `(words, passphrase)`; passphrase is
+     *  "" when none was set. Runs Argon2id — call from a coroutine. */
+    suspend fun seedFor(id: String): Pair<List<String>, String>? {
+        val c = wallets.firstOrNull { it.id == id } ?: return null
+        val secret = appSecret ?: return null
+        return withContext(Dispatchers.Default) {
+            val (mnemonic, passphrase) = unsealSeed(c.sealed, c.salt, secret)
+            mnemonic.trim().split(Regex("\\s+")) to passphrase
+        }
     }
 
     /** Add a wallet to the other chain under the same name (same seed, same
