@@ -23,9 +23,9 @@ enum class Phase { Loading, Onboard, Gen, Create, Restore, Locked, Home, Setting
 /** The one backend the mobile app talks to. Not user-configurable, not shown. */
 const val HOSTED_EDGE = "https://api.fortis.rest"
 
-/** Public-explorer fallback for `btc` wallets when [HOSTED_EDGE] is unreachable.
- *  There is no public explorer for `btcb2`, so a BTCB2 wallet has no fallback. */
+/** Public Esplora fallbacks, used when [HOSTED_EDGE] is unreachable. */
 const val PUBLIC_BTC_ESPLORA = "https://mempool.space/api"
+const val PUBLIC_BTCB2_ESPLORA = "https://mempool.guide/api"
 
 data class PlanPreview(
     val plan: FundingPlan, val feerate: ULong, val to: String,
@@ -57,6 +57,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     var history by mutableStateOf<List<HistoryEntry>>(emptyList()); private set
     var feerates by mutableStateOf<Map<Int, Long>>(emptyMap()); private set
     var pending by mutableStateOf<PlanPreview?>(null); private set
+    var lastSentTxid by mutableStateOf<String?>(null); private set
     var error by mutableStateOf<String?>(null)
 
     init { viewModelScope.launch { config = store.load(); resolvePhase() } }
@@ -125,12 +126,14 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     fun lock() {
         session?.close(); session = null
         backend = null; fallback = null; usingFallback = false
+        lastSentTxid = null; pending = null
         phase = Phase.Locked
     }
 
     fun wipe() = viewModelScope.launch {
         store.wipe(); session?.close(); session = null
         backend = null; fallback = null; usingFallback = false
+        lastSentTxid = null; pending = null
         config = null; phase = Phase.Onboard
     }
 
@@ -159,8 +162,10 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         val c = config ?: return
         val view = session?.view ?: return
         if (backend == null) backend = edgeBackend(c.backendToken ?: "")
-        if (fallback == null && c.chain == "btc")
-            fallback = EsploraBackend(http, "$PUBLIC_BTC_ESPLORA", view, { config!!.nextReceive to config!!.nextChange })
+        if (fallback == null) {
+            val esplora = if (c.chain == "btc") PUBLIC_BTC_ESPLORA else PUBLIC_BTCB2_ESPLORA
+            fallback = EsploraBackend(http, esplora, view, { config!!.nextReceive to config!!.nextChange })
+        }
     }
 
     fun refresh() = viewModelScope.launch {
@@ -214,13 +219,16 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     fun confirmSend() = wrap {
         val p = pending!!; val b = active(); val s = session!!; val c = config!!
         val signed = s.sign(p.plan.txHex, p.plan.selected)
-        b.broadcast(signed)
+        val txid = b.broadcast(signed)
         val idx = s.view.nextIndices()
         val updated = c.copy(nextChange = maxOf(c.nextChange, idx.nextChange.toInt()))
         store.save(updated); config = updated
         pending = null
+        lastSentTxid = txid.trim().ifBlank { null }
         refresh()
     }
+
+    fun dismissLastSent() { lastSentTxid = null }
 
     private fun wrap(block: suspend () -> Unit) = viewModelScope.launch {
         error = null

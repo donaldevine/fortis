@@ -13,6 +13,14 @@ import { el, mount, toast, copy, fmt, parseAmount, shortTxid, timeAgo, countUp, 
 
 const UNIT = { btcb2: 'BTCB2', btc: 'BTC' };
 const DEFAULT_ESPLORA = { btcb2: 'https://mempool.guide/api', btc: 'https://mempool.space/api' };
+const EXPLORER = { btc: 'https://mempool.space', btcb2: 'https://mempool.guide' };
+
+/** Public block-explorer URL for a tx, or null (non-mainnet / unknown chain). */
+function explorerTxUrl(txid) {
+  if (state?.network !== 'mainnet') return null;
+  const base = EXPLORER[state.chain];
+  return base ? `${base}/tx/${txid}` : null;
+}
 // The hosted fortis-edge. Override for a local instance (http://127.0.0.1:8098).
 const DEFAULT_EDGE = 'https://api.fortis.rest';
 
@@ -641,15 +649,22 @@ function paneHistory() {
   const h = cache.history;
   const unit = UNIT[state.chain];
   if (!h.length) return el('div', { class: 'card center hint' }, 'no transactions yet');
-  return el('div', { class: 'card hist' }, h.map((t) => {
-    const pos = t.amount_sat > 0;
-    const conf = t.confirmations;
-    return el('div', { class: 'item', onclick: () => copy(t.txid) },
-      el('div', {},
-        el('div', { class: `amt ${pos ? 'pos' : 'neg'}` }, `${pos ? '+' : ''}${fmt(t.amount_sat)} ${unit}`),
-        el('div', { class: 'meta' }, `${t.direction} · ${timeAgo(t.time)} · ${shortTxid(t.txid)}`)),
-      el('span', { class: `badge ${conf < 1 ? 'pending' : ''}` }, conf < 1 ? 'pending' : conf < 6 ? `${conf} conf` : 'confirmed'));
-  }));
+  const openTx = (txid) => {
+    const u = explorerTxUrl(txid);
+    if (u) window.open(u, '_blank', 'noopener'); else copy(txid);
+  };
+  return el('div', { class: 'card hist' }, [
+    ...h.map((t) => {
+      const pos = t.amount_sat > 0;
+      const conf = t.confirmations;
+      return el('div', { class: 'item', onclick: () => openTx(t.txid) },
+        el('div', {},
+          el('div', { class: `amt ${pos ? 'pos' : 'neg'}` }, `${pos ? '+' : ''}${fmt(t.amount_sat)} ${unit}`),
+          el('div', { class: 'meta' }, `${t.direction} · ${timeAgo(t.time)} · ${shortTxid(t.txid)}`)),
+        el('span', { class: `badge ${conf < 1 ? 'pending' : ''}` }, conf < 1 ? 'pending' : conf < 6 ? `${conf} conf` : 'confirmed'));
+    }),
+    explorerTxUrl('') ? el('div', { class: 'hint', style: 'padding:8px 2px 0' }, 'tap a transaction to open it in the explorer') : null,
+  ]);
 }
 
 /* ------------------------------------------------------------------ polling */

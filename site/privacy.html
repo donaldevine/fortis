@@ -87,12 +87,13 @@
   <p>The backend is served through Cloudflare (TLS, CDN, DDoS protection). Cloudflare
   processes connection data (IP address, request metadata) on our behalf under its own
   <a href="https://www.cloudflare.com/privacypolicy/">privacy policy</a>.</p>
-  <h3>mempool.space (fallback only)</h3>
-  <p>If <code>api.fortis.rest</code> is unreachable, a Bitcoin (BTC) wallet will query
-  the public <a href="https://mempool.space/">mempool.space</a> API directly until the
-  fortis backend is available again. During that time mempool.space receives the same
-  wallet addresses and your IP address, governed by its own privacy policy. BTCB2
-  wallets have no fallback and simply retry the fortis backend.</p>
+  <h3>Public explorers (fallback only)</h3>
+  <p>If <code>api.fortis.rest</code> is unreachable, the app queries a public block
+  explorer directly until the fortis backend is available again —
+  <a href="https://mempool.space/">mempool.space</a> for Bitcoin,
+  <a href="https://mempool.guide/">mempool.guide</a> for BTCB2. During that time the
+  explorer receives the same wallet addresses and your IP address, governed by its
+  own privacy policy.</p>
 
   <h2>4. Camera</h2>
   <p>The camera permission is used only to scan a QR code containing a payment address,
@@ -147,7 +148,7 @@
       personal info — none; financial info — wallet addresses and on-chain transaction
       data (public), submitted transactions; app activity — none; device IDs — none.</li>
     <li><strong>Data shared:</strong> wallet addresses and IP address are processed by
-      Cloudflare (infrastructure) and, during a backend outage, by mempool.space
+      Cloudflare (infrastructure) and, during a backend outage, by mempool.space / mempool.guide
       (fallback data source).</li>
     <li><strong>Security practices:</strong> data encrypted in transit (HTTPS);
       on-device secrets encrypted at rest; users can request deletion.</li>

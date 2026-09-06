@@ -10,9 +10,11 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -20,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -305,6 +308,7 @@ fun HomeScreen(vm: WalletViewModel) {
                     }
                 }
             }
+            vm.lastSentTxid?.let { txid -> SentBanner(vm, txid) }
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(Fx.s4),
@@ -318,6 +322,27 @@ fun HomeScreen(vm: WalletViewModel) {
         }
     }
     vm.pending?.let { ConfirmSheet(vm, it, unit) }
+}
+
+@Composable
+private fun SentBanner(vm: WalletViewModel, txid: String) {
+    val ctx = LocalContext.current
+    val c = vm.config
+    val url = c?.let { explorerTxUrl(it.chain, it.network, txid) }
+    GlassCard {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Payment sent", color = Fx.good, fontWeight = FontWeight.Medium)
+                Text(
+                    "${txid.take(12)}… · tap to copy",
+                    color = Fx.textFaint, fontSize = 12.sp,
+                    modifier = Modifier.clickable { copyToClipboard(ctx, "txid", txid) },
+                )
+            }
+            if (url != null) TextButton({ openInBrowser(ctx, url) }) { Text("View", color = Fx.accent) }
+            IconButton({ vm.dismissLastSent() }) { Icon(Icons.Filled.Close, "Dismiss", tint = Fx.textDim) }
+        }
+    }
 }
 
 @Composable
@@ -426,17 +451,27 @@ private fun SendTab(vm: WalletViewModel) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun HistoryTab(vm: WalletViewModel, unit: String) {
     val ctx = LocalContext.current
+    val chain = vm.config?.chain ?: "btcb2"
+    val network = vm.config?.network ?: "mainnet"
     if (vm.history.isEmpty()) {
         GlassCard { Text("no transactions yet", color = Fx.textFaint) }
         return
     }
     GlassCard {
         vm.history.forEach { h ->
+            val url = explorerTxUrl(chain, network, h.txid)
             Row(
-                Modifier.fillMaxWidth().clickable { copyToClipboard(ctx, "txid", h.txid) }.padding(vertical = 10.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        onClick = { if (url != null) openInBrowser(ctx, url) else copyToClipboard(ctx, "txid", h.txid) },
+                        onLongClick = { copyToClipboard(ctx, "txid", h.txid) },
+                    )
+                    .padding(vertical = 10.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column {
@@ -448,6 +483,10 @@ private fun HistoryTab(vm: WalletViewModel, unit: String) {
                     color = if (h.confirmations < 1) Fx.warn else Fx.textDim, fontSize = 12.sp)
             }
         }
+        Text(
+            "tap a transaction to open it in the explorer · long-press to copy the id",
+            color = Fx.textFaint, fontSize = 11.sp, modifier = Modifier.padding(top = Fx.s2),
+        )
     }
 }
 

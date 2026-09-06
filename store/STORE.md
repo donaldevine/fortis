@@ -37,6 +37,7 @@ WHAT YOU CAN DO
 • Receive: show a QR code for your address, copy it, or share it.
 • Send: scan a QR code with the camera or paste an address, choose a fee
   (fast / normal / slow, or a custom sat/vB rate), review, and sign.
+• Tap any transaction to open it in a public block explorer.
 • Switch between the Bitcoin and BTCB2 chains.
 
 BUILT FOR SELF-CUSTODY
@@ -68,7 +69,7 @@ fortis is early software. Back up your recovery phrase offline and start small.
 |---|---|
 | Does your app collect or share user data? | Yes |
 | **Data types collected** | *Financial info* → "Other financial info": public wallet addresses and the on-chain transactions for them, submitted (signed) transactions. *App info and performance* → "Crash logs": app/OS/device version + stack trace. *App activity* → none. *Location, Personal info, Contacts, Messages, Photos, Audio, Files, Calendar, Device IDs* → none. |
-| **Data shared with third parties** | Wallet addresses and IP address are processed by Cloudflare (infrastructure) and, only during a backend outage, by mempool.space (fallback block-data source). Crash logs are sent to a fortis-operated endpoint. |
+| **Data shared with third parties** | Wallet addresses and IP address are processed by Cloudflare (infrastructure) and, only during a backend outage, by mempool.space / mempool.guide (fallback block-data sources). Crash logs are sent to a fortis-operated endpoint. |
 | Is data encrypted in transit? | Yes (HTTPS) |
 | Can users request data deletion? | Yes — support@fortis.rest; on-device data is removed on uninstall / "Forget this wallet" |
 | Is any collected data required? | Wallet addresses are required to show balances; the crash log and the per-install token are not linked to the user's identity |
