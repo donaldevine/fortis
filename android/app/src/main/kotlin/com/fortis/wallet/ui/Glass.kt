@@ -5,13 +5,20 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -19,14 +26,19 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -117,13 +129,33 @@ fun Field(
     mono: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    var reveal by remember { mutableStateOf(false) }
+    val hidden = password && !reveal
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Fx.s1)) {
         if (label != null) Text(label, color = Fx.textDim, style = MaterialTheme.typography.labelMedium)
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = !mono,
-            visualTransformation = if (password) PasswordVisualTransformation() else VisualTransformation.None,
+            visualTransformation = if (hidden) PasswordVisualTransformation() else VisualTransformation.None,
+            // Password keyboard type even when revealed: keeps the IME suggestion /
+            // clipboard strip suppressed so a secret can't leak through it.
+            keyboardOptions = if (password) {
+                KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false)
+            } else {
+                KeyboardOptions.Default
+            },
+            trailingIcon = if (password) {
+                {
+                    IconButton(onClick = { reveal = !reveal }) {
+                        Icon(
+                            if (reveal) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                            contentDescription = if (reveal) "Hide" else "Show",
+                            tint = Fx.textDim,
+                        )
+                    }
+                }
+            } else null,
             textStyle = LocalTextStyle.current.copy(
                 color = Fx.text,
                 fontFamily = if (mono) FontFamily.Monospace else null,
@@ -177,6 +209,11 @@ fun BrandMark(tagline: String? = null) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Fx.s3),
     ) {
+        Image(
+            painter = painterResource(com.fortis.wallet.R.drawable.ic_launcher_foreground),
+            contentDescription = null,
+            modifier = Modifier.size(96.dp),
+        )
         Text("fortis", fontSize = 38.sp, fontWeight = FontWeight.Bold, color = Fx.text)
         if (tagline != null) Text(tagline, color = Fx.textDim, textAlign = TextAlign.Center)
     }

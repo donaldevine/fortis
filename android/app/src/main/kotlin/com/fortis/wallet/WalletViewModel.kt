@@ -20,8 +20,12 @@ import kotlin.math.roundToLong
 
 enum class Phase { Loading, Onboard, Gen, Create, Restore, Locked, Home, Settings }
 
-/** The one backend the mobile app talks to. Not user-configurable. */
+/** The one backend the mobile app talks to. Not user-configurable, not shown. */
 const val HOSTED_EDGE = "https://api.fortis.rest"
+
+/** Public-explorer fallback for `btc` wallets when [HOSTED_EDGE] is unreachable.
+ *  There is no public explorer for `btcb2`, so a BTCB2 wallet has no fallback. */
+const val PUBLIC_BTC_ESPLORA = "https://mempool.space/api"
 
 data class PlanPreview(
     val plan: FundingPlan, val feerate: ULong, val to: String,
@@ -39,7 +43,13 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     var phase by mutableStateOf(Phase.Loading); private set
     var config by mutableStateOf<WalletConfig?>(null); private set
     var session by mutableStateOf<WalletSession?>(null); private set
-    var backend: Backend? = null; private set
+    var backend: Backend? = null; private set          // the hosted edge (primary)
+    private var fallback: Backend? = null              // public explorer, btc only
+    private var usingFallback by mutableStateOf(false)
+
+    /** Whichever backend last answered — what sends and coin queries must use. */
+    private fun active(): Backend = (if (usingFallback) fallback else backend) ?: backend
+        ?: error("no backend")
 
     var draftMnemonic by mutableStateOf<String?>(null); private set
     var status by mutableStateOf<ChainStatus?>(null); private set
@@ -79,6 +89,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         val token = edgeRegister(http, HOSTED_EDGE)
         persistToken(token)
         backend = edgeBackend(token)
+        usingFallback = false
         backend!!.status()
         status = null; balances = null; history = emptyList()
         resolvePhase()
@@ -111,10 +122,16 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         resolvePhase()
     }
 
-    fun lock() { session?.close(); session = null; backend = null; phase = Phase.Locked }
+    fun lock() {
+        session?.close(); session = null
+        backend = null; fallback = null; usingFallback = false
+        phase = Phase.Locked
+    }
 
     fun wipe() = viewModelScope.launch {
-        store.wipe(); session?.close(); session = null; backend = null; config = null; phase = Phase.Onboard
+        store.wipe(); session?.close(); session = null
+        backend = null; fallback = null; usingFallback = false
+        config = null; phase = Phase.Onboard
     }
 
     /** The hosted fortis-edge as an Esplora backend at `{HOSTED_EDGE}/{chain}`.
@@ -139,20 +156,27 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun ensureBackend() {
-        if (backend != null) return
         val c = config ?: return
-        session ?: return
-        backend = edgeBackend(c.backendToken ?: "")
+        val view = session?.view ?: return
+        if (backend == null) backend = edgeBackend(c.backendToken ?: "")
+        if (fallback == null && c.chain == "btc")
+            fallback = EsploraBackend(http, "$PUBLIC_BTC_ESPLORA", view, { config!!.nextReceive to config!!.nextChange })
     }
 
     fun refresh() = viewModelScope.launch {
-        val b = backend ?: return@launch
-        runCatching {
-            status = b.status()
+        val edge = backend ?: return@launch
+        suspend fun load(b: Backend, degraded: Boolean) {
+            status = b.status().copy(degraded = degraded)
+            usingFallback = degraded
             balances = b.balances()
             history = b.history(50)
             if (feerates.isEmpty()) feerates = listOf(1, 6, 144).associateWith { b.feerateSatVb(it).toLong() }
-        }.onFailure { status = null }
+        }
+        // Always try the hosted service first, so we recover automatically when
+        // it comes back; drop to the public explorer (btc only) meanwhile.
+        runCatching { load(edge, false) }
+            .recoverCatching { e -> fallback?.let { load(it, true) } ?: throw e }
+            .onFailure { status = null }
     }
 
     fun newReceiveAddress() = viewModelScope.launch {
@@ -165,7 +189,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         to: String, amountBtcb2: String, sweep: Boolean,
         feerateOverride: Long?, confTarget: Int, replayProtect: Boolean,
     ) = wrap {
-        val b = backend!!; val s = session!!; val c = config!!
+        val b = active(); val s = session!!; val c = config!!
         val feerate = (feerateOverride ?: b.feerateSatVb(confTarget).toLong()).coerceAtLeast(1)
         val utxos = b.utxos(1u)
         require(utxos.isNotEmpty()) { "no confirmed coins to spend" }
@@ -188,7 +212,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     fun cancelPending() { pending = null }
 
     fun confirmSend() = wrap {
-        val p = pending!!; val b = backend!!; val s = session!!; val c = config!!
+        val p = pending!!; val b = active(); val s = session!!; val c = config!!
         val signed = s.sign(p.plan.txHex, p.plan.selected)
         b.broadcast(signed)
         val idx = s.view.nextIndices()

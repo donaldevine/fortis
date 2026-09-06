@@ -11,6 +11,7 @@ navigationCompose = "2.9.5"
 datastore = "1.1.7"
 okhttp = "4.12.0"
 biometric = "1.2.0-alpha05"
+zxing = "4.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -29,6 +30,7 @@ datastore-preferences = { group = "androidx.datastore", name = "datastore-prefer
 biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 jna = { group = "net.java.dev.jna", name = "jna", version = "5.17.0" }
+zxing-android-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxing" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

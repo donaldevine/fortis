@@ -1,0 +1,25 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+
+    <!-- battlemented shield: a keep behind a heater shield -->
+    <path
+        android:strokeColor="#223D6B" android:strokeWidth="1.5" android:strokeLineJoin="round"
+        android:pathData="M22,25 h8 v7 h6 v-7 h8 v7 h6 v-7 h8 v7 h6 v-7 h8 v7 h6 v-7 h8 V60 C86,73 73,82 54,88 C35,82 22,73 22,60 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="30" android:startY="20"
+                android:endX="66" android:endY="90"
+                android:startColor="#84B6FF" android:endColor="#496FCC" />
+        </aapt:attr>
+    </path>
+
+    <!-- gate -->
+    <path android:fillColor="#0B0D18"
+        android:pathData="M47,77 V57 a7,7 0 0 1 14,0 V77 Z" />
+
+    <!-- arrow slits flanking the keep -->
+    <path android:fillColor="#0B0D18"
+        android:pathData="M40,40 h3.4 v11 h-3.4 z M64.6,40 h3.4 v11 h-3.4 z" />
+</vector>

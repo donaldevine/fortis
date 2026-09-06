@@ -14,6 +14,8 @@ data class ChainStatus(
     val subversion: String = "",
     val scanningPct: Int? = null,
     val pricing: ServicePricing? = null,
+    // true when serving from the public-explorer fallback, not the hosted service
+    val degraded: Boolean = false,
 )
 
 data class Balances(val confirmedSat: Long, val pendingSat: Long)

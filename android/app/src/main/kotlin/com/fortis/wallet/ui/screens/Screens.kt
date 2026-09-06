@@ -3,11 +3,14 @@ package com.fortis.wallet.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -25,18 +28,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fortis.wallet.BuildConfig
 import com.fortis.wallet.PlanPreview
 import com.fortis.wallet.WalletViewModel
 import com.fortis.wallet.ui.*
 import com.fortis.wallet.ui.theme.Fx
 import com.fortis.wallet.wallet.EntropyCollector
 import com.fortis.wallet.wallet.entropyProgress
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -184,7 +191,8 @@ fun RestoreScreen(vm: WalletViewModel) {
     var pw by remember { mutableStateOf("") }
     Screen(scroll = true) {
         Text("Restore wallet", style = MaterialTheme.typography.titleMedium, color = Fx.text)
-        Field(phrase, { phrase = it }, "Recovery phrase (12 or 24 words)", mono = true)
+        Text("Enter your 12 or 24 words, separated by spaces.", color = Fx.textDim)
+        MnemonicField(phrase, { phrase = it })
         Field(passphrase, { passphrase = it }, "BIP-39 passphrase (optional)", password = true)
         ChainNetworkRow(chain, { chain = it }, network, { network = it })
         Field(pw, { pw = it }, "Encryption password for this device", password = true)
@@ -202,7 +210,10 @@ fun RestoreScreen(vm: WalletViewModel) {
 private fun ChainNetworkRow(chain: String, onChain: (String) -> Unit, net: String, onNet: (String) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
         Segmented(listOf("btcb2" to "BTCB2", "btc" to "BTC"), chain, onChain, Modifier.weight(1f))
-        Segmented(listOf("mainnet" to "mainnet", "regtest" to "regtest"), net, onNet, Modifier.weight(1f))
+        // regtest is a dev-only target — release builds are mainnet-only.
+        if (BuildConfig.DEBUG) {
+            Segmented(listOf("mainnet" to "mainnet", "regtest" to "regtest"), net, onNet, Modifier.weight(1f))
+        }
     }
 }
 
@@ -269,7 +280,12 @@ fun HomeScreen(vm: WalletViewModel) {
                             Text(unit, color = Fx.textDim, fontSize = 12.sp)
                         }
                         val hint = vm.status?.let {
-                            (if (it.synced) "block ${it.blocks}" else "syncing") + "  ·  ${it.via}"
+                            val head = when {
+                                it.scanningPct != null -> "rescanning ${it.scanningPct}%"
+                                it.synced -> "block ${it.blocks}"
+                                else -> "syncing"
+                            }
+                            if (it.degraded) "$head  ·  limited service" else head
                         } ?: "connecting…"
                         Text(hint, color = Fx.textFaint, fontSize = 12.sp)
                     }
@@ -310,8 +326,29 @@ private fun ReceiveTab(vm: WalletViewModel) {
     val i = vm.config?.nextReceive ?: 0
     val addr = remember(i, vm.session) { runCatching { vm.session?.receiveAddress(i)?.address }.getOrNull() ?: "…" }
     val copy = { copyToClipboard(ctx, "address", addr) }
+    val share = {
+        ctx.startActivity(
+            Intent.createChooser(
+                Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, addr) },
+                "Share address",
+            ),
+        )
+    }
     GlassCard {
         Text("Receive", color = Fx.text, fontWeight = FontWeight.SemiBold)
+        if (addr.length > 3) {
+            val qr = remember(addr) { qrBitmap(addr) }
+            Image(
+                bitmap = qr.asImageBitmap(),
+                contentDescription = "address QR code",
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .size(224.dp)
+                    .clip(RoundedCornerShape(Fx.rSm))
+                    .background(Color.White)
+                    .padding(10.dp),
+            )
+        }
         Text(
             addr,
             fontFamily = FontFamily.Monospace,
@@ -326,8 +363,9 @@ private fun ReceiveTab(vm: WalletViewModel) {
         Text("address #$i · tap to copy", color = Fx.textFaint, fontSize = 12.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
             GhostButton("Copy", Modifier.weight(1f)) { copy() }
-            GhostButton("New address", Modifier.weight(1f)) { vm.newReceiveAddress() }
+            GhostButton("Share", Modifier.weight(1f)) { share() }
         }
+        GhostButton("New address") { vm.newReceiveAddress() }
     }
 }
 
@@ -340,9 +378,22 @@ private fun SendTab(vm: WalletViewModel) {
     var custom by remember { mutableStateOf("") }
     var replayProtect by remember { mutableStateOf(false) }
     val isBtc = vm.config?.chain == "btc"
+    val scan = rememberLauncherForActivityResult(ScanContract()) { r ->
+        r.contents?.let { to = addressFromScan(it) }
+    }
     GlassCard {
         Text("Send", color = Fx.text, fontWeight = FontWeight.SemiBold)
         Field(to, { to = it }, "To address", mono = true)
+        GhostButton("Scan QR code") {
+            scan.launch(
+                ScanOptions().apply {
+                    setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                    setPrompt("Scan a payment address")
+                    setBeepEnabled(false)
+                    setOrientationLocked(false)
+                },
+            )
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(sweep, { sweep = it }); Text("Send maximum (sweep)", color = Fx.text)
         }
@@ -436,7 +487,6 @@ fun SettingsScreen(vm: WalletViewModel) {
     val c = vm.config
     val s = vm.session
     val st = vm.status
-    var showToken by remember { mutableStateOf(false) }
 
     Screen(scroll = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -462,25 +512,22 @@ fun SettingsScreen(vm: WalletViewModel) {
             Text("Multiple wallets: not yet — one seed per install.", color = Fx.textFaint, fontSize = 12.sp)
         }
 
-        // --- backend ---
+        // --- connection ---
         GlassCard {
-            Text("fortis service", color = Fx.text, fontWeight = FontWeight.SemiBold)
-            kv("URL", com.fortis.wallet.HOSTED_EDGE)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Token", color = Fx.textDim)
-                Text(
-                    if (showToken) c?.backendToken ?: "—" else "•".repeat(16),
-                    color = Fx.text, fontFamily = FontFamily.Monospace, fontSize = 12.sp,
-                    modifier = Modifier.clickable { showToken = !showToken }.padding(start = Fx.s4),
-                )
-            }
+            Text("Connection", color = Fx.text, fontWeight = FontWeight.SemiBold)
             kv("Status", when {
-                st == null -> "not connected"
+                st == null -> "offline"
                 st.scanningPct != null -> "rescanning ${st.scanningPct}%"
-                st.synced -> "synced"
+                st.degraded -> "limited service"
+                st.synced -> "connected"
                 else -> "syncing"
             })
             kv("Chain height", st?.blocks?.toString() ?: "—")
+            if (st?.degraded == true) Text(
+                "The fortis service is unreachable — using public block data for now. " +
+                    "It'll switch back automatically.",
+                color = Fx.textFaint, fontSize = 12.sp,
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
                 GhostButton("Refresh", Modifier.weight(1f)) { vm.refresh() }
                 GhostButton("Reconnect", Modifier.weight(1f)) { vm.reconnect() }

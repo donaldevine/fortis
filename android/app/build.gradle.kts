@@ -28,7 +28,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlin { jvmToolchain(17) }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 
     packaging {
         jniLibs { useLegacyPackaging = false }
@@ -63,5 +66,6 @@ dependencies {
     implementation(libs.datastore.preferences)
     implementation(libs.biometric)
     implementation(libs.okhttp)
+    implementation(libs.zxing.android.embedded)
     debugImplementation(libs.compose.ui.tooling)
 }
