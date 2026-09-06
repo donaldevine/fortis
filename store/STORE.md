@@ -6,7 +6,8 @@ Draft copy and assets for the Play Console listing. Fill the `TODO` items.
 
 | Field | Value |
 |---|---|
-| App name | **Fortis Wallet** (plain "fortis" is likely taken — confirm on Play) |
+| App name | **Fortis Wallet** |
+| Developer/publisher | **Fortis Tech Labs** |
 | Package | `rest.fortis.wallet` |
 | Category | Finance |
 | Contact email | info@fortis.rest |
@@ -96,7 +97,7 @@ sexual / drug / gambling questions; note it references cryptocurrency.
 Play Console → App content → "Crypto Exchanges and Software Wallets":
 declare a **non-custodial software wallet** — keys are generated and stored on
 the user's device and never leave it; fortis cannot access or move user funds.
-Provide the operating entity's details (same as the privacy policy).
+The operating entity is **Fortis Tech Labs** (address as in the privacy policy).
 
 ## Assets
 
@@ -112,7 +113,7 @@ bar. Consider adding framed/captioned marketing versions later.
 
 ## TODO before submitting
 
-- [ ] Fill `[DATE]` and the operating entity in `site/privacy.html`, deploy `site/`
+- [ ] Fill `[DATE]` and the registered address in `site/privacy.html`, deploy `site/`
 - [ ] Generate the upload keystore, fill `android/keystore.properties`
 - [ ] `:app:bundleRelease` → upload the `.aab`
 - [ ] Confirm the app name on Play (trademark)

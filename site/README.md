@@ -1,13 +1,15 @@
 # fortis.rest — public site
 
-Static pages for `fortis.rest`: the landing page and the privacy policy that
-Google Play requires. **No build step** — plain HTML + one SVG.
+The **Fortis Tech Labs** company site plus the **Fortis Wallet** privacy policy
+that Google Play requires. **No build step** — plain HTML, one SVG, four small
+JPEGs.
 
 ```
 site/
-  index.html      →  https://fortis.rest/
+  index.html      →  https://fortis.rest/          (Fortis Tech Labs)
   privacy.html    →  https://fortis.rest/privacy   (Pages serves /privacy → /privacy.html)
   icon.svg        →  https://fortis.rest/icon.svg  (kept in sync with web/icon.svg)
+  img/*.jpg       →  downscaled app screenshots
 ```
 
 ## Before publishing
@@ -15,8 +17,8 @@ site/
 Fill the placeholders in `privacy.html`:
 
 - `[DATE]` — the effective date.
-- `[Legal entity name and registered address]` — the operator. Play's crypto
-  policy needs a real identity here.
+- `[registered address]` — Fortis Tech Labs' registered address. Play's crypto
+  policy needs a real operator identity.
 
 ## Deploy — Cloudflare Pages
 

@@ -3,30 +3,170 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>fortis — a non-custodial wallet for Bitcoin and its BLAKE2b fork</title>
+<title>Fortis Tech Labs — tools for Bitcoin self-custody</title>
+<meta name="description" content="Fortis Tech Labs builds non-custodial software for Bitcoin and its forks. Our first app is Fortis Wallet, for Bitcoin (BTC) and its Bitcoin Knots BLAKE2b fork (BTCB2).">
+<meta property="og:title" content="Fortis Tech Labs">
+<meta property="og:description" content="Non-custodial software for Bitcoin and its forks.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://fortis.rest/">
+<meta property="og:image" content="https://fortis.rest/img/receive.jpg">
+<link rel="icon" href="/icon.svg">
 <style>
-  :root { color-scheme: dark; }
-  body {
-    margin: 0; min-height: 100dvh; background: #0b0d16; color: #dfe4f2;
-    font: 16px/1.6 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    display: grid; place-items: center; text-align: center;
+  :root {
+    color-scheme: dark;
+    --bg: #0b0d16; --card: #12151f; --line: #1e2333;
+    --ink: #e7ebf6; --dim: #aab2c8; --faint: #7b849c; --accent: #8fbcff;
   }
-  main { max-width: 560px; padding: 40px 24px; }
-  img { width: 96px; height: 96px; }
-  h1 { font-size: 34px; margin: 20px 0 6px; color: #fff; letter-spacing: .3px; }
-  p.tag { color: #9aa3ba; font-size: 17px; margin: 0 0 28px; }
-  .links a { color: #8fbcff; margin: 0 10px; font-size: 14px; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; overflow-x: hidden; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.65 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%; overflow-x: hidden;
+  }
+  img { max-width: 100%; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+  nav .brand { display: flex; align-items: center; gap: 11px; font-weight: 700; font-size: 17px; color: #fff; }
+  nav .brand img { width: 28px; height: 28px; }
+  nav .links a { color: var(--dim); margin-left: 22px; font-size: 14px; }
+
+  header.hero {
+    text-align: center; padding: 76px 0 84px;
+    background:
+      radial-gradient(600px 380px at 18% -10%, rgba(63,92,196,.34), transparent 70%),
+      radial-gradient(560px 380px at 92% 15%, rgba(111,58,168,.26), transparent 70%);
+  }
+  header.hero .eyebrow { color: var(--faint); letter-spacing: .18em; text-transform: uppercase; font-size: 12px; }
+  header.hero h1 { font-size: clamp(34px, 7vw, 58px); margin: 12px 0 16px; letter-spacing: .4px; color: #fff; }
+  header.hero p { font-size: clamp(16px, 3.4vw, 20px); color: var(--dim); margin: 0 auto; max-width: 660px; }
+
+  section { padding: 56px 0; border-top: 1px solid var(--line); }
+  section h2 { font-size: 24px; color: #fff; margin: 0 0 8px; }
+  section .lead { color: var(--dim); max-width: 660px; margin: 0 0 32px; }
+
+  .product {
+    display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center;
+    background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 32px;
+  }
+  .product h3 { margin: 0 0 4px; font-size: 22px; color: #fff; }
+  .product .kicker { color: var(--faint); font-size: 13px; margin: 0 0 14px; }
+  .product ul { margin: 14px 0 20px; padding-left: 18px; color: var(--dim); }
+  .product li { margin: 5px 0; }
+  .product .cta { display: inline-block; font-size: 13px; color: var(--faint);
+    border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; }
+  .product .shots { display: flex; gap: 14px; max-width: 100%; overflow-x: auto; padding-bottom: 8px; }
+  .product .shots img { width: 168px; flex: none; border-radius: 16px; border: 1px solid var(--line); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 16px; }
+  .feature { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+  .feature h3 { margin: 0 0 6px; font-size: 16px; color: #fff; }
+  .feature p { margin: 0; color: var(--dim); font-size: 14.5px; }
+
+  footer { border-top: 1px solid var(--line); padding: 40px 0 64px; color: var(--faint); font-size: 14px; }
+  footer .row { display: flex; flex-wrap: wrap; gap: 14px 26px; align-items: center; justify-content: space-between; }
+  footer a { color: var(--dim); }
+  .warn { color: #ffcf7a; }
+
+  @media (max-width: 720px) {
+    .product { grid-template-columns: 1fr; gap: 26px; padding: 24px; }
+  }
+  @media (max-width: 560px) {
+    nav .links a[href="#wallet"] { display: none; }
+    nav .links a { margin-left: 16px; font-size: 13px; }
+    header.hero { padding: 52px 0 60px; }
+    section { padding: 44px 0; }
+  }
 </style>
 </head>
 <body>
-<main>
-  <img src="/icon.svg" alt="fortis">
-  <h1>fortis</h1>
-  <p class="tag">A non-custodial wallet for Bitcoin and its Bitcoin&nbsp;Knots BLAKE2b fork. Your keys never leave your device.</p>
-  <p class="links">
-    <a href="/privacy">Privacy Policy</a>
-    <a href="mailto:info@fortis.rest">info@fortis.rest</a>
-  </p>
-</main>
+
+<div class="wrap">
+  <nav>
+    <span class="brand"><img src="/icon.svg" alt=""> Fortis Tech Labs</span>
+    <span class="links">
+      <a href="#wallet">Fortis Wallet</a>
+      <a href="/privacy">Privacy</a>
+      <a href="https://github.com/donaldevine/fortis">Source</a>
+    </span>
+  </nav>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Fortis Tech Labs</div>
+    <h1>Tools for Bitcoin self-custody</h1>
+    <p>We build non-custodial software for Bitcoin and its forks — apps that put the keys, and the responsibility that comes with them, in the hands of the people who own the coins. No accounts, no custody, no middleman.</p>
+  </div>
+</header>
+
+<section id="wallet">
+  <div class="wrap">
+    <h2>Our apps</h2>
+    <p class="lead">One so far, with more to come.</p>
+    <div class="product">
+      <div>
+        <h3>Fortis Wallet</h3>
+        <p class="kicker">Android · coming to Google&nbsp;Play</p>
+        <p style="color:var(--dim)">A non-custodial mobile wallet for Bitcoin (BTC) and BTCB2 — the Bitcoin&nbsp;Knots BLAKE2b hard fork. Your recovery phrase is generated on your device, encrypted under a password you choose, and never leaves it.</p>
+        <ul>
+          <li>12- or 24-word phrase with an optional BIP-39 passphrase</li>
+          <li>Send &amp; receive with QR codes and a camera scanner</li>
+          <li>Choose your fee; tap a transaction to open it in a block explorer</li>
+          <li>Phrase and password screens blocked from screenshots</li>
+        </ul>
+        <span class="cta">Coming to Google&nbsp;Play</span>
+      </div>
+      <div class="shots">
+        <img src="/img/onboard.jpg" alt="Fortis Wallet onboarding" loading="lazy">
+        <img src="/img/receive.jpg" alt="Fortis Wallet receive screen" loading="lazy">
+        <img src="/img/send.jpg" alt="Fortis Wallet send screen" loading="lazy">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>How we build</h2>
+    <div class="grid">
+      <div class="feature">
+        <h3>Non-custodial by design</h3>
+        <p>Keys are generated and stay on the user's device. We can't move funds, freeze accounts, or recover a lost phrase.</p>
+      </div>
+      <div class="feature">
+        <h3>Open source</h3>
+        <p>The wallet core, the app shells, and the hosted backend are in one public repository. Review it, build it, run your own.</p>
+      </div>
+      <div class="feature">
+        <h3>Minimal data</h3>
+        <p>No analytics, no ad SDKs, no third-party trackers. The backend keeps no account for you. See the <a href="/privacy">privacy policy</a>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Source</h2>
+    <p class="lead"><a href="https://github.com/donaldevine/fortis">github.com/donaldevine/fortis</a></p>
+    <p class="warn" style="font-size:14px">Our software is early. Back up your recovery phrase offline and start with small amounts.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap row">
+    <span>&copy; Fortis Tech Labs</span>
+    <span>
+      <a href="/privacy">Privacy Policy</a> &nbsp;·&nbsp;
+      <a href="mailto:info@fortis.rest">info@fortis.rest</a> &nbsp;·&nbsp;
+      <a href="mailto:support@fortis.rest">support@fortis.rest</a>
+    </span>
+  </div>
+</footer>
+
 </body>
 </html>
