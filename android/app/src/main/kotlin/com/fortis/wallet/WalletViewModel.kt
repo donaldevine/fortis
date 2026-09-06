@@ -12,6 +12,7 @@ import com.fortis.wallet.wallet.WalletSession
 import com.fortis.wallet.wallet.newMnemonic
 import com.fortis.wallet.wallet.sealSeed
 import com.fortis.wallet.wallet.unsealSeed
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import uniffi.wallet_ffi.FundingPlan
@@ -71,6 +72,9 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     val config: WalletConfig? get() = wallets.firstOrNull { it.id == selectedId }
     val session: WalletSession? get() = selectedId?.let { sessions[it] }
     fun isUnlocked(id: String) = sessions.containsKey(id)
+    /** The account xpub for a wallet, if its session is loaded (it is once the
+     *  Home / Settings balance scan has run). */
+    fun accountKey(id: String): String? = sessions[id]?.xpub
 
     // --- the selected wallet's backends + view state ---
     var backend: Backend? = null; private set
@@ -119,8 +123,9 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Unseal a wallet with the in-memory app secret (no extra prompt). */
-    private fun ensureSession(id: String): WalletSession? {
+    /** Unseal a wallet with the in-memory app secret (no extra prompt).
+     *  `quiet` suppresses the error banner (used by the bulk balance scan). */
+    private fun ensureSession(id: String, quiet: Boolean = false): WalletSession? {
         sessions[id]?.let { return it }
         val secret = appSecret ?: return null
         val c = wallets.firstOrNull { it.id == id } ?: return null
@@ -131,8 +136,46 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
                 sessions[id] = it
             }
         } catch (e: Exception) {
-            error = e.message ?: "could not open wallet"
+            if (!quiet) error = e.message ?: "could not open wallet"
             null
+        }
+    }
+
+    /** Confirmed balance (sat) per wallet id, for the Home / Settings overviews.
+     *  Absent = not yet known. */
+    var walletBalances by mutableStateOf<Map<String, Long>>(emptyMap()); private set
+    private val overviewBackends = java.util.concurrent.ConcurrentHashMap<String, Backend>()
+    private var scanningAll = false
+
+    /** Scan every wallet's balance in the background; failures leave that
+     *  wallet's entry absent. Off the main thread — unsealing runs Argon2id. */
+    fun refreshAllBalances() {
+        if (appSecret == null || scanningAll) return
+        scanningAll = true
+        viewModelScope.launch(Dispatchers.Default) {
+            try {
+                for (w in wallets.toList()) {
+                    val s = ensureSession(w.id, quiet = true) ?: continue
+                    val id = w.id
+                    val b = overviewBackends.getOrPut(id) {
+                        EsploraBackend(
+                            http, "$HOSTED_EDGE/${w.chain}", s.view,
+                            { (wallets.firstOrNull { it.id == id } ?: w).let { c -> c.nextReceive to c.nextChange } },
+                            w.backendToken ?: "",
+                            "$HOSTED_EDGE/pricing",
+                        ) {
+                            val fresh = edgeRegister(http, HOSTED_EDGE)
+                            updateConfig(id) { it.copy(backendToken = fresh) }
+                            fresh
+                        }
+                    }
+                    runCatching { b.balances() }.getOrNull()?.let {
+                        walletBalances = walletBalances + (id to it.confirmedSat)
+                    }
+                }
+            } finally {
+                scanningAll = false
+            }
         }
     }
 
@@ -209,6 +252,8 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         sessions.values.forEach { it.close() }
         sessions.clear()
         appSecret = null
+        walletBalances = emptyMap()
+        overviewBackends.clear()
         resetView()
         nav = NavTab.Home
         phase = if (wallets.isEmpty()) Phase.Onboard else Phase.AppLock
@@ -278,6 +323,8 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     fun removeWallet(id: String) = viewModelScope.launch {
         val wasCurrent = id == selectedId
         sessions.remove(id)?.close()
+        overviewBackends.remove(id)
+        walletBalances = walletBalances - id
         val remaining = store.remove(id)
         wallets = remaining.wallets
         selectedId = remaining.selectedId
@@ -349,6 +396,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
             status = b.status().copy(degraded = degraded)
             usingFallback = degraded
             balances = b.balances()
+            selectedId?.let { id -> balances?.let { walletBalances = walletBalances + (id to it.confirmedSat) } }
             history = b.history(50)
             if (feerates.isEmpty()) feerates = listOf(1, 6, 144).associateWith { b.feerateSatVb(it).toLong() }
         }

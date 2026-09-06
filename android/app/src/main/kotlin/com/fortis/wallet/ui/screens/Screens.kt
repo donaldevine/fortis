@@ -263,6 +263,9 @@ fun Segmented(options: List<Pair<String, String>>, selected: String, onSelect: (
 @Composable
 fun Shell(vm: WalletViewModel) {
     val unit = if (vm.config?.chain == "btc") "BTC" else "BTCB2"
+    LaunchedEffect(vm.nav, vm.wallets.map { it.id }) {
+        if (vm.nav == NavTab.Home || vm.nav == NavTab.Settings) vm.refreshAllBalances()
+    }
     Box(Modifier.fillMaxSize()) {
         AmbientBackground()
         Column(
@@ -320,6 +323,8 @@ private fun HomeTab(vm: WalletViewModel) = Column(
     GlassCard {
         vm.wallets.forEach { w ->
             val current = w.id == vm.selectedId
+            val wUnit = if (w.chain == "btc") "BTC" else "BTCB2"
+            val bal = vm.walletBalances[w.id]
             Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(Fx.rSm))
                     .background(if (current) Fx.glass2 else Fx.glass1)
@@ -329,7 +334,12 @@ private fun HomeTab(vm: WalletViewModel) = Column(
             ) {
                 Column(Modifier.weight(1f)) {
                     Text(w.display, color = Fx.text, fontWeight = FontWeight.Medium)
-                    Text(if (current) "open" else "tap to open", color = Fx.textFaint, fontSize = 12.sp)
+                    Text(
+                        bal?.let { "${fmt(it)} $wUnit" } ?: if (current) "open" else "tap to open",
+                        color = if (bal != null) Fx.textDim else Fx.textFaint,
+                        fontFamily = if (bal != null) FontFamily.Monospace else null,
+                        fontSize = 12.sp,
+                    )
                 }
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Fx.textDim)
             }
@@ -379,6 +389,8 @@ private fun SettingsTab(vm: WalletViewModel) {
             Text("Wallets", color = Fx.text, fontWeight = FontWeight.SemiBold)
             vm.wallets.forEach { w ->
                 val current = w.id == vm.selectedId
+                val wUnit = if (w.chain == "btc") "BTC" else "BTCB2"
+                val bal = vm.walletBalances[w.id]
                 Column(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(Fx.rSm))
                         .background(if (current) Fx.glass2 else Fx.glass1).padding(Fx.s3),
@@ -388,38 +400,34 @@ private fun SettingsTab(vm: WalletViewModel) {
                         Column(Modifier.weight(1f)) {
                             Text(w.display, color = Fx.text, fontWeight = FontWeight.Medium)
                             Text(
-                                listOfNotNull(w.network.takeIf { it != "mainnet" }, if (current) "open" else null).joinToString(" · "),
-                                color = Fx.textFaint, fontSize = 12.sp,
+                                bal?.let { "${fmt(it)} $wUnit" }
+                                    ?: listOfNotNull(w.network.takeIf { it != "mainnet" }, if (current) "open" else null)
+                                        .joinToString(" · ").ifEmpty { "…" },
+                                color = if (bal != null) Fx.textDim else Fx.textFaint,
+                                fontFamily = if (bal != null) FontFamily.Monospace else null,
+                                fontSize = 12.sp,
                             )
                         }
                         if (!current) TextButton({ vm.selectWallet(w.id) }) { Text("Open", color = Fx.accent) }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
                         GhostButton("Rename", Modifier.weight(1f), dense = true) { renaming = w.id }
-                        GhostButton("Remove", Modifier.weight(1f), tint = Fx.bad, dense = true) { removing = w.id }
+                        GhostButton("Copy key", Modifier.weight(1f), dense = true) {
+                            val xpub = vm.accountKey(w.id)
+                            if (xpub != null) copyToClipboard(ctx, "xpub", xpub)
+                            else Toast.makeText(ctx, "still loading — try again", Toast.LENGTH_SHORT).show()
+                        }
                     }
                     val hasOther = vm.wallets.any { it.name == w.name && it.chain == w.otherChain }
                     if (!hasOther && vm.canAddWallet) GhostButton("Also add on ${w.otherChain.uppercase()}", dense = true) {
                         vm.cloneToOtherChain(w.id)
                     }
+                    GhostButton("Remove", tint = Fx.bad, dense = true) { removing = w.id }
                 }
             }
             if (vm.canAddWallet) PrimaryButton("Add wallet", dense = true) { vm.addWallet() }
             else Text("Maximum of ${com.fortis.wallet.MAX_WALLETS} wallets reached.", color = Fx.textFaint, fontSize = 12.sp)
             ErrorText(vm.error)
-        }
-
-        vm.session?.let { s ->
-            vm.config?.let { c ->
-                GlassCard {
-                    Text("Account key", color = Fx.text, fontWeight = FontWeight.SemiBold)
-                    Text(
-                        "${c.display}  ·  fp ${s.fingerprint}  ·  receive #${c.nextReceive}  ·  change #${c.nextChange}",
-                        color = Fx.textFaint, fontSize = 11.sp,
-                    )
-                    GhostButton("Copy account key (xpub)", dense = true) { copyToClipboard(ctx, "xpub", s.xpub) }
-                }
-            }
         }
 
         GlassCard {
