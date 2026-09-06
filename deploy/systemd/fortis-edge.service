@@ -17,7 +17,9 @@ ExecStart=/usr/local/bin/fortis-edge \
   --require-token \
   --trust-forwarded-for \
   --allow-origin https://wallet.fortis.example \
-  --rate-per-min 120 --rate-burst 60
+  --crash-log /var/log/fortis/crashes.ndjson \
+  --service-fee-address bc1qYOUR_FEE_ADDRESS_HERE \
+  --service-fee-bps 25 --service-fee-floor-sat 200 --service-fee-cap-sat 5000
 Restart=on-failure
 RestartSec=5
 StateDirectory=fortis

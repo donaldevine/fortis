@@ -325,6 +325,30 @@ fn wallet_flow_through_the_edge() {
     key.sign_p2wpkh_tx(&params, 0, &mut tx, &prevouts, &paths).unwrap();
     let raw_hex = hex::encode(consensus::serialize(&tx));
 
+    // --- service fee: a second edge configured with a fee address rejects this
+    //     transaction (it pays nothing to the fee address) and advertises /pricing ---
+    {
+        let fee_addr = node.wallet("miner", &["getnewaddress"]);
+        let fee_port = free_port();
+        let _fee_edge = spawn(
+            &edge_bin,
+            &[
+                "--bind", &format!("127.0.0.1:{fee_port}"),
+                "--btcb2-upstream", &format!("http://127.0.0.1:{idx_port}"),
+                "--secret-file", node.datadir.join("edge2.secret").to_str().unwrap(),
+                "--network", "regtest",
+                "--service-fee-address", &fee_addr,
+                "--service-fee-floor-sat", "200",
+            ],
+        );
+        wait_up(&a, &format!("http://127.0.0.1:{fee_port}/"));
+        let (ps, pb) = req(&a, "GET", &format!("http://127.0.0.1:{fee_port}/pricing"), None, None);
+        assert_eq!(ps, 200, "pricing: {pb}");
+        assert!(pb.contains("\"floor_sat\":200") && pb.contains(&fee_addr), "pricing shape: {pb}");
+        let (fs, fb) = req(&a, "POST", &format!("http://127.0.0.1:{fee_port}/btcb2/tx"), None, Some(&raw_hex));
+        assert_eq!(fs, 402, "a tx that doesn't pay the fee must be rejected: {fb}");
+    }
+
     // --- broadcast through the edge ---
     let (s, txid_body) = req(&a, "POST", &format!("{edge}/btcb2/tx"), Some(&token), Some(&raw_hex));
     assert_eq!(s, 200, "broadcast failed: {txid_body}");

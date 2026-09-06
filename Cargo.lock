@@ -577,6 +577,7 @@ name = "fortis-edge"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bitcoin",
  "clap",
  "getrandom 0.2.17",
  "hex",

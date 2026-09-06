@@ -74,7 +74,8 @@ function makeBackend() {
           return b.token;
         },
       };
-      return new EsploraBackend(`${b.url.replace(/\/+$/, '')}/${state.chain}`, session, state.network, auth);
+      const root = b.url.replace(/\/+$/, '');
+      return new EsploraBackend(`${root}/${state.chain}`, session, state.network, auth, `${root}/pricing`);
     }
     return new EsploraBackend(b.url, session, state.network);
   }

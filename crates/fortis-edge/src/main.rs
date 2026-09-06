@@ -11,6 +11,7 @@
 mod cache;
 mod limit;
 mod metrics;
+mod pricing;
 mod proxy;
 mod token;
 
@@ -79,6 +80,26 @@ struct Args {
     /// line). Unset → `/crash` returns 404.
     #[arg(long)]
     crash_log: Option<PathBuf>,
+    /// Network the fee address is on: `bitcoin` (default), `testnet`, `signet`,
+    /// `regtest`. Only used to validate `--service-fee-address`.
+    #[arg(long, default_value = "bitcoin")]
+    network: bitcoin::Network,
+    /// Service-fee address. When set, `GET /pricing` advertises the fee and
+    /// `POST /<chain>/tx` is rejected unless the transaction pays at least
+    /// `--service-fee-floor-sat` to this address. Unset → no fee, `/pricing` 404s.
+    #[arg(long)]
+    service_fee_address: Option<String>,
+    /// Service fee, basis points of the amount sent (advertised; the client adds
+    /// the output, the edge only enforces the floor).
+    #[arg(long, default_value_t = 25)]
+    service_fee_bps: u32,
+    /// Minimum service fee per transaction, satoshis. This is what the edge
+    /// enforces on broadcast.
+    #[arg(long, default_value_t = 200)]
+    service_fee_floor_sat: u64,
+    /// Maximum service fee per transaction, satoshis (0 = uncapped). Advertised only.
+    #[arg(long, default_value_t = 5000)]
+    service_fee_cap_sat: u64,
 }
 
 struct State {
@@ -92,6 +113,7 @@ struct State {
     register_limiter: RateLimiter,
     crash_limiter: RateLimiter,
     crash_log: Option<PathBuf>,
+    pricing: Option<pricing::Pricing>,
     cache: Cache,
     metrics: Metrics,
 }
@@ -128,6 +150,17 @@ fn run() -> Result<()> {
         .unwrap_or_else(|| default_home().join("fortis-edge.secret"));
     let secret = token::load_or_create_secret(&secret_file)?;
 
+    let fee = match &args.service_fee_address {
+        Some(addr) => Some(pricing::Pricing::new(
+            addr.clone(),
+            args.network,
+            args.service_fee_bps,
+            args.service_fee_floor_sat,
+            args.service_fee_cap_sat,
+        )?),
+        None => None,
+    };
+
     let state = Arc::new(State {
         secret,
         require_token: args.require_token,
@@ -140,6 +173,7 @@ fn run() -> Result<()> {
         // crashes are rare per device; this just caps a crash-looping client or abuse
         crash_limiter: RateLimiter::new(2, 8),
         crash_log: args.crash_log.clone(),
+        pricing: fee,
         cache: Cache::new(args.cache_entries),
         metrics: Metrics::default(),
     });
@@ -154,6 +188,16 @@ fn run() -> Result<()> {
     eprintln!("  token auth     {}", if args.require_token { "required" } else { "optional" });
     eprintln!("  rate limit     {}/min, burst {}", args.rate_per_min, args.rate_burst);
     eprintln!("  crash log      {}", args.crash_log.as_deref().map(|p| p.display().to_string()).unwrap_or_else(|| "(disabled)".into()));
+    eprintln!(
+        "  service fee    {}",
+        match &args.service_fee_address {
+            Some(a) => format!(
+                "{} bps, floor {} sat → {}",
+                args.service_fee_bps, args.service_fee_floor_sat, a
+            ),
+            None => "(disabled)".into(),
+        },
+    );
 
     let mut handles = Vec::new();
     for _ in 0..args.workers.max(1) {
@@ -243,6 +287,10 @@ fn handle(req: &mut Request, st: &State) -> Reply {
         (Method::Get, "/metrics") => {
             Reply::Raw(200, "text/plain; version=0.0.4".into(), st.metrics.render().into_bytes())
         }
+        (Method::Get, "/pricing") => match &st.pricing {
+            Some(p) => Reply::Json(200, p.as_json()),
+            None => err(404, "no service fee"),
+        },
         (Method::Post, "/register") => {
             let ip = client_ip(req, st.trust_forwarded_for);
             if !st.register_limiter.check(&ip) {
@@ -345,6 +393,17 @@ fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query
     let mut body = Vec::new();
     if method == &Method::Post {
         let _ = req.as_reader().read_to_end(&mut body);
+    }
+
+    // Enforce the service fee on broadcast: the transaction must pay at least
+    // the floor to the fee address (the client adds the exact percentage output).
+    if method == &Method::Post && rest == "tx" {
+        if let Some(p) = &st.pricing {
+            if let Err(msg) = p.check_tx_hex(&String::from_utf8_lossy(&body)) {
+                Metrics::inc(&st.metrics.fee_rejected);
+                return err(402, &msg);
+            }
+        }
     }
 
     match upstream.forward(method, rest, query, &body) {

@@ -29,17 +29,31 @@ export class EsploraBackend {
   // `auth` (optional): `{ token, refresh: async () => newToken }` for a
   // fortis-edge that requires `Authorization: Bearer`. A 401 triggers one
   // `refresh()` + retry.
-  constructor(url, session, network, auth) {
+  constructor(url, session, network, auth, pricingUrl) {
     this.kind = auth ? 'edge' : 'esplora';
     this.base = String(url || '').replace(/\/+$/, '');
     this.session = session;
     this.network = network || 'mainnet';
     this.auth = auth || null;
+    // `{edge}/pricing`; when it advertises a service fee, status() surfaces it so
+    // a send attaches the fee output. Absent on the public-explorer fallback.
+    this.pricingUrl = pricingUrl || null;
+    this._pricing = null; // null = not fetched, false = none, object = fee
     this._snap = null;
     this._snapAt = 0;
     this._hist = null;
     this._histAt = 0;
     this._fees = null;
+  }
+
+  async _loadPricing() {
+    if (this._pricing !== null || !this.pricingUrl) return;
+    try {
+      const r = await fetch(this.pricingUrl);
+      this._pricing = r.ok ? await r.json() : false;
+    } catch {
+      this._pricing = false;
+    }
   }
 
   async _fetch(path, init = {}) {
@@ -114,6 +128,7 @@ export class EsploraBackend {
 
   async status() {
     const snap = await this._refresh();
+    await this._loadPricing();
     return {
       node: {
         chain: this.network === 'regtest' ? 'regtest' : 'main',
@@ -128,6 +143,7 @@ export class EsploraBackend {
       },
       connected: true,
       scanning: null,
+      pricing: this._pricing || null,
     };
   }
 

@@ -38,10 +38,15 @@ class EsploraBackend(
     private val view: WalletView,
     private val counters: () -> Pair<Int, Int>,
     private var token: String? = null,
+    /** `{edge}/pricing` — when set and the edge advertises a service fee, it's
+     *  surfaced in [status] so a send attaches the fee output. Null on the
+     *  public-explorer fallback → no fee. */
+    private val pricingUrl: String? = null,
     private val refresh: (suspend () -> String)? = null,
 ) : Backend {
     private val base = baseUrl.trimEnd('/')
     override val label: String = Regex("https?://([^/]+)").find(base)?.groupValues?.get(1) ?: base
+    private var pricing: ServicePricing? = null
 
     /** Execute `build()`, adding the bearer token; on 401 re-register once and retry. */
     private suspend fun send(build: () -> Request.Builder): okhttp3.Response {
@@ -111,9 +116,27 @@ class EsploraBackend(
         return out
     }
 
+    private suspend fun loadPricing() {
+        val url = pricingUrl ?: return
+        if (pricing != null) return
+        pricing = runCatching {
+            withContext(Dispatchers.IO) {
+                http.newCall(Request.Builder().url(url).build()).execute().use { r ->
+                    if (!r.isSuccessful) return@use null
+                    val o = JSONObject(r.body?.string().orEmpty())
+                    ServicePricing(o.getString("address"), o.getInt("bps"), o.getLong("floor_sat"), o.getLong("cap_sat"))
+                }
+            }
+        }.getOrNull()
+    }
+
     override suspend fun status(): ChainStatus {
         val t = tip()
-        return ChainStatus(blocks = t, synced = true, via = label, chain = "explorer", subversion = "esplora")
+        loadPricing()
+        return ChainStatus(
+            blocks = t, synced = true, via = label, chain = "explorer", subversion = "esplora",
+            pricing = pricing,
+        )
     }
 
     override suspend fun balances(): Balances {

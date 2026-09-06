@@ -146,6 +146,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
             http, "$HOSTED_EDGE/${c.chain}", session!!.view,
             { config!!.nextReceive to config!!.nextChange },
             token,
+            "$HOSTED_EDGE/pricing",
         ) {
             val fresh = edgeRegister(http, HOSTED_EDGE)
             persistToken(fresh)

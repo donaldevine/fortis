@@ -40,6 +40,14 @@ cargo run -p fortis-edge -- \
 line (`{ts, ip, report}`) — the app's uncaught-exception reporter posts there.
 Without the flag `/crash` is 404. Rotate the file yourself (logrotate / a cron).
 
+`--service-fee-address <addr>` turns on the service fee: `GET /pricing`
+advertises `{address, bps, floor_sat, cap_sat}` (the client reads it and adds the
+percentage output) and `POST /<chain>/tx` is rejected `402` unless the
+transaction pays at least `--service-fee-floor-sat` (default 200) to that
+address. `--service-fee-bps` (default 25) and `--service-fee-cap-sat` (default
+5000, 0 = uncapped) are advertised only. `--network` (default `bitcoin`)
+validates the address. Unset → no fee, `/pricing` 404s.
+
 The wallet points its BTCB2 explorer URL at `https://<host>/btcb2` and its BTC one at
 `https://<host>/btc`, sending `Authorization: Bearer <token>` (or `?token=<t>`).
 
@@ -51,6 +59,7 @@ The wallet points its BTCB2 explorer URL at `https://<host>/btcb2` and its BTC o
 | `GET \| POST /btcb2/<esplora path>` | → BTCB2 upstream |
 | `GET \| POST /btc/<esplora path>` | → BTC upstream |
 | `POST /crash` | `204`; appends the body to `--crash-log` (else `404`) |
+| `GET /pricing` | `{address, bps, floor_sat, cap_sat}` when a service fee is set (else `404`) |
 | `GET /metrics` | Prometheus text |
 | `GET /` | health + which chains are served |
 
