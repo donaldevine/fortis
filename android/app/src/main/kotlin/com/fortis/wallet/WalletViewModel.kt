@@ -14,6 +14,7 @@ import com.fortis.wallet.wallet.sealSeed
 import com.fortis.wallet.wallet.unsealSeed
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import uniffi.wallet_ffi.FundingPlan
 import java.net.Proxy
@@ -145,7 +146,14 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
      *  Absent = not yet known. */
     var walletBalances by mutableStateOf<Map<String, Long>>(emptyMap()); private set
     private val overviewBackends = java.util.concurrent.ConcurrentHashMap<String, Backend>()
+    private val balanceLock = Any()
     private var scanningAll = false
+
+    /** Record one wallet's balance — serialised, since the bulk scan runs off the
+     *  main thread while [refresh] writes from it. */
+    private fun setWalletBalance(id: String, sat: Long) = synchronized(balanceLock) {
+        walletBalances = walletBalances + (id to sat)
+    }
 
     /** Scan every wallet's balance in the background; failures leave that
      *  wallet's entry absent. Off the main thread — unsealing runs Argon2id. */
@@ -169,9 +177,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
                             fresh
                         }
                     }
-                    runCatching { b.balances() }.getOrNull()?.let {
-                        walletBalances = walletBalances + (id to it.confirmedSat)
-                    }
+                    runCatching { b.balances() }.getOrNull()?.let { setWalletBalance(id, it.confirmedSat) }
                 }
             } finally {
                 scanningAll = false
@@ -239,10 +245,17 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         resolvePhase()
     }
 
-    /** Password mode: verify against a wallet, then hold the secret. */
+    /** Password mode: open a wallet with the password off the main thread (it
+     *  runs Argon2id), caching the session so the balance scan reuses it. */
     fun appUnlockWithPassword(pw: String) = wrap {
         val c = config ?: wallets.first()
-        unsealSeed(c.sealed, c.salt, pw) // throws on a wrong password
+        withContext(Dispatchers.Default) {
+            val (mnemonic, passphrase) = unsealSeed(c.sealed, c.salt, pw) // throws on a wrong password
+            WalletSession(c.chain, c.network, mnemonic, passphrase).also {
+                it.setIndices(c.nextReceive, c.nextChange)
+                sessions[c.id] = it
+            }
+        }
         appSecret = pw
         resolvePhase()
     }
@@ -252,7 +265,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         sessions.values.forEach { it.close() }
         sessions.clear()
         appSecret = null
-        walletBalances = emptyMap()
+        synchronized(balanceLock) { walletBalances = emptyMap() }
         overviewBackends.clear()
         resetView()
         nav = NavTab.Home
@@ -348,6 +361,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     /** Drop the stored token and mint a fresh one (Settings → Reconnect). */
     fun reconnect() = wrap {
         val id = selectedId ?: return@wrap
+        if (ensureSession(id) == null) return@wrap // needs the wallet open
         val token = edgeRegister(http, HOSTED_EDGE)
         updateConfig(id) { it.copy(backendToken = token) }
         backend = edgeBackend(token)
@@ -396,7 +410,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
             status = b.status().copy(degraded = degraded)
             usingFallback = degraded
             balances = b.balances()
-            selectedId?.let { id -> balances?.let { walletBalances = walletBalances + (id to it.confirmedSat) } }
+            selectedId?.let { id -> balances?.let { setWalletBalance(id, it.confirmedSat) } }
             history = b.history(50)
             if (feerates.isEmpty()) feerates = listOf(1, 6, 144).associateWith { b.feerateSatVb(it).toLong() }
         }
