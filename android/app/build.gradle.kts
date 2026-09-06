@@ -8,11 +8,13 @@ plugins {
 }
 
 android {
+    // namespace stays com.fortis.wallet (the source package + generated R/BuildConfig);
+    // applicationId is the permanent Play/device identity, reverse-DNS of fortis.rest.
     namespace = "com.fortis.wallet"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.fortis.wallet"
+        applicationId = "rest.fortis.wallet"
         minSdk = 26
         targetSdk = 37
         versionCode = 1
