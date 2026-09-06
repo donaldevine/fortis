@@ -43,6 +43,11 @@ struct Args {
     /// Explicit RPC cookie file (overrides `--datadir`).
     #[arg(long)]
     cookie_file: Option<String>,
+    /// Static RPC credentials as `user:password` (a bitcoin.conf `rpcauth` entry) —
+    /// survives node restarts, unlike a cookie file. Overrides `--cookie-file` /
+    /// `--datadir`.
+    #[arg(long, value_name = "USER:PASS")]
+    rpc_auth: Option<String>,
     /// Node network: mainnet | regtest.
     #[arg(long, default_value = "mainnet")]
     network: String,
@@ -78,9 +83,12 @@ fn run() -> Result<()> {
         .rpc_url
         .clone()
         .unwrap_or_else(|| if regtest { "http://127.0.0.1:18443".into() } else { "http://127.0.0.1:8332".into() });
-    let rpc = match &args.cookie_file {
-        Some(cf) => Rpc::new(&rpc_url, std::fs::read_to_string(cf).with_context(|| format!("reading {cf}"))?.trim()),
-        None => {
+    let rpc = match (&args.rpc_auth, &args.cookie_file) {
+        (Some(auth), _) => Rpc::new(&rpc_url, auth.trim()),
+        (None, Some(cf)) => {
+            Rpc::new(&rpc_url, std::fs::read_to_string(cf).with_context(|| format!("reading {cf}"))?.trim())
+        }
+        (None, None) => {
             let dd = args
                 .datadir
                 .clone()

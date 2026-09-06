@@ -1,0 +1,31 @@
+# /etc/systemd/system/fortis-edge.service
+
+[Unit]
+Description=fortis-edge (public wallet backend)
+After=network-online.target fortis-index.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=fortis
+Group=fortis
+ExecStart=/usr/local/bin/fortis-edge \
+  --bind 127.0.0.1:8098 \
+  --btcb2-upstream http://127.0.0.1:8094 \
+  --btc-upstream https://blockstream.info/api \
+  --secret-file /var/lib/fortis/fortis-edge.secret \
+  --require-token \
+  --trust-forwarded-for \
+  --allow-origin https://wallet.fortis.example \
+  --rate-per-min 120 --rate-burst 60
+Restart=on-failure
+RestartSec=5
+StateDirectory=fortis
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/fortis
+
+[Install]
+WantedBy=multi-user.target

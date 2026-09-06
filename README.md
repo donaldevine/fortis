@@ -21,6 +21,7 @@ reimplementation of the crypto per platform.
 | [`crates/fortis-edge`](crates/fortis-edge) | public front for the backends: per-install tokens, rate limiting, response caching, CORS, `/metrics` — in front of `fortis-index` (BTCB2) and an Esplora upstream (BTC). No keys. |
 | [`web/`](web) | the browser wallet — a static PWA; keys stay in wasm, encrypted seed in IndexedDB. Reads the chain via a public Esplora explorer or your own node. |
 | [`android/`](android) | native Android wallet — Jetpack Compose; keys via `wallet-ffi`, encrypted seed in DataStore. Same design language and backends as `web/`. |
+| [`deploy/`](deploy) | running the hosted backend (`fortis-index` + `fortis-edge` + Caddy) — systemd units, a Docker Compose stack, and the Tailscale / public-DNS paths. |
 
 ## Tests
 

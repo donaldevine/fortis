@@ -42,7 +42,12 @@ cargo run -p fortis-index -- \
 # regtest:  --network regtest --datadir <regtest datadir> --start-height 0
 ```
 
-Point the wallet's explorer URL at `http://<host>:8094`.
+RPC auth: `--datadir` / `--cookie-file` read the node's `.cookie` (rotates on
+restart); `--rpc-auth user:password` uses a static `rpcauth` credential instead —
+preferred for a long-running deployment. See [`deploy/`](../../deploy).
+
+Point the wallet's explorer URL at `http://<host>:8094` (or front it with
+`fortis-edge`).
 
 ## Routes
 
