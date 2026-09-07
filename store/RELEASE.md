@@ -8,22 +8,29 @@ into step 4. Assets are in `store/`.
 
 ---
 
-## 0. Decide: personal account or organization
+## 0. Account: personal, with a closed test
 
-Personal (individual) developer accounts created after 13 Nov 2023 must run a
-**closed test with ≥ 12 testers opted in for ≥ 14 continuous days** before they
-can request production access. **Organization accounts are exempt.**
+Decision made: **personal (individual) developer account** — no legal entity, so
+no D-U-N-S. That means the mandatory **closed test: ≥ 12 testers opted in for
+≥ 14 continuous days** before you can request production access (steps 7–9).
 
-- **Organization** — needs a free **D-U-N-S number** (Dun & Bradstreet,
-  ~1–4 weeks) and business verification. If "Fortis Tech Labs" is a real entity,
-  do this; it removes the 12/14 requirement. Apply for the D-U-N-S now — it's the
-  slowest step. `https://www.dnb.com/duns-number/get-a-duns.html`
-- **Personal** — no D-U-N-S, but you do the closed test (steps 6–8).
+Register at `https://play.google.com/console/signup`:
+- $25 one-time fee.
+- Account type: **Yourself** (individual).
+- Identity verification: government photo ID, your address, and (for recent
+  accounts) a short video selfie. Takes anywhere from minutes to a few days —
+  **start it now**, in parallel with the build.
+- **Developer name** (the public "publisher" shown on the listing) can be set to
+  **`Fortis Tech Labs`** even on a personal account — it's a display name, not
+  your legal name. Set it under **Account details → Developer name**.
+- The **verified contact details** (legal name, address, email/phone) are your
+  personal ones and are used by Google, not shown publicly, except an email
+  address is shown on the listing (use `info@fortis.rest`).
 
-Either way: $25 one-time registration, and identity verification (photo ID +
-address; for personal accounts, a video selfie may be required). Do this at
-`https://play.google.com/console/signup` — verification can take a few days, so
-start it in parallel with the build.
+Because you have no registered entity, keep `site/privacy.html`'s operator line
+as the trading name **"Fortis Tech Labs"** with `support@fortis.rest` as the
+contact — that's sufficient for a non-custodial wallet. Don't invent a
+"registered address."
 
 ---
 
@@ -167,10 +174,9 @@ section. Declare:
 - Some countries restrict crypto apps — see step 7 (country selection). You may
   need to exclude a handful (e.g. Egypt, Algeria, Bangladesh, etc.); Play will
   flag disallowed regions.
-- If asked for a **registered organization / address**: this is where the
-  business entity + address matters (also why `site/privacy.html` should carry a
-  real operator address). Personal accounts still declare, using your verified
-  personal details.
+- If asked for a **registered organization / address**: you have none — answer
+  as an individual developer distributing a non-custodial wallet. Your Play
+  account's verified personal details cover it.
 
 ### 5g. Government apps / News / Health
 No to all.
@@ -272,8 +278,9 @@ Keep the thread open for 14 days; nudge anyone who un-opts.
 
 ## 9. Promote to production
 
-Once the tracker says the 12/14 requirement is met (personal account) — or
-immediately (organization account):
+Once the tracker (Closed testing → track → **How your closed testing is going**)
+says the 12/14 requirement is met and you've applied for and been granted
+production access:
 
 1. Play Console → **Testing → Closed testing → your track → Promote release →
    Production**, *or* create a fresh Production release with the same AAB.
