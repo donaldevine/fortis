@@ -797,11 +797,11 @@ private fun SendTab(vm: WalletViewModel) {
                 )
                 AmountUnitPicker(amountInSat, coinUnit) { amountInSat = it }
             }
-            amountSat?.let {
-                Text(
-                    if (amountInSat) "= ${fmt(it)} $coinUnit" else "= $it sat",
-                    color = Fx.textFaint, fontSize = 12.sp,
-                )
+            amountSat?.let { sat ->
+                val alt = if (amountInSat) "= ${fmt(sat)} $coinUnit" else "= $sat sat"
+                val usd = vm.usdValue(sat, if (isBtc) "btc" else "btcb2")
+                    ?.let { "  ·  ${fmtUsd(it)}" } ?: ""
+                Text(alt + usd, color = Fx.textFaint, fontSize = 12.sp)
             }
         }
         Segmented(listOf("1" to "Fast", "6" to "Normal", "144" to "Slow"), target.toString(),
