@@ -11,6 +11,7 @@
 mod cache;
 mod limit;
 mod metrics;
+mod price;
 mod pricing;
 mod proxy;
 mod token;
@@ -44,11 +45,21 @@ struct Args {
     /// http://127.0.0.1:8088/esplora.
     #[arg(long)]
     btc_upstream: Option<String>,
-    /// BTCB2 price feed — a mempool-style base URL that serves `/v1/prices`
-    /// (e.g. https://mempool.kilombino.com/api). `--btcb2-upstream` (a
-    /// `fortis-index`) has no price feed of its own. Unset → `GET /btcb2/v1/prices`
-    /// hits the normal upstream (404) and the wallet shows no fiat value.
-    /// `/btc/v1/prices` needs nothing here — it rides the BTC Esplora upstream.
+    /// USD price source for `GET /btc/v1/prices`. A full URL the edge fetches and
+    /// normalises to `{ "USD": <n> }` — a mempool `/v1/prices` endpoint or a
+    /// Kraken-style `Ticker` (e.g.
+    /// `https://api.kraken.com/0/public/Ticker?pair=XBTUSD`). Unset → the route
+    /// proxies to `--btc-upstream/v1/prices` as before.
+    #[arg(long)]
+    btc_price_url: Option<String>,
+    /// USD price source for `GET /btcb2/v1/prices` — same rules as
+    /// `--btc-price-url`. A `fortis-index` (`--btcb2-upstream`) has no price feed,
+    /// so without this (or `--btcb2-price-upstream`) the route 404s and the
+    /// wallet shows no fiat value.
+    #[arg(long)]
+    btcb2_price_url: Option<String>,
+    /// Deprecated alias for `--btcb2-price-url`: a mempool-style *base* URL whose
+    /// `/v1/prices` carries the feed (e.g. https://mempool.kilombino.com/api).
     #[arg(long)]
     btcb2_price_upstream: Option<String>,
     /// HMAC secret file for tokens. Default: <home>/fortis-edge.secret.
@@ -118,7 +129,8 @@ struct State {
     allow_origin: String,
     btcb2: Option<Upstream>,
     btc: Option<Upstream>,
-    btcb2_price: Option<Upstream>,
+    btc_price: Option<price::PriceSource>,
+    btcb2_price: Option<price::PriceSource>,
     limiter: RateLimiter,
     register_limiter: RateLimiter,
     crash_limiter: RateLimiter,
@@ -160,6 +172,14 @@ fn run() -> Result<()> {
         .unwrap_or_else(|| default_home().join("fortis-edge.secret"));
     let secret = token::load_or_create_secret(&secret_file)?;
 
+    // `--btcb2-price-url` wins; `--btcb2-price-upstream <base>` is the old form
+    // that pointed at a mempool base and implied `/v1/prices`.
+    let btcb2_price_url = args.btcb2_price_url.clone().or_else(|| {
+        args.btcb2_price_upstream
+            .as_deref()
+            .map(|b| format!("{}/v1/prices", b.trim_end_matches('/')))
+    });
+
     let fee = match &args.service_fee_address {
         Some(addr) => Some(pricing::Pricing::new(
             addr.clone(),
@@ -178,7 +198,8 @@ fn run() -> Result<()> {
         allow_origin: args.allow_origin.clone(),
         btcb2: args.btcb2_upstream.as_deref().map(Upstream::new),
         btc: args.btc_upstream.as_deref().map(Upstream::new),
-        btcb2_price: args.btcb2_price_upstream.as_deref().map(Upstream::new),
+        btc_price: args.btc_price_url.as_deref().map(price::PriceSource::new),
+        btcb2_price: btcb2_price_url.as_deref().map(price::PriceSource::new),
         limiter: RateLimiter::new(args.rate_per_min, args.rate_burst),
         register_limiter: RateLimiter::new(args.register_per_hour, args.register_per_hour.max(1)),
         // crashes are rare per device; this just caps a crash-looping client or abuse
@@ -196,7 +217,8 @@ fn run() -> Result<()> {
     eprintln!("fortis-edge listening on  http://{}", args.bind);
     eprintln!("  btcb2 upstream   {}", args.btcb2_upstream.as_deref().unwrap_or("(none)"));
     eprintln!("  btc upstream   {}", args.btc_upstream.as_deref().unwrap_or("(none)"));
-    eprintln!("  btcb2 price    {}", args.btcb2_price_upstream.as_deref().unwrap_or("(none)"));
+    eprintln!("  btc price      {}", args.btc_price_url.as_deref().unwrap_or("(via btc upstream)"));
+    eprintln!("  btcb2 price    {}", btcb2_price_url.as_deref().unwrap_or("(none)"));
     eprintln!("  token auth     {}", if args.require_token { "required" } else { "optional" });
     eprintln!("  rate limit     {}/min, burst {}", args.rate_per_min, args.rate_burst);
     eprintln!("  crash log      {}", args.crash_log.as_deref().map(|p| p.display().to_string()).unwrap_or_else(|| "(disabled)".into()));
@@ -364,11 +386,55 @@ fn crash_report(req: &mut Request, st: &State) -> Reply {
 fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query: &str) -> Reply {
     let (chain, rest) = path[1..].split_once('/').unwrap_or((&path[1..], ""));
 
-    // A `fortis-index` has no price feed — route `GET /btcb2/v1/prices` to the
-    // dedicated price upstream when configured, else let it fall through (404).
-    let price_route = method == &Method::Get && chain == "btcb2" && rest == "v1/prices";
+    let tok = bearer(req);
+    let token_ok = || match &tok {
+        Some(t) if token::verify(&st.secret, t) => true,
+        _ => false,
+    };
+
+    // `GET /{chain}/v1/prices` with a configured price source is normalised, not
+    // proxied: fetch the source and return `{ "USD": <spot> }`, cached 60 s.
+    if method == &Method::Get && rest == "v1/prices" {
+        let source = match chain {
+            "btc" => st.btc_price.as_ref(),
+            "btcb2" => st.btcb2_price.as_ref(),
+            _ => None,
+        };
+        if let Some(source) = source {
+            if st.require_token && !token_ok() {
+                Metrics::inc(&st.metrics.unauthorized);
+                return err(401, "missing or invalid token — POST /register first");
+            }
+            let key = format!("{chain}/v1/prices");
+            if let Some(hit) = st.cache.get(&key) {
+                Metrics::inc(&st.metrics.cache_hits);
+                return Reply::Raw(hit.status, hit.content_type, hit.body);
+            }
+            return match source.fetch_usd() {
+                Ok(usd) => {
+                    let body = serde_json::to_vec(&json!({ "USD": usd })).unwrap_or_default();
+                    st.cache.put(
+                        &key,
+                        std::time::Duration::from_secs(60),
+                        cache::Cached {
+                            status: 200,
+                            content_type: "application/json".into(),
+                            body: body.clone(),
+                        },
+                    );
+                    Reply::Raw(200, "application/json".into(), body)
+                }
+                Err(e) => {
+                    Metrics::inc(&st.metrics.upstream_errors);
+                    err(502, &format!("price source {chain}: {e}"))
+                }
+            };
+        }
+        // no source configured → fall through: /btc/v1/prices proxies to the BTC
+        // Esplora upstream; /btcb2/v1/prices has no fallback and 404s below.
+    }
+
     let upstream = match chain {
-        "btcb2" if price_route => st.btcb2_price.as_ref().or(st.btcb2.as_ref()),
         "btcb2" => st.btcb2.as_ref(),
         "btc" => st.btc.as_ref(),
         _ => None,
@@ -377,15 +443,9 @@ fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query
         return err(404, "that chain is not served here");
     };
 
-    let tok = bearer(req);
-    if st.require_token {
-        match &tok {
-            Some(t) if token::verify(&st.secret, t) => {}
-            _ => {
-                Metrics::inc(&st.metrics.unauthorized);
-                return err(401, "missing or invalid token — POST /register first");
-            }
-        }
+    if st.require_token && !token_ok() {
+        Metrics::inc(&st.metrics.unauthorized);
+        return err(401, "missing or invalid token — POST /register first");
     }
 
     // Cache hits never touch the upstream, so they don't spend rate budget —

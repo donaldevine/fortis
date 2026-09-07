@@ -49,12 +49,15 @@ the ~294-sat dust limit or the node rejects the whole tx) to that address.
 uncapped) are advertised only. `--network` (default `bitcoin`)
 validates the address. Unset → no fee, `/pricing` 404s.
 
-`--btcb2-price-upstream <base>` gives `GET /btcb2/v1/prices` its own upstream — a
-mempool instance that carries a BTCB2/USD feed (e.g.
-`https://mempool.kilombino.com/api`), since a `fortis-index` has no prices.
-Cached 60 s. Unset → `/btcb2/v1/prices` falls through to `--btcb2-upstream` (404)
-and the wallet just shows no fiat value. `/btc/v1/prices` needs no flag — it
-rides the BTC Esplora upstream.
+`--btc-price-url` / `--btcb2-price-url <url>` set the USD price source for
+`GET /{chain}/v1/prices`. The edge fetches the URL, pulls a positive USD spot out
+of a mempool `{ "USD": … }` body **or** a Kraken-style `Ticker`
+(`result.<pair>.c[0]` — last trade), and returns `{ "USD": <n> }`. Cached 60 s.
+Examples: `https://api.kraken.com/0/public/Ticker?pair=XBTUSD` for BTC,
+`https://mempool.kilombino.com/api/v1/prices` for BTCB2 (a `fortis-index` has no
+feed). Unset → `/btc/v1/prices` proxies to `--btc-upstream/v1/prices`;
+`/btcb2/v1/prices` 404s and the wallet shows no fiat value.
+`--btcb2-price-upstream <base>` is a deprecated alias that appends `/v1/prices`.
 
 The wallet points its BTCB2 explorer URL at `https://<host>/btcb2` and its BTC one at
 `https://<host>/btc`, sending `Authorization: Bearer <token>` (or `?token=<t>`).
@@ -66,7 +69,7 @@ The wallet points its BTCB2 explorer URL at `https://<host>/btcb2` and its BTC o
 | `POST /register` | `{ "token": "<id>.<hmac>" }` |
 | `GET \| POST /btcb2/<esplora path>` | → BTCB2 upstream |
 | `GET \| POST /btc/<esplora path>` | → BTC upstream |
-| `GET /btcb2/v1/prices` | → `--btcb2-price-upstream` if set (60 s cache), else the BTCB2 upstream |
+| `GET /{btc,btcb2}/v1/prices` | `{ "USD": <n> }` from `--{chain}-price-url` (60 s cache); BTC falls back to the Esplora upstream, BTCB2 404s |
 | `POST /crash` | `204`; appends the body to `--crash-log` (else `404`) |
 | `GET /pricing` | `{address, bps, floor_sat, cap_sat}` when a service fee is set (else `404`) |
 | `GET /metrics` | Prometheus text |
