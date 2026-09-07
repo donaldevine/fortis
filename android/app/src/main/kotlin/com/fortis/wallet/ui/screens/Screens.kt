@@ -839,9 +839,19 @@ private fun AmountUnitPicker(isSat: Boolean, coinUnit: String, onChange: (Boolea
             Text(if (isSat) "sat" else coinUnit, color = Fx.text, fontSize = 14.sp)
             Icon(Icons.Filled.ArrowDropDown, contentDescription = "amount unit", tint = Fx.textDim)
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(text = { Text("sat") }, onClick = { onChange(true); open = false })
-            DropdownMenuItem(text = { Text(coinUnit) }, onClick = { onChange(false); open = false })
+        DropdownMenu(
+            expanded = open,
+            onDismissRequest = { open = false },
+            containerColor = Fx.bg1,
+        ) {
+            DropdownMenuItem(
+                text = { Text("sat", color = Fx.text) },
+                onClick = { onChange(true); open = false },
+            )
+            DropdownMenuItem(
+                text = { Text(coinUnit, color = Fx.text) },
+                onClick = { onChange(false); open = false },
+            )
         }
     }
 }

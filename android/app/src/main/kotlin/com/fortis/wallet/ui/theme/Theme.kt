@@ -1,10 +1,8 @@
 package com.fortis.wallet.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -57,14 +55,6 @@ private val DarkColors = darkColorScheme(
     outline = Fx.hair,
 )
 
-private val LightColors = lightColorScheme(
-    primary = Fx.accent,
-    onPrimary = Color.White,
-    background = Color(0xFFEEF1F8),
-    onBackground = Color(0xFF10131C),
-    surface = Color(0xFFFFFFFF),
-)
-
 private val mono = FontFamily.Monospace
 
 val FortisType = Typography(
@@ -74,10 +64,13 @@ val FortisType = Typography(
     labelMedium = TextStyle(fontWeight = FontWeight.Medium, fontSize = 12.sp, letterSpacing = 0.4.sp, color = Fx.textDim),
 )
 
+/** Dark-first and dark-only: every screen is hand-styled against [Fx]'s dark
+ *  palette, so the Material colour scheme is pinned to dark regardless of the
+ *  system setting. This also keeps Material surfaces (menus, dialogs) dark. */
 @Composable
-fun FortisTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+fun FortisTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = if (dark) DarkColors else LightColors,
+        colorScheme = DarkColors,
         typography = FortisType,
         content = content,
     )
