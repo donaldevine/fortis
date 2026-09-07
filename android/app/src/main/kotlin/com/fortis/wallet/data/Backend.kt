@@ -38,4 +38,8 @@ interface Backend {
     suspend fun feerateSatVb(confTarget: Int): ULong
     suspend fun history(count: Int): List<HistoryEntry>
     suspend fun broadcast(rawHex: String): String
+
+    /** USD per whole coin for this chain, or null if the backend has no price
+     *  feed. Used only to show an approximate fiat value. */
+    suspend fun price(): Double? = null
 }

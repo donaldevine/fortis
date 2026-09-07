@@ -38,6 +38,7 @@ services:
       --bind 0.0.0.0:8098
       --btcb2-upstream http://index:8094
       --btc-upstream ${BTC_UPSTREAM:-https://mempool.space/api}
+      --btcb2-price-upstream ${BTCB2_PRICE_UPSTREAM:-https://mempool.kilombino.com/api}
       --secret-file /data/fortis-edge.secret
       --require-token
       --trust-forwarded-for

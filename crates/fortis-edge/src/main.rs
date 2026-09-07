@@ -44,6 +44,13 @@ struct Args {
     /// http://127.0.0.1:8088/esplora.
     #[arg(long)]
     btc_upstream: Option<String>,
+    /// BTCB2 price feed — a mempool-style base URL that serves `/v1/prices`
+    /// (e.g. https://mempool.kilombino.com/api). `--btcb2-upstream` (a
+    /// `fortis-index`) has no price feed of its own. Unset → `GET /btcb2/v1/prices`
+    /// hits the normal upstream (404) and the wallet shows no fiat value.
+    /// `/btc/v1/prices` needs nothing here — it rides the BTC Esplora upstream.
+    #[arg(long)]
+    btcb2_price_upstream: Option<String>,
     /// HMAC secret file for tokens. Default: <home>/fortis-edge.secret.
     #[arg(long)]
     secret_file: Option<PathBuf>,
@@ -111,6 +118,7 @@ struct State {
     allow_origin: String,
     btcb2: Option<Upstream>,
     btc: Option<Upstream>,
+    btcb2_price: Option<Upstream>,
     limiter: RateLimiter,
     register_limiter: RateLimiter,
     crash_limiter: RateLimiter,
@@ -170,6 +178,7 @@ fn run() -> Result<()> {
         allow_origin: args.allow_origin.clone(),
         btcb2: args.btcb2_upstream.as_deref().map(Upstream::new),
         btc: args.btc_upstream.as_deref().map(Upstream::new),
+        btcb2_price: args.btcb2_price_upstream.as_deref().map(Upstream::new),
         limiter: RateLimiter::new(args.rate_per_min, args.rate_burst),
         register_limiter: RateLimiter::new(args.register_per_hour, args.register_per_hour.max(1)),
         // crashes are rare per device; this just caps a crash-looping client or abuse
@@ -187,6 +196,7 @@ fn run() -> Result<()> {
     eprintln!("fortis-edge listening on  http://{}", args.bind);
     eprintln!("  btcb2 upstream   {}", args.btcb2_upstream.as_deref().unwrap_or("(none)"));
     eprintln!("  btc upstream   {}", args.btc_upstream.as_deref().unwrap_or("(none)"));
+    eprintln!("  btcb2 price    {}", args.btcb2_price_upstream.as_deref().unwrap_or("(none)"));
     eprintln!("  token auth     {}", if args.require_token { "required" } else { "optional" });
     eprintln!("  rate limit     {}/min, burst {}", args.rate_per_min, args.rate_burst);
     eprintln!("  crash log      {}", args.crash_log.as_deref().map(|p| p.display().to_string()).unwrap_or_else(|| "(disabled)".into()));
@@ -353,7 +363,12 @@ fn crash_report(req: &mut Request, st: &State) -> Reply {
 
 fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query: &str) -> Reply {
     let (chain, rest) = path[1..].split_once('/').unwrap_or((&path[1..], ""));
+
+    // A `fortis-index` has no price feed — route `GET /btcb2/v1/prices` to the
+    // dedicated price upstream when configured, else let it fall through (404).
+    let price_route = method == &Method::Get && chain == "btcb2" && rest == "v1/prices";
     let upstream = match chain {
+        "btcb2" if price_route => st.btcb2_price.as_ref().or(st.btcb2.as_ref()),
         "btcb2" => st.btcb2.as_ref(),
         "btc" => st.btc.as_ref(),
         _ => None,

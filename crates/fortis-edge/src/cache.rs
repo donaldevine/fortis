@@ -62,6 +62,8 @@ pub fn ttl_for(path: &str) -> Option<Duration> {
         Some(Duration::from_secs(5))
     } else if path.ends_with("/v1/fees/recommended") || path.ends_with("/fee-estimates") {
         Some(Duration::from_secs(30))
+    } else if path.ends_with("/v1/prices") {
+        Some(Duration::from_secs(60))
     } else if path.contains("/address/") {
         Some(Duration::from_secs(5))
     } else {
@@ -101,6 +103,7 @@ mod tests {
         assert!(ttl_for("/btcb2/blocks/tip/height").is_some());
         assert!(ttl_for("/btc/address/bc1.../utxo").is_some());
         assert!(ttl_for("/btc/v1/fees/recommended").is_some());
+        assert!(ttl_for("/btcb2/v1/prices").is_some());
         assert!(ttl_for("/btc/tx").is_none());
     }
 }

@@ -87,6 +87,15 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     var draftMnemonic by mutableStateOf<String?>(null); private set
     var status by mutableStateOf<ChainStatus?>(null); private set
     var balances by mutableStateOf<Balances?>(null); private set
+
+    /** USD per whole coin, keyed by chain ("btc" / "btcb2"). Shared by every
+     *  wallet on that chain; absent = no fiat value shown. */
+    var coinUsd by mutableStateOf<Map<String, Double>>(emptyMap()); private set
+
+    /** Approximate USD value of `sat` on `chain`, or null if that chain has no
+     *  price yet. */
+    fun usdValue(sat: Long, chain: String): Double? =
+        coinUsd[chain]?.let { it * (sat / 100_000_000.0) }
     var history by mutableStateOf<List<HistoryEntry>>(emptyList()); private set
     var feerates by mutableStateOf<Map<Int, Long>>(emptyMap()); private set
     var pending by mutableStateOf<PlanPreview?>(null); private set
@@ -154,6 +163,10 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         walletBalances = walletBalances + (id to sat)
     }
 
+    private fun setCoinUsd(chain: String, usd: Double) = synchronized(balanceLock) {
+        coinUsd = coinUsd + (chain to usd)
+    }
+
     /** Scan every wallet's balance in the background; failures leave that
      *  wallet's entry absent. Off the main thread — unsealing runs Argon2id. */
     fun refreshAllBalances() {
@@ -161,6 +174,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         scanningAll = true
         viewModelScope.launch(Dispatchers.Default) {
             try {
+                val priced = HashSet<String>()
                 for (w in wallets.toList()) {
                     val s = ensureSession(w.id, quiet = true) ?: continue
                     val id = w.id
@@ -177,6 +191,10 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
                         }
                     }
                     runCatching { b.balances() }.getOrNull()?.let { setWalletBalance(id, it.confirmedSat) }
+                    // one price lookup per chain, reused across its wallets
+                    if (priced.add(w.chain)) {
+                        runCatching { b.price() }.getOrNull()?.let { setCoinUsd(w.chain, it) }
+                    }
                 }
             } finally {
                 scanningAll = false
@@ -264,7 +282,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         sessions.values.forEach { it.close() }
         sessions.clear()
         appSecret = null
-        synchronized(balanceLock) { walletBalances = emptyMap() }
+        synchronized(balanceLock) { walletBalances = emptyMap(); coinUsd = emptyMap() }
         overviewBackends.clear()
         revealingId = null
         resetView()
@@ -430,6 +448,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
             usingFallback = degraded
             balances = b.balances()
             selectedId?.let { id -> balances?.let { setWalletBalance(id, it.confirmedSat) } }
+            config?.chain?.let { ch -> runCatching { b.price() }.getOrNull()?.let { setCoinUsd(ch, it) } }
             history = b.history(50)
             if (feerates.isEmpty()) feerates = listOf(1, 6, 144).associateWith { b.feerateSatVb(it).toLong() }
         }

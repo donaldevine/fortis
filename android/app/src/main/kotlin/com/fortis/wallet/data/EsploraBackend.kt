@@ -150,6 +150,21 @@ class EsploraBackend(
     override suspend fun utxos(minConf: UInt): List<WalletUtxo> =
         scan(force = true).filter { it.confirmations >= minConf }
 
+    private var priceUsd: Double? = null
+    private var priceAt = 0L
+
+    /** `GET /v1/prices` → the `USD` field. Cached ~2 min per instance (the edge
+     *  also caches 60 s); a missing/unpriced feed just returns null. */
+    override suspend fun price(): Double? {
+        val now = System.currentTimeMillis()
+        if (priceUsd != null && now - priceAt < 120_000) return priceUsd
+        val v = runCatching { JSONObject(get("/v1/prices")).optDouble("USD") }
+            .getOrNull()
+            ?.takeIf { it.isFinite() && it > 0.0 }
+        if (v != null) { priceUsd = v; priceAt = now }
+        return v ?: priceUsd
+    }
+
     override suspend fun feerateSatVb(confTarget: Int): ULong = try {
         val f = JSONObject(get("/v1/fees/recommended"))
         val pick = when {

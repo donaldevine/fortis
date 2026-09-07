@@ -56,6 +56,10 @@ import kotlinx.coroutines.withContext
 
 private fun fmt(sat: Long) = "%.8f".format(sat / 1e8)
 
+/** An approximate fiat value — "$12.34", "$1,208.00", or "<$0.01" for dust. */
+private fun fmtUsd(v: Double): String =
+    if (v > 0.0 && v < 0.01) "<\$0.01" else "$" + "%,.2f".format(v)
+
 /** Parse what the user typed in the Amount field into satoshis.
  *  [sat] true → a plain integer number of sats; false → a decimal coin amount
  *  (BTC / BTCB2). Returns null for anything unparseable or negative. */
@@ -411,6 +415,9 @@ private fun HomeTab(vm: WalletViewModel) = Column(
                         fontFamily = if (bal != null) FontFamily.Monospace else null,
                         fontSize = 12.sp,
                     )
+                    bal?.let { vm.usdValue(it, w.chain) }?.let {
+                        Text("≈ ${fmtUsd(it)}", color = Fx.textFaint, fontSize = 11.sp)
+                    }
                 }
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Fx.textDim)
             }
@@ -479,6 +486,9 @@ private fun SettingsTab(vm: WalletViewModel) {
                                 fontFamily = if (bal != null) FontFamily.Monospace else null,
                                 fontSize = 12.sp,
                             )
+                            bal?.let { vm.usdValue(it, w.chain) }?.let {
+                                Text("≈ ${fmtUsd(it)}", color = Fx.textFaint, fontSize = 11.sp)
+                            }
                         }
                         if (!current) TextButton({ vm.selectWallet(w.id) }) { Text("Open", color = Fx.accent) }
                     }
@@ -627,6 +637,11 @@ private fun WalletTab(vm: WalletViewModel) {
                             color = Fx.text)
                         Spacer(Modifier.width(6.dp))
                         Text(unit, color = Fx.textDim, fontSize = 12.sp)
+                    }
+                    b?.let { bal ->
+                        vm.usdValue(bal.confirmedSat, c.chain)?.let {
+                            Text("≈ ${fmtUsd(it)}", color = Fx.textDim, fontSize = 12.sp)
+                        }
                     }
                     if (b != null && b.pendingSat != 0L) Text(
                         "${if (b.pendingSat > 0) "+" else ""}${fmt(b.pendingSat)} $unit pending",
@@ -880,8 +895,14 @@ private fun HistoryTab(vm: WalletViewModel, unit: String) {
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column {
-                    Text((if (h.amountSat > 0) "+" else "") + fmt(h.amountSat) + " " + unit,
-                        fontFamily = FontFamily.Monospace, color = if (h.amountSat > 0) Fx.good else Fx.text)
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text((if (h.amountSat > 0) "+" else "") + fmt(h.amountSat) + " " + unit,
+                            fontFamily = FontFamily.Monospace, color = if (h.amountSat > 0) Fx.good else Fx.text)
+                        vm.usdValue(if (h.amountSat < 0) -h.amountSat else h.amountSat, chain)?.let {
+                            Spacer(Modifier.width(6.dp))
+                            Text("≈ ${fmtUsd(it)}", color = Fx.textFaint, fontSize = 11.sp)
+                        }
+                    }
                     Text("${if (h.send) "send" else "receive"} · ${h.txid.take(10)}…", color = Fx.textFaint, fontSize = 12.sp)
                 }
                 Text(if (h.confirmations < 1) "pending" else if (h.confirmations < 6) "${h.confirmations} conf" else "confirmed",
@@ -901,15 +922,19 @@ private fun ConfirmSheet(vm: WalletViewModel, p: PlanPreview, unit: String) {
     ModalBottomSheet(onDismissRequest = { vm.cancelPending() }, containerColor = Fx.bg1) {
         Column(Modifier.padding(Fx.s4).padding(bottom = Fx.s5), verticalArrangement = Arrangement.spacedBy(Fx.s3)) {
             Text(if (p.sweep) "Confirm sweep" else "Confirm payment", style = MaterialTheme.typography.titleMedium, color = Fx.text)
+            val chain = vm.config?.chain ?: "btcb2"
             val inTotal = p.plan.selected.sumOf { it.valueSat.toLong() }
             val svcFee = p.plan.serviceFeeSat?.toLong() ?: 0L
             val out = inTotal - p.plan.feeSat.toLong() - svcFee - (p.plan.changeSat?.toLong() ?: 0L)
-            kv("To", p.to); kv("Amount", "${fmt(out)} $unit")
+            val total = out + p.plan.feeSat.toLong() + svcFee
+            fun withUsd(sat: Long) = "${fmt(sat)} $unit" +
+                (vm.usdValue(sat, chain)?.let { "  ·  ${fmtUsd(it)}" } ?: "")
+            kv("To", p.to); kv("Amount", withUsd(out))
             kv("Network fee", "${fmt(p.plan.feeSat.toLong())} $unit · ${p.feerate} sat/vB")
             if (svcFee > 0) kv("Service fee", "${fmt(svcFee)} $unit")
             p.plan.changeSat?.let { kv("Change", "${fmt(it.toLong())} $unit") }
             if (p.replayProtected) kv("Replay protection", "on · 100-byte OP_RETURN")
-            kv("Total", "${fmt(out + p.plan.feeSat.toLong() + svcFee)} $unit")
+            kv("Total", withUsd(total))
             ErrorText(vm.error)
             Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
                 GhostButton("Cancel", Modifier.weight(1f)) { vm.cancelPending() }

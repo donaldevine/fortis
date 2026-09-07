@@ -49,6 +49,13 @@ the ~294-sat dust limit or the node rejects the whole tx) to that address.
 uncapped) are advertised only. `--network` (default `bitcoin`)
 validates the address. Unset → no fee, `/pricing` 404s.
 
+`--btcb2-price-upstream <base>` gives `GET /btcb2/v1/prices` its own upstream — a
+mempool instance that carries a BTCB2/USD feed (e.g.
+`https://mempool.kilombino.com/api`), since a `fortis-index` has no prices.
+Cached 60 s. Unset → `/btcb2/v1/prices` falls through to `--btcb2-upstream` (404)
+and the wallet just shows no fiat value. `/btc/v1/prices` needs no flag — it
+rides the BTC Esplora upstream.
+
 The wallet points its BTCB2 explorer URL at `https://<host>/btcb2` and its BTC one at
 `https://<host>/btc`, sending `Authorization: Bearer <token>` (or `?token=<t>`).
 
@@ -59,6 +66,7 @@ The wallet points its BTCB2 explorer URL at `https://<host>/btcb2` and its BTC o
 | `POST /register` | `{ "token": "<id>.<hmac>" }` |
 | `GET \| POST /btcb2/<esplora path>` | → BTCB2 upstream |
 | `GET \| POST /btc/<esplora path>` | → BTC upstream |
+| `GET /btcb2/v1/prices` | → `--btcb2-price-upstream` if set (60 s cache), else the BTCB2 upstream |
 | `POST /crash` | `204`; appends the body to `--crash-log` (else `404`) |
 | `GET /pricing` | `{address, bps, floor_sat, cap_sat}` when a service fee is set (else `404`) |
 | `GET /metrics` | Prometheus text |
