@@ -29,15 +29,15 @@ impl Cache {
     }
 
     pub fn get(&self, key: &str) -> Option<Cached> {
-        let mut map = self.map.lock().unwrap();
-        match map.get(key) {
-            Some(e) if e.until > Instant::now() => Some(e.value.clone()),
-            Some(_) => {
-                map.remove(key);
-                None
-            }
-            None => None,
-        }
+        let map = self.map.lock().unwrap();
+        map.get(key).filter(|e| e.until > Instant::now()).map(|e| e.value.clone())
+    }
+
+    /// A fresh-or-recently-expired value — for serving stale data when the
+    /// upstream is failing. `grace` is how far past the TTL is still acceptable.
+    pub fn get_stale(&self, key: &str, grace: Duration) -> Option<Cached> {
+        let map = self.map.lock().unwrap();
+        map.get(key).filter(|e| e.until + grace > Instant::now()).map(|e| e.value.clone())
     }
 
     pub fn put(&self, key: &str, ttl: Duration, value: Cached) {
@@ -89,6 +89,9 @@ mod tests {
         assert_eq!(c.get("k").unwrap().body, b"v");
         std::thread::sleep(Duration::from_millis(60));
         assert!(c.get("k").is_none());
+        // still available as stale within the grace window
+        assert_eq!(c.get_stale("k", Duration::from_secs(1)).unwrap().body, b"v");
+        assert!(c.get_stale("k", Duration::from_millis(0)).is_none());
     }
 
     #[test]

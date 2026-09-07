@@ -508,24 +508,41 @@ fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query
         }
     }
 
+    // When the upstream is flaking (429 after retries, 5xx, transport error), a
+    // recently-cached copy keeps a wallet scan from aborting on one bad address.
+    let stale = || st.cache.get_stale(&cache_key, std::time::Duration::from_secs(600));
+
     match upstream.forward(method, rest, query, &body) {
-        Ok(resp) => {
+        Ok(resp) if resp.status == 200 => {
             if let Some(ttl) = ttl {
-                if resp.status == 200 {
-                    st.cache.put(
-                        &cache_key,
-                        ttl,
-                        cache::Cached {
-                            status: resp.status,
-                            content_type: resp.content_type.clone(),
-                            body: resp.body.clone(),
-                        },
-                    );
+                st.cache.put(
+                    &cache_key,
+                    ttl,
+                    cache::Cached {
+                        status: 200,
+                        content_type: resp.content_type.clone(),
+                        body: resp.body.clone(),
+                    },
+                );
+            }
+            Reply::Raw(200, resp.content_type, resp.body)
+        }
+        Ok(resp) => {
+            if ttl.is_some() {
+                if let Some(s) = stale() {
+                    Metrics::inc(&st.metrics.cache_hits);
+                    return Reply::Raw(s.status, s.content_type, s.body);
                 }
             }
             Reply::Raw(resp.status, resp.content_type, resp.body)
         }
         Err(e) => {
+            if ttl.is_some() {
+                if let Some(s) = stale() {
+                    Metrics::inc(&st.metrics.cache_hits);
+                    return Reply::Raw(s.status, s.content_type, s.body);
+                }
+            }
             Metrics::inc(&st.metrics.upstream_errors);
             err(502, &format!("upstream {chain}: {e}"))
         }
