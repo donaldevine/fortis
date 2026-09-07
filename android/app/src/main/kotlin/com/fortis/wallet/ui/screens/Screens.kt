@@ -18,6 +18,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -524,6 +526,8 @@ private fun SettingsTab(vm: WalletViewModel) {
             Text(stringResource(R.string.settings_one_unlock), color = Fx.textFaint, fontSize = 12.sp)
         }
 
+        LanguageCard()
+
         GlassCard {
             Text(stringResource(R.string.settings_connection), color = Fx.text, fontWeight = FontWeight.SemiBold)
             kv(
@@ -974,4 +978,48 @@ private fun ConfirmSheet(vm: WalletViewModel, p: PlanPreview, unit: String) {
 private fun kv(k: String, v: String) = Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
     Text(k, color = Fx.textDim)
     Text(v, color = Fx.text, modifier = Modifier.padding(start = Fx.s4), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+}
+
+/** The app-language override. Empty = follow the device; picking one recreates
+ *  the activity (via AppCompatDelegate). */
+@Composable
+private fun LanguageCard() {
+    val ctx = LocalContext.current
+    var open by remember { mutableStateOf(false) }
+    val current = currentLocaleTag(ctx)
+    val systemDefault = stringResource(R.string.language_system_default)
+    GlassCard {
+        Row(
+            Modifier.fillMaxWidth().clickable { open = true },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.settings_language), color = Fx.text, fontWeight = FontWeight.SemiBold)
+            Text(current?.let { localeLabel(it) } ?: systemDefault, color = Fx.textDim)
+        }
+    }
+    if (open) {
+        val entries = remember { listOf<String?>(null) + SUPPORTED_LOCALES.sortedBy { localeLabel(it) } }
+        AlertDialog(
+            onDismissRequest = { open = false },
+            containerColor = Fx.bg1,
+            title = { Text(stringResource(R.string.settings_language), color = Fx.text) },
+            text = {
+                LazyColumn(Modifier.heightIn(max = 420.dp)) {
+                    items(entries) { tag ->
+                        val selected = tag == current
+                        Text(
+                            tag?.let { localeLabel(it) } ?: systemDefault,
+                            color = if (selected) Fx.accent else Fx.text,
+                            modifier = Modifier.fillMaxWidth()
+                                .clickable { open = false; applyLocale(ctx, tag) }
+                                .padding(vertical = 12.dp),
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton({ open = false }) { Text(stringResource(R.string.action_cancel), color = Fx.text) } },
+        )
+    }
 }
