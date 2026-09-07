@@ -20,7 +20,6 @@ import uniffi.wallet_ffi.FundingPlan
 import java.net.Proxy
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import kotlin.math.roundToLong
 
 enum class Phase { Loading, AppLock, Onboard, Gen, Create, Restore, Shell, RevealSeed }
 
@@ -445,9 +444,10 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun buildPayment(
-        to: String, amountBtcb2: String, sweep: Boolean,
+        to: String, amountSat: Long, sweep: Boolean,
         feerateOverride: Long?, confTarget: Int, replayProtect: Boolean,
     ) = wrap {
+        require(sweep || amountSat > 0L) { "enter an amount" }
         val b = active(); val s = session!!; val c = config!!
         val feerate = (feerateOverride ?: b.feerateSatVb(confTarget).toLong()).coerceAtLeast(1)
         val utxos = b.utxos(1u)
@@ -459,12 +459,9 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
             uniffi.wallet_ffi.ServiceFee(it.address, it.bps.toUInt(), it.floorSat.toULong(), it.capSat.toULong())
         }
         val plan = if (sweep) s.view.planSweep(utxos, to, feerate.toULong(), 1u, serviceFee)
-        else {
-            val sat = (amountBtcb2.trim().toDouble() * 1e8).roundToLong()
-            s.view.planPayment(
-                utxos, listOf(uniffi.wallet_ffi.PayTo(to, sat.toULong())), feerate.toULong(), 1u, opReturn, serviceFee,
-            )
-        }
+        else s.view.planPayment(
+            utxos, listOf(uniffi.wallet_ffi.PayTo(to, amountSat.toULong())), feerate.toULong(), 1u, opReturn, serviceFee,
+        )
         pending = PlanPreview(plan, feerate.toULong(), to, sweep, replayProtected = opReturn != null)
     }
 

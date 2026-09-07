@@ -134,6 +134,7 @@ fun Field(
     label: String? = null,
     password: Boolean = false,
     mono: Boolean = false,
+    keyboardType: KeyboardType? = null,
     modifier: Modifier = Modifier,
 ) {
     var reveal by remember { mutableStateOf(false) }
@@ -147,10 +148,10 @@ fun Field(
             visualTransformation = if (hidden) PasswordVisualTransformation() else VisualTransformation.None,
             // Password keyboard type even when revealed: keeps the IME suggestion /
             // clipboard strip suppressed so a secret can't leak through it.
-            keyboardOptions = if (password) {
-                KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false)
-            } else {
-                KeyboardOptions.Default
+            keyboardOptions = when {
+                password -> KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false)
+                keyboardType != null -> KeyboardOptions(keyboardType = keyboardType)
+                else -> KeyboardOptions.Default
             },
             trailingIcon = if (password) {
                 {

@@ -13,6 +13,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -23,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,6 +38,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fortis.wallet.NavTab
@@ -52,6 +55,22 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private fun fmt(sat: Long) = "%.8f".format(sat / 1e8)
+
+/** Parse what the user typed in the Amount field into satoshis.
+ *  [sat] true → a plain integer number of sats; false → a decimal coin amount
+ *  (BTC / BTCB2). Returns null for anything unparseable or negative. */
+private fun amountToSat(text: String, sat: Boolean): Long? = runCatching {
+    val t = text.trim().replace(",", "").replace("_", "").replace(" ", "")
+    when {
+        t.isEmpty() -> null
+        sat -> t.toLong().takeIf { it >= 0 }
+        else -> t.toBigDecimal()
+            .movePointRight(8)
+            .setScale(0, java.math.RoundingMode.DOWN)
+            .longValueExact()
+            .takeIf { it >= 0 }
+    }
+}.getOrNull()
 
 private fun copyToClipboard(ctx: Context, label: String, text: String) {
     val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -723,11 +742,14 @@ private fun ReceiveTab(vm: WalletViewModel) {
 private fun SendTab(vm: WalletViewModel) {
     var to by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
+    var amountInSat by remember { mutableStateOf(true) }
     var sweep by remember { mutableStateOf(false) }
     var target by remember { mutableStateOf(6) }
     var custom by remember { mutableStateOf("") }
     var replayProtect by remember { mutableStateOf(false) }
     val isBtc = vm.config?.chain == "btc"
+    val coinUnit = if (isBtc) "BTC" else "BTCB2"
+    val amountSat = amountToSat(amount, amountInSat)
     val scan = rememberLauncherForActivityResult(ScanContract()) { r ->
         r.contents?.let { to = addressFromScan(it) }
     }
@@ -747,10 +769,29 @@ private fun SendTab(vm: WalletViewModel) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(sweep, { sweep = it }); Text("Send maximum (sweep)", color = Fx.text)
         }
-        if (!sweep) Field(amount, { amount = it }, "Amount")
+        if (!sweep) {
+            Text("Amount", color = Fx.textDim, style = MaterialTheme.typography.labelMedium)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Fx.s2),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Field(
+                    amount, { amount = it }, null,
+                    keyboardType = if (amountInSat) KeyboardType.Number else KeyboardType.Decimal,
+                    modifier = Modifier.weight(1f),
+                )
+                AmountUnitPicker(amountInSat, coinUnit) { amountInSat = it }
+            }
+            amountSat?.let {
+                Text(
+                    if (amountInSat) "= ${fmt(it)} $coinUnit" else "= $it sat",
+                    color = Fx.textFaint, fontSize = 12.sp,
+                )
+            }
+        }
         Segmented(listOf("1" to "Fast", "6" to "Normal", "144" to "Slow"), target.toString(),
             { target = it.toInt(); custom = "" })
-        Field(custom, { custom = it }, "custom sat/vB (optional)")
+        Field(custom, { custom = it }, "custom sat/vB (optional)", keyboardType = KeyboardType.Number)
         if (isBtc && !sweep) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(replayProtect, { replayProtect = it })
@@ -770,8 +811,37 @@ private fun SendTab(vm: WalletViewModel) {
             )
         }
         ErrorText(vm.error)
-        PrimaryButton("Review", enabled = to.isNotBlank() && (sweep || amount.isNotBlank())) {
-            vm.buildPayment(to, amount, sweep, custom.toLongOrNull(), target, replayProtect && isBtc)
+        PrimaryButton(
+            "Review",
+            enabled = to.isNotBlank() && (sweep || (amountSat != null && amountSat > 0)),
+        ) {
+            vm.buildPayment(to, amountSat ?: 0L, sweep, custom.toLongOrNull(), target, replayProtect && isBtc)
+        }
+    }
+}
+
+/** The "sat / BTC" (or "sat / BTCB2") unit picker that sits beside the Amount
+ *  field. Styled to match [Field] so the two line up. */
+@Composable
+private fun AmountUnitPicker(isSat: Boolean, coinUnit: String, onChange: (Boolean) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            Modifier
+                .height(56.dp)
+                .clip(RoundedCornerShape(Fx.rSm))
+                .background(Fx.glass1)
+                .border(1.dp, Fx.hair, RoundedCornerShape(Fx.rSm))
+                .clickable { open = true }
+                .padding(start = Fx.s3, end = Fx.s1),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(if (isSat) "sat" else coinUnit, color = Fx.text, fontSize = 14.sp)
+            Icon(Icons.Filled.ArrowDropDown, contentDescription = "amount unit", tint = Fx.textDim)
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(text = { Text("sat") }, onClick = { onChange(true); open = false })
+            DropdownMenuItem(text = { Text(coinUnit) }, onClick = { onChange(false); open = false })
         }
     }
 }
