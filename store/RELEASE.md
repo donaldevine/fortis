@@ -40,26 +40,38 @@ Play App Signing holds the real signing key; you sign uploads with an **upload
 key**. Losing it is recoverable (contact Play support); losing the *app signing*
 key is not, but Google holds that one.
 
-PowerShell, from `C:\Repos\fortis\android`:
+`keytool` ships with the Android Studio JDK but isn't on PATH. PowerShell, from
+`C:\Repos\fortis\android`:
 
 ```powershell
-keytool -genkeypair -v -keystore ..\fortis-upload.jks -alias fortis `
-  -keyalg RSA -keysize 4096 -validity 10000
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"   # JAVA_HOME is already set to the Android Studio JBR
+keytool -genkeypair -v -keystore fortis-upload.jks -alias fortis `
+  -keyalg RSA -keysize 4096 -validity 10000 `
+  -dname "CN=Fortis Tech Labs, O=Fortis Tech Labs, L=Dublin, C=IE"
 ```
 
-It prompts for a keystore password, a key password (use the same for both —
-Gradle expects that), and a name/org (any value; not shown to users).
+It prompts for a keystore password, then a key password (press RETURN at the key
+prompt to reuse the keystore password — Gradle expects them equal). `-dname`
+skips the interactive name/org questions; those values are baked into the cert
+but never shown to users.
 
-- The file lands at `C:\Repos\fortis\fortis-upload.jks` (outside the repo).
-- **Back it up** — password manager + an offline copy. If you rebuild your
-  machine without it you can't push updates without a key reset.
+- The file lands at `C:\Repos\fortis\android\fortis-upload.jks`. That's inside
+  the repo tree but caught by `android/.gitignore` (`*.jks`), so it won't be
+  committed.
+- **It is not in git.** A `git clean -fdx` or deleting the repo folder destroys
+  it. Back it up the moment it exists — password manager + one offline copy —
+  and store both passwords with it. Losing the upload key means a support
+  round-trip with Google to reset it (~2 days); until Play App Signing is
+  enrolled (first upload) there's no recovery at all.
 
 ## 2. Wire up signing
 
-Create `C:\Repos\fortis\android\keystore.properties` (git-ignored):
+Create `C:\Repos\fortis\android\keystore.properties` (git-ignored). Use an
+absolute path with forward slashes — `storeFile` is resolved relative to
+`android/app/`, so a relative path is a foot-gun:
 
 ```properties
-storeFile=../fortis-upload.jks
+storeFile=C:/Repos/fortis/android/fortis-upload.jks
 storePassword=<the password you just set>
 keyAlias=fortis
 keyPassword=<same password>
@@ -93,12 +105,22 @@ Notes:
 Install the AAB's APKs on a real device or the emulator so you test what testers
 get (R8-minified, release-signed):
 
+Easiest: install the release variant straight to a device — same R8 output, same
+signing key, no extra tooling:
+
+```powershell
+cd C:\Repos\fortis\android
+.\gradlew.bat :app:installRelease
+```
+
+Or, to exercise the actual AAB → split-APK path Play uses:
+
 ```powershell
 # one-time: get bundletool — https://github.com/google/bundletool/releases
 java -jar bundletool.jar build-apks `
   --bundle=app\build\outputs\bundle\release\app-release.aab `
   --output=release.apks --mode=universal `
-  --ks=..\fortis-upload.jks --ks-key-alias=fortis
+  --ks=fortis-upload.jks --ks-key-alias=fortis
 java -jar bundletool.jar install-apks --apks=release.apks
 ```
 
@@ -300,7 +322,7 @@ test track → promote), send for review.
 | Thing | Value |
 |---|---|
 | Package | `rest.fortis.wallet` |
-| Upload keystore | `C:\Repos\fortis\fortis-upload.jks` (alias `fortis`) — **back up** |
+| Upload keystore | `C:\Repos\fortis\android\fortis-upload.jks` (alias `fortis`, git-ignored) — **back up** |
 | Signing config | `android/keystore.properties` (git-ignored) |
 | Build | `cd android && .\gradlew.bat clean :app:bundleRelease` |
 | Output | `android/app/build/outputs/bundle/release/app-release.aab` |
