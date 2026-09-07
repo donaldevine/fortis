@@ -89,10 +89,15 @@ cd C:\Repos\fortis\android
 
 ```powershell
 cd C:\Repos\fortis\android
-.\gradlew.bat clean :app:bundleRelease
+.\gradlew.bat :app:bundleRelease
 ```
 
 Output: `android\app\build\outputs\bundle\release\app-release.aab` (~9 MB).
+
+Don't add `gradlew clean` here: it runs `:app:cargoClean`, which tries to
+`cargo clean` the whole workspace `target/` and fails ("Access is denied") while
+`fortis-edge` / `fortis-index` are running as services and hold their `.exe`
+open. For a clean Android build, `Remove-Item -Recurse -Force app\build` instead.
 
 Notes:
 - `versionCode` (currently `1`) must **increase on every upload**. Bump it in
