@@ -15,13 +15,17 @@ ExecStart=/usr/local/bin/fortis-edge \
   --btc-upstream https://mempool.space/api \
   --btc-price-url 'https://api.kraken.com/0/public/Ticker?pair=XBTUSD' \
   --btcb2-price-url https://mempool.kilombino.com/api/v1/prices \
+  --btc-upstream-rate 5 \
   --secret-file /var/lib/fortis/fortis-edge.secret \
   --require-token \
   --trust-forwarded-for \
   --allow-origin https://wallet.fortis.example \
   --crash-log /var/log/fortis/crashes.ndjson \
   --service-fee-address bc1qYOUR_FEE_ADDRESS_HERE
-  # --service-fee-bps 100 (1%) and --service-fee-floor-sat 546 are the defaults
+  # --service-fee-bps 100 (1%) and --service-fee-floor-sat 546 are the defaults.
+  # --btc-upstream-rate 5 (also the default) paces /btc/address/* so a wallet's
+  # ~40-address scan doesn't get 429'd by mempool.space; raise it if the upstream
+  # tolerates more, 0 to disable.
 Restart=on-failure
 RestartSec=5
 StateDirectory=fortis

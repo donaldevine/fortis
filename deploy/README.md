@@ -44,6 +44,7 @@ cargo build --release -p fortis-index -p fortis-edge
   --btc-upstream https://mempool.space/api \
   --btc-price-url 'https://api.kraken.com/0/public/Ticker?pair=XBTUSD' \
   --btcb2-price-url https://mempool.kilombino.com/api/v1/prices \
+  --btc-upstream-rate 5 \
   --require-token --trust-forwarded-for \
   --crash-log /var/log/fortis/crashes.ndjson \
   --service-fee-address <your mainnet address>   # advertised + enforced; omit for no fee

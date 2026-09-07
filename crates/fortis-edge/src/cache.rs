@@ -65,7 +65,10 @@ pub fn ttl_for(path: &str) -> Option<Duration> {
     } else if path.ends_with("/v1/prices") {
         Some(Duration::from_secs(60))
     } else if path.contains("/address/") {
-        Some(Duration::from_secs(5))
+        // BTC rides a paced public upstream — a scan can take longer than a
+        // short TTL, so hold address results long enough to cover the next poll.
+        // BTCB2 is a local index; keep it fresh so a new deposit shows fast.
+        Some(Duration::from_secs(if path.starts_with("/btc/") { 60 } else { 5 }))
     } else {
         None
     }
@@ -101,9 +104,10 @@ mod tests {
     #[test]
     fn ttl_policy() {
         assert!(ttl_for("/btcb2/blocks/tip/height").is_some());
-        assert!(ttl_for("/btc/address/bc1.../utxo").is_some());
         assert!(ttl_for("/btc/v1/fees/recommended").is_some());
         assert!(ttl_for("/btcb2/v1/prices").is_some());
         assert!(ttl_for("/btc/tx").is_none());
+        // BTC address results are held far longer than BTCB2's.
+        assert!(ttl_for("/btc/address/bc1x/utxo") > ttl_for("/btcb2/address/bc1x/utxo"));
     }
 }

@@ -28,7 +28,7 @@ use serde_json::json;
 use tiny_http::{Header, Method, Request, Response, Server};
 
 use cache::Cache;
-use limit::RateLimiter;
+use limit::{Pacer, RateLimiter};
 use metrics::Metrics;
 use proxy::Upstream;
 
@@ -62,6 +62,12 @@ struct Args {
     /// `/v1/prices` carries the feed (e.g. https://mempool.kilombino.com/api).
     #[arg(long)]
     btcb2_price_upstream: Option<String>,
+    /// Cap on `/btc/address/*` lookups per second sent to `--btc-upstream`.
+    /// A wallet scan fans out ~40 of them at once and public explorers
+    /// (mempool.space, blockstream.info) 429 the burst; the edge queues them
+    /// instead. `0` disables. Only affects BTC — a `fortis-index` has no limit.
+    #[arg(long, default_value_t = 5.0)]
+    btc_upstream_rate: f64,
     /// HMAC secret file for tokens. Default: <home>/fortis-edge.secret.
     #[arg(long)]
     secret_file: Option<PathBuf>,
@@ -131,6 +137,7 @@ struct State {
     btc: Option<Upstream>,
     btc_price: Option<price::PriceSource>,
     btcb2_price: Option<price::PriceSource>,
+    btc_pacer: Option<Pacer>,
     limiter: RateLimiter,
     register_limiter: RateLimiter,
     crash_limiter: RateLimiter,
@@ -200,6 +207,7 @@ fn run() -> Result<()> {
         btc: args.btc_upstream.as_deref().map(Upstream::new),
         btc_price: args.btc_price_url.as_deref().map(price::PriceSource::new),
         btcb2_price: btcb2_price_url.as_deref().map(price::PriceSource::new),
+        btc_pacer: (args.btc_upstream_rate > 0.0).then(|| Pacer::new(args.btc_upstream_rate)),
         limiter: RateLimiter::new(args.rate_per_min, args.rate_burst),
         register_limiter: RateLimiter::new(args.register_per_hour, args.register_per_hour.max(1)),
         // crashes are rare per device; this just caps a crash-looping client or abuse
@@ -219,6 +227,14 @@ fn run() -> Result<()> {
     eprintln!("  btc upstream   {}", args.btc_upstream.as_deref().unwrap_or("(none)"));
     eprintln!("  btc price      {}", args.btc_price_url.as_deref().unwrap_or("(via btc upstream)"));
     eprintln!("  btcb2 price    {}", btcb2_price_url.as_deref().unwrap_or("(none)"));
+    eprintln!(
+        "  btc pacing     {}",
+        if args.btc_upstream_rate > 0.0 {
+            format!("{}/s on /address/*", args.btc_upstream_rate)
+        } else {
+            "(off)".into()
+        },
+    );
     eprintln!("  token auth     {}", if args.require_token { "required" } else { "optional" });
     eprintln!("  rate limit     {}/min, burst {}", args.rate_per_min, args.rate_burst);
     eprintln!("  crash log      {}", args.crash_log.as_deref().map(|p| p.display().to_string()).unwrap_or_else(|| "(disabled)".into()));
@@ -480,6 +496,15 @@ fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query
                 Metrics::inc(&st.metrics.fee_rejected);
                 return err(402, &msg);
             }
+        }
+    }
+
+    // A wallet's gap-limit scan is ~40 address lookups back to back; public BTC
+    // explorers rate-limit that. Space the address GETs (the cache absorbs the
+    // added latency on the next poll). tip / fees / broadcast are untouched.
+    if let Some(pacer) = &st.btc_pacer {
+        if chain == "btc" && method == &Method::Get && rest.starts_with("address/") {
+            pacer.wait();
         }
     }
 

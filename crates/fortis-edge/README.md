@@ -15,9 +15,12 @@ wallet ──HTTPS──▶ reverse proxy (TLS) ──▶ fortis-edge ─┬─�
   lookup), so instances scale out horizontally. `--require-token` enforces it on
   `/{btcb2,btc}/*`.
 - **Rate limiting** — token-bucket per token (or per client IP when untokened);
-  a stricter bucket on `/register` per IP.
-- **Response caching** — short TTLs (tip 5 s, address 5 s, fees 30 s) collapse a
-  burst of wallet polls into one upstream hit. `POST /tx` is never cached.
+  a stricter bucket on `/register` per IP. **Outbound**, `--btc-upstream-rate`
+  (default 5/s, `0` off) paces `/btc/address/*` so a wallet's ~40-address gap
+  scan doesn't get 429'd by mempool.space — requests queue rather than fail.
+- **Response caching** — short TTLs (tip 5 s, fees 30 s, prices 60 s; address
+  5 s for BTCB2, 60 s for the paced BTC path) collapse a burst of wallet polls
+  into one upstream hit. `POST /tx` is never cached.
 - **CORS** (`--allow-origin`) and **`/metrics`** (Prometheus counters:
   requests, registrations, cache hits, rate-limit / auth rejections, upstream
   errors).
