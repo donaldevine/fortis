@@ -184,12 +184,14 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
                             { (wallets.firstOrNull { it.id == id } ?: w).let { c -> c.nextReceive to c.nextChange } },
                             w.backendToken ?: "",
                             "$HOSTED_EDGE/pricing",
+                            bulkPrewarm = w.chain == "btc",
                         ) {
                             val fresh = edgeRegister(http, HOSTED_EDGE)
                             updateConfig(id) { it.copy(backendToken = fresh) }
                             fresh
                         }
                     }
+                    runCatching { b.prewarm() }
                     runCatching { b.balances() }.getOrNull()?.let { setWalletBalance(id, it.confirmedSat) }
                     // one price lookup per chain, reused across its wallets
                     if (priced.add(w.chain)) {
@@ -417,6 +419,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
             { (wallets.firstOrNull { it.id == id } ?: c).let { w -> w.nextReceive to w.nextChange } },
             token,
             "$HOSTED_EDGE/pricing",
+            bulkPrewarm = c.chain == "btc",
         ) {
             val fresh = edgeRegister(http, HOSTED_EDGE)
             updateConfig(id) { it.copy(backendToken = fresh) }
@@ -444,6 +447,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     fun refresh() = viewModelScope.launch {
         val edge = backend ?: return@launch
         suspend fun load(b: Backend, degraded: Boolean) {
+            runCatching { b.prewarm() }
             status = b.status().copy(degraded = degraded)
             usingFallback = degraded
             balances = b.balances()

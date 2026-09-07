@@ -41,6 +41,7 @@ services:
       --btc-price-url ${BTC_PRICE_URL:-https://api.kraken.com/0/public/Ticker?pair=XBTUSD}
       --btcb2-price-url ${BTCB2_PRICE_URL:-https://mempool.kilombino.com/api/v1/prices}
       --btc-upstream-rate ${BTC_UPSTREAM_RATE:-5}
+      --btc-haskoin-url ${BTC_HASKOIN_URL:-https://api.haskoin.com/btc}
       --secret-file /data/fortis-edge.secret
       --require-token
       --trust-forwarded-for

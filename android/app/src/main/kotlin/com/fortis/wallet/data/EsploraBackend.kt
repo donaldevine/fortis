@@ -42,6 +42,9 @@ class EsploraBackend(
      *  surfaced in [status] so a send attaches the fee output. Null on the
      *  public-explorer fallback → no fee. */
     private val pricingUrl: String? = null,
+    /** POST the wallet's address set to `{base}/prewarm` before a scan so the
+     *  edge batch-loads them (BTC via Haskoin). Only the hosted BTC backend. */
+    private val bulkPrewarm: Boolean = false,
     private val refresh: (suspend () -> String)? = null,
 ) : Backend {
     private val base = baseUrl.trimEnd('/')
@@ -128,6 +131,28 @@ class EsploraBackend(
                 }
             }
         }.getOrNull()
+    }
+
+    private var lastPrewarm = 0L
+
+    /** One POST of the whole watch-set to `{base}/prewarm`; the edge fills its
+     *  address cache from a batch source so [scan]/[history] hit it. Throttled
+     *  to sit just inside the edge's cache TTL. Best-effort — a failure just
+     *  means the scan falls back to per-address fetches. */
+    override suspend fun prewarm() {
+        if (!bulkPrewarm) return
+        val now = System.currentTimeMillis()
+        if (now - lastPrewarm < 45_000) return
+        val body = JSONArray(watchSet().map { it.address }).toString()
+        val ok = runCatching {
+            withContext(Dispatchers.IO) {
+                send {
+                    Request.Builder().url("$base/prewarm")
+                        .post(body.toRequestBody("application/json".toMediaTypeOrNull()))
+                }.use { it.isSuccessful }
+            }
+        }.getOrDefault(false)
+        if (ok) lastPrewarm = now
     }
 
     override suspend fun status(): ChainStatus {

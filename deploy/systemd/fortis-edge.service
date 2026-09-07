@@ -16,6 +16,7 @@ ExecStart=/usr/local/bin/fortis-edge \
   --btc-price-url 'https://api.kraken.com/0/public/Ticker?pair=XBTUSD' \
   --btcb2-price-url https://mempool.kilombino.com/api/v1/prices \
   --btc-upstream-rate 5 \
+  --btc-haskoin-url https://api.haskoin.com/btc \
   --secret-file /var/lib/fortis/fortis-edge.secret \
   --require-token \
   --trust-forwarded-for \
@@ -26,6 +27,9 @@ ExecStart=/usr/local/bin/fortis-edge \
   # --btc-upstream-rate 5 (also the default) paces /btc/address/* so a wallet's
   # ~40-address scan doesn't get 429'd by mempool.space; raise it if the upstream
   # tolerates more, 0 to disable.
+  # --btc-haskoin-url (default api.haskoin.com/btc) enables POST /btc/prewarm:
+  # the app batch-loads its whole address set in ~2 calls, so the scan is served
+  # from cache and never touches --btc-upstream. Empty string disables.
 Restart=on-failure
 RestartSec=5
 StateDirectory=fortis

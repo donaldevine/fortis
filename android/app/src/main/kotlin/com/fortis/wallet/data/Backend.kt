@@ -42,4 +42,9 @@ interface Backend {
     /** USD per whole coin for this chain, or null if the backend has no price
      *  feed. Used only to show an approximate fiat value. */
     suspend fun price(): Double? = null
+
+    /** Bulk-load everything for the wallet's addresses ahead of a scan, if the
+     *  backend can (a no-op otherwise). Called once at the top of a refresh so
+     *  the per-address loop that follows is served from cache. */
+    suspend fun prewarm() {}
 }

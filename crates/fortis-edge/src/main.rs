@@ -9,6 +9,7 @@
 //! TLS is expected from a reverse proxy (Caddy / nginx) in front.
 
 mod cache;
+mod haskoin;
 mod limit;
 mod metrics;
 mod price;
@@ -68,6 +69,18 @@ struct Args {
     /// instead. `0` disables. Only affects BTC — a `fortis-index` has no limit.
     #[arg(long, default_value_t = 5.0)]
     btc_upstream_rate: f64,
+    /// Batch source for BTC address data — a Haskoin Store base URL. Enables
+    /// `POST /btc/prewarm`, which fetches a wallet's whole address set in two
+    /// calls and pre-fills the cache, so the per-address scan is served locally
+    /// instead of fanned out to `--btc-upstream`. Default is the Haskoin
+    /// project's instance; blockchain.com's is capped at ~1000/day and unusable.
+    /// Empty disables (the client falls back to the paced per-address path).
+    #[arg(long, default_value = "https://api.haskoin.com/btc")]
+    btc_haskoin_url: String,
+    /// Optional `X-API-Key` header for `--btc-haskoin-url` (api.haskoin.com needs
+    /// none).
+    #[arg(long)]
+    btc_haskoin_key: Option<String>,
     /// HMAC secret file for tokens. Default: <home>/fortis-edge.secret.
     #[arg(long)]
     secret_file: Option<PathBuf>,
@@ -137,6 +150,7 @@ struct State {
     btc: Option<Upstream>,
     btc_price: Option<price::PriceSource>,
     btcb2_price: Option<price::PriceSource>,
+    btc_haskoin: Option<haskoin::HaskoinStore>,
     btc_pacer: Option<Pacer>,
     limiter: RateLimiter,
     register_limiter: RateLimiter,
@@ -207,6 +221,8 @@ fn run() -> Result<()> {
         btc: args.btc_upstream.as_deref().map(Upstream::new),
         btc_price: args.btc_price_url.as_deref().map(price::PriceSource::new),
         btcb2_price: btcb2_price_url.as_deref().map(price::PriceSource::new),
+        btc_haskoin: (!args.btc_haskoin_url.trim().is_empty())
+            .then(|| haskoin::HaskoinStore::new(&args.btc_haskoin_url, args.btc_haskoin_key.clone())),
         btc_pacer: (args.btc_upstream_rate > 0.0).then(|| Pacer::new(args.btc_upstream_rate)),
         limiter: RateLimiter::new(args.rate_per_min, args.rate_burst),
         register_limiter: RateLimiter::new(args.register_per_hour, args.register_per_hour.max(1)),
@@ -233,6 +249,14 @@ fn run() -> Result<()> {
             format!("{}/s on /address/*", args.btc_upstream_rate)
         } else {
             "(off)".into()
+        },
+    );
+    eprintln!(
+        "  btc batch      {}",
+        if args.btc_haskoin_url.trim().is_empty() {
+            "(off)".into()
+        } else {
+            format!("{} (/btc/prewarm)", args.btc_haskoin_url)
         },
     );
     eprintln!("  token auth     {}", if args.require_token { "required" } else { "optional" });
@@ -448,6 +472,54 @@ fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query
         }
         // no source configured → fall through: /btc/v1/prices proxies to the BTC
         // Esplora upstream; /btcb2/v1/prices has no fallback and 404s below.
+    }
+
+    // `POST /btc/prewarm` — body is a JSON array of the wallet's addresses. Pull
+    // them all from Haskoin in two calls, reshape into per-address Esplora
+    // `/address/{a}/{utxo,txs}` bodies, and prime the cache so the scan that
+    // follows is local. On any failure the client falls back to per-address.
+    if method == &Method::Post && chain == "btc" && rest == "prewarm" {
+        let Some(hs) = &st.btc_haskoin else {
+            return err(404, "batch prewarm is not enabled");
+        };
+        if st.require_token && !token_ok() {
+            Metrics::inc(&st.metrics.unauthorized);
+            return err(401, "missing or invalid token — POST /register first");
+        }
+        let mut raw = Vec::new();
+        let _ = req.as_reader().take(64 * 1024).read_to_end(&mut raw);
+        let addrs: Vec<String> = serde_json::from_slice::<Vec<String>>(&raw)
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|a| !a.is_empty() && a.len() < 128)
+            .take(80)
+            .collect();
+        if addrs.is_empty() {
+            return err(400, "expected a non-empty JSON array of addresses");
+        }
+        return match hs.warm(&addrs) {
+            Ok(warmed) => {
+                let ttl = std::time::Duration::from_secs(60);
+                for (a, w) in &warmed {
+                    for (suffix, body) in [("utxo", &w.utxo), ("txs", &w.txs)] {
+                        st.cache.put(
+                            &format!("btc/address/{a}/{suffix}?"),
+                            ttl,
+                            cache::Cached {
+                                status: 200,
+                                content_type: "application/json".into(),
+                                body: body.clone(),
+                            },
+                        );
+                    }
+                }
+                Reply::Json(200, json!({ "warmed": warmed.len() }))
+            }
+            Err(e) => {
+                Metrics::inc(&st.metrics.upstream_errors);
+                err(502, &format!("haskoin: {e}"))
+            }
+        };
     }
 
     let upstream = match chain {

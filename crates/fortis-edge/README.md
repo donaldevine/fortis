@@ -18,6 +18,11 @@ wallet ──HTTPS──▶ reverse proxy (TLS) ──▶ fortis-edge ─┬─�
   a stricter bucket on `/register` per IP. **Outbound**, `--btc-upstream-rate`
   (default 5/s, `0` off) paces `/btc/address/*` so a wallet's ~40-address gap
   scan doesn't get 429'd by mempool.space — requests queue rather than fail.
+- **Batch prewarm** — `POST /btc/prewarm` (a JSON array of the wallet's
+  addresses) pulls the whole set from a Haskoin Store (`--btc-haskoin-url`,
+  default `https://api.haskoin.com/btc`) in two calls, reshapes it to the
+  Esplora `/address/{a}/{utxo,txs}` bodies, and fills the cache — so the client's
+  per-address scan is entirely local and `--btc-upstream` is only a fallback.
 - **Response caching** — short TTLs (tip 5 s, fees 30 s, prices 60 s; address
   5 s for BTCB2, 60 s for the paced BTC path) collapse a burst of wallet polls
   into one upstream hit. `POST /tx` is never cached.
@@ -73,6 +78,7 @@ The wallet points its BTCB2 explorer URL at `https://<host>/btcb2` and its BTC o
 | `GET \| POST /btcb2/<esplora path>` | → BTCB2 upstream |
 | `GET \| POST /btc/<esplora path>` | → BTC upstream |
 | `GET /{btc,btcb2}/v1/prices` | `{ "USD": <n> }` from `--{chain}-price-url` (60 s cache); BTC falls back to the Esplora upstream, BTCB2 404s |
+| `POST /btc/prewarm` | `["addr",…]` → batch-load from Haskoin, fill the address cache, `{ "warmed": <n> }` (404 if `--btc-haskoin-url` empty) |
 | `POST /crash` | `204`; appends the body to `--crash-log` (else `404`) |
 | `GET /pricing` | `{address, bps, floor_sat, cap_sat}` when a service fee is set (else `404`) |
 | `GET /metrics` | Prometheus text |
