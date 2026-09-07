@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fortis.wallet.MAX_WALLET_NAME
 import com.fortis.wallet.NavTab
 import com.fortis.wallet.PlanPreview
 import com.fortis.wallet.WalletViewModel
@@ -179,7 +180,7 @@ fun CreateScreen(vm: WalletViewModel) {
         Text("Your recovery phrase", style = MaterialTheme.typography.titleMedium, color = Fx.text)
         Text("Write these ${words.size} words on paper, offline. Anyone with them controls your funds.", color = Fx.textDim)
         GlassCard { PhraseGrid(words) }
-        Field(name, { name = it }, "Wallet name")
+        Field(name, { name = it }, "Wallet name", maxLen = MAX_WALLET_NAME)
         ChainRow(chain) { chain = it }
         Field(passphrase, { passphrase = it }, "BIP-39 passphrase (optional)", password = true)
         Text(
@@ -221,7 +222,7 @@ fun RestoreScreen(vm: WalletViewModel) {
     Screen(scroll = true) {
         Text("Restore wallet", style = MaterialTheme.typography.titleMedium, color = Fx.text)
         Text("Enter your 12 or 24 words, separated by spaces.", color = Fx.textDim)
-        Field(name, { name = it }, "Wallet name")
+        Field(name, { name = it }, "Wallet name", maxLen = MAX_WALLET_NAME)
         MnemonicField(phrase, { phrase = it })
         Field(passphrase, { passphrase = it }, "BIP-39 passphrase (optional)", password = true)
         ChainRow(chain) { chain = it }
@@ -551,7 +552,7 @@ private fun SettingsTab(vm: WalletViewModel) {
             onDismissRequest = { renaming = null },
             containerColor = Fx.bg1,
             title = { Text("Rename wallet", color = Fx.text) },
-            text = { Field(text, { text = it }, "Wallet name") },
+            text = { Field(text, { text = it }, "Wallet name", maxLen = MAX_WALLET_NAME) },
             confirmButton = { TextButton({ vm.renameWallet(id, text); renaming = null }) { Text("Save", color = Fx.accent) } },
             dismissButton = { TextButton({ renaming = null }) { Text("Cancel", color = Fx.text) } },
         )

@@ -29,6 +29,9 @@ enum class NavTab { Home, Wallet, Settings }
 /** How many wallets one install can hold. */
 const val MAX_WALLETS = 10
 
+/** Longest a wallet name may be. */
+const val MAX_WALLET_NAME = 30
+
 /** The one backend the mobile app talks to. Not user-configurable, not shown. */
 const val HOSTED_EDGE = "https://api.fortis.rest"
 
@@ -318,7 +321,8 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         val s = WalletSession(chain, network, mnemonic, passphrase)
         val sealed = sealSeed(mnemonic, passphrase, secret)
         val id = UUID.randomUUID().toString()
-        val c = WalletConfig(id, name.trim().ifBlank { "Wallet" }, chain, network, sealed.blobHex, sealed.saltHex)
+        val cleanName = name.trim().take(MAX_WALLET_NAME).ifBlank { "Wallet" }
+        val c = WalletConfig(id, cleanName, chain, network, sealed.blobHex, sealed.saltHex)
         store.save(c); store.setSelected(id)
         wallets = wallets + c
         selectedId = id
@@ -332,7 +336,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     // --- manage ---
 
     fun renameWallet(id: String, name: String) = wrap {
-        val clean = name.trim()
+        val clean = name.trim().take(MAX_WALLET_NAME)
         if (clean.isNotEmpty()) updateConfig(id) { it.copy(name = clean) }
     }
 

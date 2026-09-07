@@ -135,6 +135,7 @@ fun Field(
     password: Boolean = false,
     mono: Boolean = false,
     keyboardType: KeyboardType? = null,
+    maxLen: Int? = null,
     modifier: Modifier = Modifier,
 ) {
     var reveal by remember { mutableStateOf(false) }
@@ -143,7 +144,7 @@ fun Field(
         if (label != null) Text(label, color = Fx.textDim, style = MaterialTheme.typography.labelMedium)
         OutlinedTextField(
             value = value,
-            onValueChange = onValueChange,
+            onValueChange = { if (maxLen == null || it.length <= maxLen) onValueChange(it) },
             singleLine = !mono,
             visualTransformation = if (hidden) PasswordVisualTransformation() else VisualTransformation.None,
             // Password keyboard type even when revealed: keeps the IME suggestion /
