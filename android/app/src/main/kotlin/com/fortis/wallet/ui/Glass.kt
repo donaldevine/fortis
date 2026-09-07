@@ -159,7 +159,9 @@ fun Field(
                     IconButton(onClick = { reveal = !reveal }) {
                         Icon(
                             if (reveal) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                            contentDescription = if (reveal) "Hide" else "Show",
+                            contentDescription = androidx.compose.ui.res.stringResource(
+                                if (reveal) com.fortis.wallet.R.string.action_hide else com.fortis.wallet.R.string.action_show,
+                            ),
                             tint = Fx.textDim,
                         )
                     }

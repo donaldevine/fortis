@@ -19,9 +19,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import com.fortis.wallet.LockSetup
+import com.fortis.wallet.R
 import com.fortis.wallet.WalletViewModel
 import com.fortis.wallet.data.LOCK_BIOMETRIC
 import com.fortis.wallet.data.LOCK_PASSWORD
@@ -114,18 +116,17 @@ fun LockChoiceFields(choice: LockChoice) {
     if (choice.biometricAvailable) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(choice.useBiometric, { choice.useBiometric = it })
-            Text("Lock the app with fingerprint or PIN", color = Fx.text)
+            Text(stringResource(R.string.lock_choice_use_biometric), color = Fx.text)
         }
         if (choice.useBiometric) Text(
-            "One unlock opens all your wallets. No password to remember — your " +
-                "device's fingerprint/face or screen-lock PIN gets you in.",
+            stringResource(R.string.lock_choice_biometric_note),
             color = Fx.textFaint, fontSize = 12.sp,
         )
     }
     if (!choice.useBiometric) {
-        Text("This password unlocks the app and every wallet in it.", color = Fx.textFaint, fontSize = 12.sp)
-        Field(choice.pw, { choice.pw = it }, "App password", password = true)
-        Field(choice.pw2, { choice.pw2 = it }, "Confirm password", password = true)
+        Text(stringResource(R.string.lock_choice_password_note), color = Fx.textFaint, fontSize = 12.sp)
+        Field(choice.pw, { choice.pw = it }, stringResource(R.string.field_app_password), password = true)
+        Field(choice.pw2, { choice.pw2 = it }, stringResource(R.string.field_confirm_password), password = true)
     }
 }
 
@@ -136,7 +137,12 @@ suspend fun LockChoice.resolve(activity: FragmentActivity?): LockSetup? {
     val act = activity ?: throw BiometricUnavailable("no activity for the unlock prompt")
     SeedKeystore.createKey()
     val cipher = try {
-        authenticate(act, "Set up app lock", "Fortis Wallet", SeedKeystore.encryptCipher())
+        authenticate(
+            act,
+            act.getString(R.string.biometric_setup_title),
+            act.getString(R.string.biometric_subtitle),
+            SeedKeystore.encryptCipher(),
+        )
     } catch (e: BiometricCancelled) {
         SeedKeystore.deleteKey()
         return null
@@ -164,7 +170,7 @@ fun BiometricAppUnlock(vm: WalletViewModel) {
         val wrapped = vm.appWrappedSecret ?: return
         scope.launch {
             try {
-                val cipher = authenticate(a, "Unlock Fortis Wallet", "", SeedKeystore.decryptCipher(wrapped))
+                val cipher = authenticate(a, a.getString(R.string.biometric_unlock_title), "", SeedKeystore.decryptCipher(wrapped))
                 vm.appUnlockWithSecret(SeedKeystore.unwrap(cipher, wrapped).toHex())
             } catch (e: BiometricCancelled) {
                 // stay put — the button retries
@@ -177,13 +183,9 @@ fun BiometricAppUnlock(vm: WalletViewModel) {
     LaunchedEffect(Unit) { go() }
 
     if (invalidated) {
-        Text(
-            "Your device's screen lock changed, so the app can't be unlocked here " +
-                "any more. Reinstall and restore each wallet from its recovery phrase.",
-            color = Fx.bad, fontSize = 13.sp,
-        )
+        Text(stringResource(R.string.biometric_invalidated), color = Fx.bad, fontSize = 13.sp)
     } else {
-        PrimaryButton("Unlock") { go() }
+        PrimaryButton(stringResource(R.string.action_unlock)) { go() }
     }
     ErrorText(vm.error)
 }

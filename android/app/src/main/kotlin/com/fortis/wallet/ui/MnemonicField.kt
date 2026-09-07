@@ -25,6 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -32,6 +34,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fortis.wallet.R
 import com.fortis.wallet.ui.theme.Fx
 import uniffi.wallet_ffi.bip39Wordlist
 
@@ -77,7 +80,7 @@ fun MnemonicField(
     val ok = words.size == 12 || words.size == 24
 
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Fx.s1)) {
-        Text("Recovery phrase", color = Fx.textDim, style = MaterialTheme.typography.labelMedium)
+        Text(stringResource(R.string.reveal_title), color = Fx.textDim, style = MaterialTheme.typography.labelMedium)
         OutlinedTextField(
             value = tfv,
             onValueChange = { push(it) },
@@ -117,11 +120,12 @@ fun MnemonicField(
                 }
             }
         }
+        val count = pluralStringResource(R.plurals.word_count, words.size, words.size)
         Text(
-            buildString {
-                append(words.size).append(if (words.size == 1) " word" else " words")
-                if (ok && bad == 0) append("  ·  looks good")
-                if (bad > 0) append("  ·  ").append(bad).append(" not in the word list")
+            when {
+                bad > 0 -> stringResource(R.string.mnemonic_status, count, stringResource(R.string.mnemonic_not_in_list, bad))
+                ok -> stringResource(R.string.mnemonic_status, count, stringResource(R.string.mnemonic_looks_good))
+                else -> count
             },
             color = if (bad > 0) Fx.warn else Fx.textFaint,
             fontSize = 12.sp,

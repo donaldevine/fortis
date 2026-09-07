@@ -49,6 +49,7 @@ data class LockSetup(val mode: String, val secret: String, val appWrapped: Strin
 
 class WalletViewModel(app: Application) : AndroidViewModel(app) {
     private val store = Store(app)
+    private fun str(id: Int, vararg args: Any) = getApplication<Application>().getString(id, *args)
     private val http = OkHttpClient.Builder()
         .proxy(Proxy.NO_PROXY) // ignore any Wi-Fi/Studio proxy — local hosts must be direct
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -148,7 +149,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
                 sessions[id] = it
             }
         } catch (e: Exception) {
-            if (!quiet) error = e.message ?: "could not open wallet"
+            if (!quiet) error = e.message ?: str(R.string.error_open_wallet)
             null
         }
     }
@@ -230,7 +231,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
 
     val canAddWallet: Boolean get() = wallets.size < MAX_WALLETS
     fun addWallet() {
-        if (!canAddWallet) { error = "You can keep up to $MAX_WALLETS wallets on one device."; return }
+        if (!canAddWallet) { error = str(R.string.error_wallet_max, MAX_WALLETS); return }
         error = null; draftMnemonic = null; phase = Phase.Onboard
     }
     fun cancelOnboard() {
@@ -363,9 +364,9 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
      *  addresses). Doesn't change the selection. */
     fun cloneToOtherChain(id: String) = wrap {
         val c = wallets.firstOrNull { it.id == id } ?: return@wrap
-        if (!canAddWallet) { error = "You can keep up to $MAX_WALLETS wallets on one device."; return@wrap }
+        if (!canAddWallet) { error = str(R.string.error_wallet_max, MAX_WALLETS); return@wrap }
         if (wallets.any { it.name == c.name && it.chain == c.otherChain }) {
-            error = "“${c.name}” is already on ${c.otherChain.uppercase()}."
+            error = str(R.string.error_clone_exists, c.name, c.otherChain.uppercase())
             return@wrap
         }
         val clone = c.copy(id = UUID.randomUUID().toString(), chain = c.otherChain, backendToken = null)
@@ -474,11 +475,11 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         to: String, amountSat: Long, sweep: Boolean,
         feerateOverride: Long?, confTarget: Int, replayProtect: Boolean,
     ) = wrap {
-        require(sweep || amountSat > 0L) { "enter an amount" }
+        require(sweep || amountSat > 0L) { str(R.string.error_enter_amount) }
         val b = active(); val s = session!!; val c = config!!
         val feerate = (feerateOverride ?: b.feerateSatVb(confTarget).toLong()).coerceAtLeast(1)
         val utxos = b.utxos(1u)
-        require(utxos.isNotEmpty()) { "no confirmed coins to spend" }
+        require(utxos.isNotEmpty()) { str(R.string.error_no_coins) }
         s.setIndices(c.nextReceive, c.nextChange)
         val opReturn = if (replayProtect && c.chain == "btc" && !sweep)
             com.fortis.wallet.wallet.randomBytes(100) else null
