@@ -69,10 +69,6 @@ Write-Host ''
 
 $wr = @('--yes', 'wrangler@4')
 
-# Create the project on first run. Harmless ("already exists") every other time;
-# a real failure here (bad auth) is reported clearly by the deploy step below.
-& npx @wr pages project create $Project --production-branch main *> $null
-
 $deploy = @(
     'pages', 'deploy', $dir,
     '--project-name', $Project,
@@ -82,8 +78,18 @@ $deploy = @(
 if ($sha) { $deploy += @('--commit-hash',    $sha) }
 if ($msg) { $deploy += @('--commit-message', $msg) }
 
-& npx @wr @deploy
-$rc = $LASTEXITCODE
+# Run from the repo root so wrangler's .wrangler\ working dir always lands in one
+# predictable, git-ignored place regardless of where this script was invoked from.
+Push-Location $repo
+try {
+    # Create the project on first run. Harmless ("already exists") otherwise; a
+    # real failure here (bad auth) is reported clearly by the deploy step below.
+    & npx @wr pages project create $Project --production-branch main *> $null
+
+    & npx @wr @deploy
+    $rc = $LASTEXITCODE
+}
+finally { Pop-Location }
 
 if ($rc -ne 0) {
     Write-Host ''

@@ -22,3 +22,6 @@ fortis-edge.secret
 
 # deploy secrets
 deploy/.env
+
+# wrangler local working state (cache, account id/name, local dev data)
+.wrangler/
