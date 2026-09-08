@@ -962,6 +962,7 @@ private fun HistoryTab(vm: WalletViewModel, unit: String) {
     }
     val sendLabel = stringResource(R.string.history_send)
     val receiveLabel = stringResource(R.string.history_receive)
+    val internalLabel = stringResource(R.string.history_internal)
     GlassCard {
         vm.history.forEach { h ->
             val url = explorerTxUrl(chain, network, h.txid)
@@ -979,13 +980,21 @@ private fun HistoryTab(vm: WalletViewModel, unit: String) {
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text((if (h.amountSat > 0) "+" else "") + fmt(h.amountSat) + " " + unit,
                             fontFamily = FontFamily.Monospace, color = if (h.amountSat > 0) Fx.good else Fx.text)
-                        vm.usdValue(if (h.amountSat < 0) -h.amountSat else h.amountSat, chain)?.let {
+                        if (h.amountSat != 0L) vm.usdValue(if (h.amountSat < 0) -h.amountSat else h.amountSat, chain)?.let {
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(R.string.fiat_approx, fmtUsd(it)), color = Fx.textFaint, fontSize = 11.sp)
                         }
                     }
+                    val label = when {
+                        h.internal -> internalLabel
+                        h.send -> sendLabel
+                        else -> receiveLabel
+                    }
                     Text(
-                        stringResource(R.string.history_row_subtitle, if (h.send) sendLabel else receiveLabel, h.txid.take(10)),
+                        if (h.send && h.feeSat > 0L)
+                            stringResource(R.string.history_row_subtitle_fee, label, h.txid.take(10), h.feeSat)
+                        else
+                            stringResource(R.string.history_row_subtitle, label, h.txid.take(10)),
                         color = Fx.textFaint, fontSize = 12.sp,
                     )
                 }

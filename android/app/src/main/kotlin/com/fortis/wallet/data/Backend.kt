@@ -26,7 +26,13 @@ data class HistoryEntry(
     val amountSat: Long,
     val confirmations: Long,
     val time: Long,
-)
+    /** Fee this wallet paid, sat. 0 for a receive (the sender paid it). */
+    val feeSat: Long = 0L,
+) {
+    /** A send where nothing actually left the wallet — a self-transfer or a
+     *  consolidation; only the fee was spent. */
+    val internal: Boolean get() = send && amountSat == 0L
+}
 
 /** Same surface for both chain backends. Coin selection and signing happen in
  *  wallet-ffi; a backend only ever handles public data + finished transactions. */

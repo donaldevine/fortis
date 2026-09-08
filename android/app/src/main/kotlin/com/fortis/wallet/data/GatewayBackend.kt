@@ -98,6 +98,7 @@ class GatewayBackend(
                 amountSat = h.getLong("amount_sat"),
                 confirmations = h.getLong("confirmations"),
                 time = h.getLong("time"),
+                feeSat = kotlin.math.abs(h.optLong("fee_sat")), // fortisd reports it signed (negative for sends)
             )
         }
     }

@@ -659,10 +659,13 @@ function paneHistory() {
     ...h.map((t) => {
       const pos = t.amount_sat > 0;
       const conf = t.confirmations;
+      const send = t.direction === 'send';
+      const label = send && t.amount_sat === 0 ? 'internal transfer' : t.direction;
+      const fee = send && t.fee_sat ? ` · fee ${Math.abs(t.fee_sat)} sat` : '';
       return el('div', { class: 'item', onclick: () => openTx(t.txid) },
         el('div', {},
           el('div', { class: `amt ${pos ? 'pos' : 'neg'}` }, `${pos ? '+' : ''}${fmt(t.amount_sat)} ${unit}`),
-          el('div', { class: 'meta' }, `${t.direction} · ${timeAgo(t.time)} · ${shortTxid(t.txid)}`)),
+          el('div', { class: 'meta' }, `${label} · ${timeAgo(t.time)} · ${shortTxid(t.txid)}${fee}`)),
         el('span', { class: `badge ${conf < 1 ? 'pending' : ''}` }, conf < 1 ? 'pending' : conf < 6 ? `${conf} conf` : 'confirmed'));
     }),
     explorerTxUrl('') ? el('div', { class: 'hint', style: 'padding:8px 2px 0' }, 'tap a transaction to open it in the explorer') : null,

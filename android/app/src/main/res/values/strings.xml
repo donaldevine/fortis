@@ -172,7 +172,9 @@
     <string name="history_empty">no transactions yet</string>
     <string name="history_send">send</string>
     <string name="history_receive">receive</string>
+    <string name="history_internal">internal transfer</string>
     <string name="history_row_subtitle">%1$s · %2$s…</string>
+    <string name="history_row_subtitle_fee">%1$s · %2$s… · fee %3$d sat</string>
     <string name="history_pending">pending</string>
     <string name="history_conf_n">%1$d conf</string>
     <string name="history_confirmed">confirmed</string>
