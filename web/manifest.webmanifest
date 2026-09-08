@@ -1,7 +1,7 @@
 {
   "name": "fortis wallet",
   "short_name": "fortis",
-  "description": "Non-custodial wallet for Bitcoin and its BLAKE2b fork.",
+  "description": "Non-custodial wallet for Bitcoin BLAKE2b and Bitcoin Legacy.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

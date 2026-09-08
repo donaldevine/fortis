@@ -115,7 +115,7 @@ function renderOnboard() {
   if (ui.screen === 'restore') return renderRestore();
   mount(el('div', { class: 'screen' },
     el('div', { class: 'spacer' }),
-    brand('a non-custodial wallet for Bitcoin and its BLAKE2b fork'),
+    brand('a non-custodial wallet for Bitcoin BLAKE2b and Bitcoin Legacy'),
     el('div', { class: 'spacer' }),
     el('button', { class: 'primary wide', onclick: () => go('gen') }, 'Create a new wallet'),
     el('button', { class: 'ghost wide', onclick: () => go('restore') }, 'Restore from a recovery phrase'),

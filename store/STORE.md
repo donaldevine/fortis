@@ -17,14 +17,14 @@ Draft copy and assets for the Play Console listing. Fill the `TODO` items.
 ## Short description (≤ 80 chars)
 
 ```
-Non-custodial wallet for Bitcoin and its Bitcoin Knots BLAKE2b fork.
+Non-custodial wallet for Bitcoin BLAKE2b and Bitcoin Legacy.
 ```
 
 ## Full description (≤ 4000 chars)
 
 ```
-fortis is a non-custodial wallet for Bitcoin (BTC) and its Bitcoin Knots BLAKE2b
-hard fork (BTCB2).
+fortis is a non-custodial wallet for Bitcoin BLAKE2b (BTCB2) and Bitcoin Legacy
+(BTC).
 
 Your keys are yours. The recovery phrase is generated on your device and
 encrypted under a password you choose. It is never uploaded, and neither fortis

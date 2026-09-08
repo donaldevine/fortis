@@ -284,7 +284,7 @@ reset progress, so tell people to leave it installed.
 **Post template:**
 
 > **Beta testers wanted — Fortis Wallet (Android)**
-> Non-custodial BTC + Bitcoin Knots BLAKE2b (BTCB2) wallet. Need 12 people to
+> Non-custodial Bitcoin BLAKE2b + Bitcoin Legacy wallet. Need 12 people to
 > stay opted in for 14 days for the Play Store requirement — you don't have to
 > use it, just keep it installed.
 >

@@ -33,7 +33,7 @@
 
     <!-- onboarding -->
     <string name="onboard_add_title">Add a wallet</string>
-    <string name="onboard_tagline">a non-custodial wallet for Bitcoin and its BLAKE2b fork</string>
+    <string name="onboard_tagline">a non-custodial wallet for Bitcoin BLAKE2b and Bitcoin Legacy</string>
     <string name="onboard_create">Create a new wallet</string>
     <string name="onboard_restore">Restore from a recovery phrase</string>
 

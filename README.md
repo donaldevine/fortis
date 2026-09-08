@@ -1,7 +1,7 @@
 # fortis
 
-A non-custodial wallet for **Bitcoin (SHA256d)** and the **Bitcoin Knots BLAKE2b
-hard fork**, with built-in cross-chain atomic swaps.
+A non-custodial wallet for **Bitcoin BLAKE2b** and **Bitcoin Legacy**, with
+built-in cross-chain atomic swaps.
 
 The security-critical logic is one audited Rust crate. It compiles to WebAssembly
 for the browser and to a native library (UniFFI) for iOS / Android — no
