@@ -30,6 +30,9 @@ pub struct Mempool {
     spent: HashSet<String>,
     /// spk hex → outputs the mempool creates for it: `(txid, vout, value_sat)`.
     outputs: HashMap<String, Vec<(String, u32, u64)>>,
+    /// `"txid:vout"` → `(spk hex, value_sat)` for every output the mempool creates
+    /// — backfills the prevout of a mempool-to-mempool spend.
+    by_outpoint: HashMap<String, (String, u64)>,
     /// spk hex → txids that fund or spend it (for `/address/:a/txs`).
     txids: HashMap<String, Vec<String>>,
 }
@@ -70,6 +73,7 @@ impl Mempool {
     fn reindex(&mut self) {
         self.spent.clear();
         self.outputs.clear();
+        self.by_outpoint.clear();
         self.txids.clear();
 
         for (txid, t) in &self.txs {
@@ -83,10 +87,13 @@ impl Mempool {
             }
             for (n, o) in t["vout"].as_array().into_iter().flatten().enumerate() {
                 let Some(spk) = o["scriptPubKey"]["hex"].as_str() else { continue };
+                let value = to_sat(&o["value"]);
                 self.outputs
                     .entry(spk.to_string())
                     .or_default()
-                    .push((txid.clone(), n as u32, to_sat(&o["value"])));
+                    .push((txid.clone(), n as u32, value));
+                self.by_outpoint
+                    .insert(outpoint(txid, n as u32), (spk.to_string(), value));
                 self.txids.entry(spk.to_string()).or_default().push(txid.clone());
             }
         }
@@ -98,6 +105,11 @@ impl Mempool {
 
     pub fn is_spent(&self, txid: &str, vout: u32) -> bool {
         self.spent.contains(&outpoint(txid, vout))
+    }
+
+    /// `(spk hex, value_sat)` for an output some mempool tx created.
+    pub fn output_at(&self, txid: &str, vout: u32) -> Option<(String, u64)> {
+        self.by_outpoint.get(&outpoint(txid, vout)).cloned()
     }
 
     /// Unconfirmed outputs for `spk` that aren't themselves already spent by
@@ -175,6 +187,15 @@ mod tests {
         ]);
         assert!(m.utxos_for("spkA").next().is_none()); // t1:0 is spent by t2
         assert_eq!(m.utxos_for("spkC").count(), 1);
+    }
+
+    #[test]
+    fn output_at_resolves_an_outpoint_to_its_spk_and_value() {
+        let m = indexed(&[("t1", raw("t1", json!([]), json!([vout_to("spkA", 1.0), vout_to("spkB", 0.5)])))]);
+        assert_eq!(m.output_at("t1", 0), Some(("spkA".to_string(), 100_000_000)));
+        assert_eq!(m.output_at("t1", 1), Some(("spkB".to_string(), 50_000_000)));
+        assert_eq!(m.output_at("t1", 2), None);
+        assert_eq!(m.output_at("nope", 0), None);
     }
 
     #[test]

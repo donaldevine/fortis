@@ -13,6 +13,9 @@ pub enum WalletError {
     #[error("insufficient funds: need {need} sat, have {have} sat")]
     InsufficientFunds { need: u64, have: u64 },
 
+    #[error("invalid input: {0}")]
+    InvalidInput(String),
+
     #[error("invalid swap parameters: {0}")]
     InvalidSwapParams(String),
 

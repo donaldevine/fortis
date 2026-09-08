@@ -5,7 +5,7 @@
 
 use anyhow::{anyhow, Context, Result};
 use bitcoin::address::NetworkUnchecked;
-use bitcoin::{Address, Amount, Network, ScriptBuf, Transaction};
+use bitcoin::{Address, Network, ScriptBuf, Transaction};
 use serde_json::json;
 
 pub struct Pricing {
@@ -36,12 +36,14 @@ impl Pricing {
         })
     }
 
-    fn paid_by(&self, tx: &Transaction) -> Amount {
+    /// Total paid to the fee address, in sat. Saturating — a hand-crafted tx hex
+    /// can carry absurd output values, and this must not panic.
+    fn paid_by(&self, tx: &Transaction) -> u64 {
         tx.output
             .iter()
             .filter(|o| o.script_pubkey == self.spk)
-            .map(|o| o.value)
-            .sum()
+            .map(|o| o.value.to_sat())
+            .fold(0u64, u64::saturating_add)
     }
 
     /// `Err(msg)` when `raw_tx_hex` parses but pays less than `floor_sat` to the
@@ -49,7 +51,7 @@ impl Pricing {
     pub fn check_tx_hex(&self, raw_tx_hex: &str) -> std::result::Result<(), String> {
         let Ok(bytes) = hex::decode(raw_tx_hex.trim()) else { return Ok(()) };
         let Ok(tx) = bitcoin::consensus::deserialize::<Transaction>(&bytes) else { return Ok(()) };
-        if self.paid_by(&tx).to_sat() < self.floor_sat {
+        if self.paid_by(&tx) < self.floor_sat {
             return Err(format!(
                 "transaction must pay the service fee: at least {} sat to {}",
                 self.floor_sat, self.address
@@ -62,7 +64,7 @@ impl Pricing {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bitcoin::{transaction::Version, TxOut};
+    use bitcoin::{transaction::Version, Amount, TxOut};
 
     // a real mainnet p2wpkh address
     const FEE_ADDR: &str = "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4";
@@ -99,6 +101,27 @@ mod tests {
     fn accepts_a_tx_that_pays_at_least_the_floor() {
         assert!(pricing().check_tx_hex(&tx_paying(200)).is_ok());
         assert!(pricing().check_tx_hex(&tx_paying(4_000)).is_ok());
+    }
+
+    #[test]
+    fn absurd_output_values_do_not_panic() {
+        let fee_spk = FEE_ADDR
+            .parse::<Address<NetworkUnchecked>>()
+            .unwrap()
+            .assume_checked()
+            .script_pubkey();
+        let tx = Transaction {
+            version: Version::TWO,
+            lock_time: bitcoin::absolute::LockTime::ZERO,
+            input: vec![],
+            output: vec![
+                TxOut { value: Amount::from_sat(u64::MAX), script_pubkey: fee_spk.clone() },
+                TxOut { value: Amount::from_sat(u64::MAX), script_pubkey: fee_spk },
+            ],
+        };
+        let hex_tx = hex::encode(bitcoin::consensus::serialize(&tx));
+        // saturates rather than overflowing; the huge "payment" clears the floor
+        assert!(pricing().check_tx_hex(&hex_tx).is_ok());
     }
 
     #[test]

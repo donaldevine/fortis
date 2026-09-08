@@ -7,7 +7,7 @@ use std::sync::{Arc, RwLock};
 
 use anyhow::{anyhow, Context, Result};
 use bitcoin::address::NetworkUnchecked;
-use bitcoin::{Address, Network};
+use bitcoin::{Address, Network, ScriptBuf};
 use serde_json::{json, Value};
 use tiny_http::{Header, Method, Request, Response, Server};
 
@@ -100,7 +100,7 @@ fn address_route(path: &str, store: &Store, rpc: &Rpc, mp: &Mempool, network: Ne
             Ok(v) => Reply::Json(200, v),
             Err(e) => err(500, e),
         },
-        "txs" => match address_txs(&spk, store, rpc, mp) {
+        "txs" => match address_txs(&spk, store, rpc, mp, network) {
             Ok(v) => Reply::Json(200, v),
             Err(e) => err(502, e),
         },
@@ -140,8 +140,18 @@ fn address_utxo(spk: &str, store: &Store, mp: &Mempool) -> Result<Value> {
 /// value}`, `fee`, `status`). Mempool txs first, then confirmed newest-first. The
 /// index stores only txid lists; confirmed detail comes from `getrawtransaction
 /// <txid> 2 <blockhash>` (no txindex needed), mempool detail from the overlay.
-fn address_txs(spk: &str, store: &Store, rpc: &Rpc, mp: &Mempool) -> Result<Value> {
-    let mut txs: Vec<Value> = mp.txs_for(spk).into_iter().map(|t| esplora_tx(t, None)).collect();
+fn address_txs(
+    spk: &str,
+    store: &Store,
+    rpc: &Rpc,
+    mp: &Mempool,
+    network: Network,
+) -> Result<Value> {
+    let mut txs: Vec<Value> = mp
+        .txs_for(spk)
+        .into_iter()
+        .map(|t| esplora_tx(&backfill_prevouts(t, store, mp, network), None))
+        .collect();
     let pending: std::collections::HashSet<String> =
         txs.iter().filter_map(|t| t["txid"].as_str().map(str::to_string)).collect();
 
@@ -155,6 +165,41 @@ fn address_txs(spk: &str, store: &Store, rpc: &Rpc, mp: &Mempool) -> Result<Valu
         txs.push(esplora_tx(&t, Some(h.height)));
     }
     Ok(Value::Array(txs))
+}
+
+/// Some Knots/BLAKE2b nodes omit `vin[].prevout` for a *mempool* transaction's
+/// inputs (`getrawtransaction <txid> 2` only fills it once the tx is mined).
+/// Without it the client can't tell that a pending tx spends the wallet's own
+/// coins, so an outgoing payment shows as an incoming receive of its change.
+/// Fill any missing prevout from the confirmed index / the mempool overlay.
+/// A no-op when the node already provided the prevout.
+fn backfill_prevouts(t: &Value, store: &Store, mp: &Mempool, network: Network) -> Value {
+    let mut t = t.clone();
+    let Some(vins) = t.get_mut("vin").and_then(Value::as_array_mut) else { return t };
+    for i in vins {
+        if i.get("prevout").is_some_and(|p| !p.is_null()) {
+            continue;
+        }
+        let (Some(ptxid), Some(pvout)) = (i["txid"].as_str(), i["vout"].as_u64()) else { continue };
+        let (ptxid, pvout) = (ptxid.to_string(), pvout as u32);
+        let Some((spk_hex, value_sat)) = mp
+            .output_at(&ptxid, pvout)
+            .or_else(|| store.output_at(&ptxid, pvout).ok().flatten())
+        else {
+            continue;
+        };
+        let Some(addr) = spk_hex_to_address(&spk_hex, network) else { continue };
+        i["prevout"] = json!({
+            "scriptPubKey": { "address": addr },
+            "value": value_sat as f64 / 1e8,
+        });
+    }
+    t
+}
+
+fn spk_hex_to_address(spk_hex: &str, network: Network) -> Option<String> {
+    let spk = ScriptBuf::from(hex::decode(spk_hex).ok()?);
+    Address::from_script(&spk, network).ok().map(|a| a.to_string())
 }
 
 /// `confirmed_at` is `Some(height)` for a mined tx, `None` for a mempool one.
@@ -266,4 +311,67 @@ fn respond(req: Request, reply: Reply) -> std::io::Result<()> {
         }
     }
     req.respond(resp)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::store::{IndexedTx, Store, TxOut};
+
+    // BIP-173 P2WPKH example program.
+    const P2WPKH_SPK: &str = "0014751e76e8199196d454941c45d1b3a323f1433bd6";
+    const P2WPKH_ADDR: &str = "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4";
+
+    #[test]
+    fn spk_hex_to_address_round_trips_a_p2wpkh() {
+        assert_eq!(spk_hex_to_address(P2WPKH_SPK, Network::Bitcoin).as_deref(), Some(P2WPKH_ADDR));
+        assert_eq!(spk_hex_to_address("not-hex", Network::Bitcoin), None);
+        assert_eq!(spk_hex_to_address("00", Network::Bitcoin), None); // not a known template
+    }
+
+    #[test]
+    fn backfill_fills_a_null_mempool_prevout_from_the_confirmed_index() {
+        let mut store = Store::open(":memory:").unwrap();
+        store
+            .apply_block(
+                100,
+                "h100",
+                &[IndexedTx {
+                    txid: "aa".into(),
+                    inputs: vec![],
+                    outputs: vec![TxOut { spk_hex: P2WPKH_SPK.into(), value_sat: 500_000 }],
+                }],
+            )
+            .unwrap();
+        let mp = Mempool::default();
+
+        // a mempool tx spending aa:0 that the node reported with no prevout
+        let pending = json!({
+            "txid": "bb",
+            "vin": [{ "txid": "aa", "vout": 0 }],
+            "vout": [{ "value": 0.004, "scriptPubKey": { "address": "bc1qdest" } }],
+        });
+        let filled = backfill_prevouts(&pending, &store, &mp, Network::Bitcoin);
+
+        let e = esplora_tx(&filled, None);
+        assert_eq!(e["vin"][0]["prevout"]["scriptpubkey_address"], P2WPKH_ADDR);
+        assert_eq!(e["vin"][0]["prevout"]["value"], 500_000);
+        assert_eq!(e["status"]["confirmed"], false);
+    }
+
+    #[test]
+    fn backfill_leaves_a_prevout_the_node_already_gave_us_untouched() {
+        let store = Store::open(":memory:").unwrap();
+        let mp = Mempool::default();
+        let tx = json!({
+            "txid": "bb",
+            "vin": [{
+                "txid": "aa", "vout": 0,
+                "prevout": { "scriptPubKey": { "address": "bc1qkeep" }, "value": 0.001 }
+            }],
+            "vout": [],
+        });
+        let filled = backfill_prevouts(&tx, &store, &mp, Network::Bitcoin);
+        assert_eq!(filled["vin"][0]["prevout"]["scriptPubKey"]["address"], "bc1qkeep");
+    }
 }

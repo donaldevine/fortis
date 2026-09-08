@@ -184,6 +184,19 @@ impl Store {
         Ok(rows)
     }
 
+    /// `(spk_hex, value_sat)` for one confirmed output — used to backfill the
+    /// prevout of a mempool spend the node reported without one.
+    pub fn output_at(&self, txid: &str, vout: u32) -> Result<Option<(String, u64)>> {
+        let mut stmt = self
+            .conn
+            .prepare_cached("SELECT spk, value FROM outputs WHERE txid=?1 AND vout=?2")?;
+        stmt.query_row(params![txid, vout as i64], |r| {
+            Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)? as u64))
+        })
+        .optional()
+        .context("output_at")
+    }
+
     pub fn history_for(&self, spk_hex: &str, limit: usize) -> Result<Vec<HistTx>> {
         let mut stmt = self.conn.prepare_cached(
             "SELECT h.txid, h.height, b.hash

@@ -279,7 +279,16 @@ fn run() -> Result<()> {
         let state = Arc::clone(&state);
         handles.push(thread::spawn(move || {
             for mut req in server.incoming_requests() {
-                let reply = handle(&mut req, &state);
+                // One panicking request must not take the worker (and its share of
+                // the pool) down with it — catch it, count it, answer 500.
+                let reply = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    handle(&mut req, &state)
+                }))
+                .unwrap_or_else(|_| {
+                    Metrics::inc(&state.metrics.panics);
+                    eprintln!("fortis-edge: request handler panicked; returned 500");
+                    err(500, "internal error")
+                });
                 let _ = respond(req, reply, &state.allow_origin);
             }
         }));
@@ -427,10 +436,7 @@ fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query
     let (chain, rest) = path[1..].split_once('/').unwrap_or((&path[1..], ""));
 
     let tok = bearer(req);
-    let token_ok = || match &tok {
-        Some(t) if token::verify(&st.secret, t) => true,
-        _ => false,
-    };
+    let token_ok = || matches!(&tok, Some(t) if token::verify(&st.secret, t));
 
     // `GET /{chain}/v1/prices` with a configured price source is normalised, not
     // proxied: fetch the source and return `{ "USD": <spot> }`, cached 60 s.

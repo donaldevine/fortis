@@ -4,7 +4,7 @@
 use bip39::Mnemonic;
 use bitcoin::bip32::{DerivationPath, Xpriv, Xpub};
 use bitcoin::secp256k1::{Message, PublicKey, Secp256k1};
-use bitcoin::{NetworkKind, ScriptBuf, Transaction, TxOut, Witness};
+use bitcoin::{CompressedPublicKey, NetworkKind, ScriptBuf, Transaction, TxOut, Witness};
 use zeroize::Zeroizing;
 
 use crate::chain::ChainParams;
@@ -171,6 +171,16 @@ impl MasterKey {
         for (i, &(is_change, index)) in paths.iter().enumerate() {
             let sk = self.wallet_xpriv(params, account, is_change, index)?.private_key;
             let pk = sk.public_key(&secp);
+            // The prevout this input spends must be the P2WPKH output of the key we
+            // just derived — otherwise `paths` was mispaired with the inputs and
+            // the signature would be worthless (a silently un-broadcastable tx).
+            let expected_spk =
+                ScriptBuf::new_p2wpkh(&CompressedPublicKey(pk).wpubkey_hash());
+            if prevouts[i].script_pubkey != expected_spk {
+                return Err(WalletError::InvalidSwapParams(format!(
+                    "input {i}: prevout scriptPubKey does not match the key at (change={is_change}, index={index})"
+                )));
+            }
             // BIP-143 scriptCode for a P2WPKH input is the implied P2PKH script.
             let script_code = ScriptBuf::new_p2pkh(&bitcoin::PublicKey::new(pk).pubkey_hash());
             let sh = sighash_all(&*tx, prevouts, i, &script_code, variant)?;

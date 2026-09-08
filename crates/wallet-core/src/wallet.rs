@@ -39,8 +39,16 @@ pub struct ServiceFee {
 }
 
 impl ServiceFee {
+    /// Basis points above this are ignored — a hosted backend advertising a
+    /// larger cut than 10% is misconfigured or hostile, and the client should not
+    /// build a transaction around it. The fee is also shown in the confirm sheet
+    /// before the user signs.
+    const MAX_BPS: u32 = 1_000;
+
     fn amount_sat(&self, send_amount_sat: u64) -> u64 {
-        let pct = (u128::from(send_amount_sat) * u128::from(self.bps) / 10_000) as u64;
+        let bps = u128::from(self.bps.min(Self::MAX_BPS));
+        let pct = u64::try_from(u128::from(send_amount_sat).saturating_mul(bps) / 10_000)
+            .unwrap_or(u64::MAX);
         let fee = pct.max(self.floor_sat);
         if self.cap_sat > 0 {
             fee.min(self.cap_sat)
@@ -91,6 +99,50 @@ const P2WPKH_INPUT_VB: u64 = 68;
 /// Below this a change output costs more to spend than it's worth; fold it into fee.
 const CHANGE_DUST_SAT: u64 = 294;
 
+/// A feerate above this is refused by `plan_payment` / `plan_sweep`. Even the
+/// worst historic mainnet fee spikes stayed near ~1000 sat/vB; a value an order
+/// of magnitude past that is a fat-fingered custom feerate or a hostile backend
+/// estimate, and building the transaction anyway would burn the wallet on fees.
+pub const MAX_FEERATE_SAT_VB: u64 = 10_000;
+
+/// Sum `Amount`s, returning an error instead of panicking if the total would
+/// overflow `u64` (a hostile backend can report absurd UTXO / output values).
+fn checked_sum(amounts: impl IntoIterator<Item = Amount>) -> Result<Amount> {
+    amounts.into_iter().try_fold(Amount::ZERO, |acc, a| {
+        acc.checked_add(a)
+            .ok_or_else(|| WalletError::InvalidInput("amount total overflows".into()))
+    })
+}
+
+/// Reject a feerate of 0 (a non-relayable zero-fee transaction) or one above
+/// [`MAX_FEERATE_SAT_VB`].
+fn check_feerate(feerate_sat_vb: u64) -> Result<()> {
+    if feerate_sat_vb == 0 || feerate_sat_vb > MAX_FEERATE_SAT_VB {
+        return Err(WalletError::InvalidInput(format!(
+            "feerate {feerate_sat_vb} sat/vB is out of range (1..={MAX_FEERATE_SAT_VB})"
+        )));
+    }
+    Ok(())
+}
+
+/// Reject a spend output below the dust threshold for its own scriptPubKey — such
+/// a transaction is non-standard and will not relay. `OP_RETURN` outputs (value
+/// 0 by design) are exempt.
+fn check_not_dust(outputs: &[TxOut]) -> Result<()> {
+    for o in outputs {
+        if o.script_pubkey.is_op_return() {
+            continue;
+        }
+        if o.value < o.script_pubkey.minimal_non_dust() {
+            return Err(WalletError::InvalidInput(format!(
+                "output of {} is below the dust limit for its address",
+                o.value
+            )));
+        }
+    }
+    Ok(())
+}
+
 fn varint_len(n: usize) -> u64 {
     match n {
         0..=0xFC => 1,
@@ -130,7 +182,10 @@ impl WalletView {
     }
 
     pub fn balance(&self, utxos: &[Utxo]) -> Amount {
-        utxos.iter().map(|u| u.value).fold(Amount::ZERO, |a, b| a + b)
+        utxos
+            .iter()
+            .map(|u| u.value)
+            .fold(Amount::ZERO, |a, b| a.checked_add(b).unwrap_or(Amount::MAX_MONEY))
     }
 
     /// Next unused external (receive) address, BIP-84 `.../0/<i>`.
@@ -178,8 +233,11 @@ impl WalletView {
         min_confirmations: u32,
         service_fee: Option<&ServiceFee>,
     ) -> Result<FundingPlan> {
+        check_feerate(feerate_sat_vb)?;
+        check_not_dust(&outputs)?;
+
         let service_fee_amt = service_fee.and_then(|sf| {
-            let send_amount_sat: u64 = outputs.iter().map(|o| o.value.to_sat()).sum();
+            let send_amount_sat = checked_sum(outputs.iter().map(|o| o.value)).ok()?.to_sat();
             sf.output(send_amount_sat)
         });
         if let Some(out) = &service_fee_amt {
@@ -187,8 +245,11 @@ impl WalletView {
         }
         let service_fee_sat = service_fee_amt.map(|o| o.value);
 
-        let target = outputs.iter().map(|o| o.value).fold(Amount::ZERO, |a, b| a + b);
-        let outputs_vb: u64 = outputs.iter().map(|o| output_vb(&o.script_pubkey)).sum();
+        let target = checked_sum(outputs.iter().map(|o| o.value))?;
+        let outputs_vb: u64 = outputs
+            .iter()
+            .map(|o| output_vb(&o.script_pubkey))
+            .fold(0u64, u64::saturating_add);
 
         let mut eligible: Vec<&Utxo> =
             utxos.iter().filter(|u| u.confirmations >= min_confirmations).collect();
@@ -202,14 +263,20 @@ impl WalletView {
 
         for u in eligible {
             selected.push(u.clone());
-            acc += u.value;
+            acc = acc.checked_add(u.value).ok_or_else(|| {
+                WalletError::InvalidInput("selected input value overflows".into())
+            })?;
             let n = selected.len() as u64;
-            let base_vb = TX_OVERHEAD_VB + n * P2WPKH_INPUT_VB + outputs_vb;
-            let fee_no_change = Amount::from_sat(base_vb * feerate_sat_vb);
-            let fee_with_change = Amount::from_sat((base_vb + change_vb) * feerate_sat_vb);
+            let base_vb = TX_OVERHEAD_VB
+                .saturating_add(n.saturating_mul(P2WPKH_INPUT_VB))
+                .saturating_add(outputs_vb);
+            let fee_no_change = Amount::from_sat(base_vb.saturating_mul(feerate_sat_vb));
+            let fee_with_change =
+                Amount::from_sat(base_vb.saturating_add(change_vb).saturating_mul(feerate_sat_vb));
 
-            if acc >= target + fee_with_change {
-                let change = acc - target - fee_with_change;
+            let need_with_change = checked_sum([target, fee_with_change])?;
+            if acc >= need_with_change {
+                let change = acc - need_with_change;
                 if change.to_sat() >= CHANGE_DUST_SAT {
                     let mut outs = outputs.clone();
                     outs.push(TxOut { value: change, script_pubkey: change_spk });
@@ -217,7 +284,7 @@ impl WalletView {
                     return Ok(assemble(selected, outs, fee_with_change, Some(change), service_fee_sat));
                 }
             }
-            if acc >= target + fee_no_change {
+            if acc >= checked_sum([target, fee_no_change])? {
                 // No change output — the surplus (< a change output's cost) is fee.
                 return Ok(assemble(selected, outputs, acc - target, None, service_fee_sat));
             }
@@ -237,6 +304,7 @@ impl WalletView {
         min_confirmations: u32,
         service_fee: Option<&ServiceFee>,
     ) -> Result<FundingPlan> {
+        check_feerate(feerate_sat_vb)?;
         let selected: Vec<Utxo> = utxos
             .iter()
             .filter(|u| u.confirmations >= min_confirmations)
@@ -245,13 +313,16 @@ impl WalletView {
         if selected.is_empty() {
             return Err(WalletError::InsufficientFunds { need: 1, have: 0 });
         }
-        let total = selected.iter().map(|u| u.value).fold(Amount::ZERO, |a, b| a + b);
+        let total = checked_sum(selected.iter().map(|u| u.value))?;
         let fee_out = service_fee.and_then(|sf| sf.output(total.to_sat()));
         let fee_out_value = fee_out.as_ref().map_or(Amount::ZERO, |o| o.value);
         let fee_out_vb = fee_out.as_ref().map_or(0, |o| output_vb(&o.script_pubkey));
 
-        let vb = TX_OVERHEAD_VB + selected.len() as u64 * P2WPKH_INPUT_VB + output_vb(&dest) + fee_out_vb;
-        let fee = Amount::from_sat(vb * feerate_sat_vb);
+        let vb = TX_OVERHEAD_VB
+            .saturating_add((selected.len() as u64).saturating_mul(P2WPKH_INPUT_VB))
+            .saturating_add(output_vb(&dest))
+            .saturating_add(fee_out_vb);
+        let fee = Amount::from_sat(vb.saturating_mul(feerate_sat_vb));
         let value = total
             .checked_sub(fee)
             .and_then(|v| v.checked_sub(fee_out_value))
@@ -497,6 +568,61 @@ mod tests {
             (Amount::from_sat(200_000) + Amount::from_sat(2_000) + plan.fee + change).to_sat(),
             1_000_000
         );
+    }
+
+    #[test]
+    fn rejects_a_zero_or_absurd_feerate() {
+        let mut v = view();
+        let utxos = [utxo(100_000_000, 3, 1)];
+        let zero = v.plan_payment(&utxos, vec![htlc_out(200_000)], 0, 1, None);
+        assert!(matches!(zero, Err(WalletError::InvalidInput(_))));
+        let huge = v.plan_payment(&utxos, vec![htlc_out(200_000)], MAX_FEERATE_SAT_VB + 1, 1, None);
+        assert!(matches!(huge, Err(WalletError::InvalidInput(_))));
+        // the ceiling itself is allowed (funds permitting)
+        assert!(v.plan_payment(&utxos, vec![htlc_out(200_000)], MAX_FEERATE_SAT_VB, 1, None).is_ok());
+
+        let sv = view();
+        let dest = ScriptBuf::from(vec![0u8; 22]);
+        assert!(matches!(
+            sv.plan_sweep(&utxos, dest.clone(), 0, 1, None),
+            Err(WalletError::InvalidInput(_))
+        ));
+        assert!(matches!(
+            sv.plan_sweep(&utxos, dest, 999_999, 1, None),
+            Err(WalletError::InvalidInput(_))
+        ));
+    }
+
+    #[test]
+    fn rejects_a_dust_destination_output() {
+        let mut v = view();
+        let utxos = [utxo(1_000_000, 3, 1)];
+        // 100 sat to a P2WPKH-shaped script is below the dust limit.
+        let dust = TxOut { value: Amount::from_sat(100), script_pubkey: ScriptBuf::from(vec![0u8; 34]) };
+        assert!(v.plan_payment(&utxos, vec![dust], 10, 1, None).is_err());
+    }
+
+    #[test]
+    fn overflowing_amounts_error_instead_of_panicking() {
+        let mut v = view();
+        let utxos = [utxo(u64::MAX, 3, 1)];
+        // A payment whose target + fee overflows u64 must be rejected, not panic —
+        // a hostile backend can report absurd UTXO / output values.
+        let r = v.plan_payment(&utxos, vec![htlc_out(u64::MAX)], 10, 1, None);
+        assert!(matches!(r, Err(WalletError::InvalidInput(_))));
+
+        // And an overflowing input accumulation, likewise.
+        let mut v2 = view();
+        let many = [utxo(u64::MAX, 3, 1), utxo(u64::MAX, 3, 2)];
+        let r2 = v2.plan_payment(&many, vec![htlc_out(u64::MAX)], 10, 1, None);
+        assert!(matches!(r2, Err(WalletError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn service_fee_bps_is_clamped_to_a_sane_maximum() {
+        // A backend advertising a 500% fee is capped at 10% of the amount.
+        let sf = ServiceFee { bps: 50_000, floor_sat: 0, cap_sat: 0, fee_spk: fee_addr_spk() };
+        assert_eq!(sf.amount_sat(1_000_000), 100_000);
     }
 
     #[test]
