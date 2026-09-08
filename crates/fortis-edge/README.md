@@ -48,6 +48,14 @@ cargo run -p fortis-edge -- \
 line (`{ts, ip, report}`) — the app's uncaught-exception reporter posts there.
 Without the flag `/crash` is 404. Rotate the file yourself (logrotate / a cron).
 
+`--btc-rpc-url <url>` (+ `--btc-rpc-auth user:pass` or `--btc-rpc-cookie <file>`)
+broadcasts `POST /btc/tx` through a local Bitcoin Core / Knots node's
+`sendrawtransaction` instead of `--btc-upstream`. A pruned node is fine. Use it
+so replay-protected sends (an oversized `OP_RETURN`) reach the network even when
+the public Esplora won't relay them — the node itself still has to accept them
+(Core 30+, or `-datacarriersize` raised). Address / history / fee reads stay on
+`--btc-upstream`.
+
 `--service-fee-address <addr>` turns on the service fee: `GET /pricing`
 advertises `{address, bps, floor_sat, cap_sat}` (the client reads it and adds the
 percentage output) and `POST /<chain>/tx` is rejected `402` unless the

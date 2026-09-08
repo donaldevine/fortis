@@ -23,7 +23,7 @@ use std::process::ExitCode;
 use std::sync::Arc;
 use std::thread;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::Parser;
 use serde_json::json;
 use tiny_http::{Header, Method, Request, Response, Server};
@@ -81,6 +81,20 @@ struct Args {
     /// none).
     #[arg(long)]
     btc_haskoin_key: Option<String>,
+    /// Broadcast `POST /btc/tx` through a local Bitcoin Core / Knots node's
+    /// `sendrawtransaction` instead of `--btc-upstream` (a pruned node is fine).
+    /// Lets replay-protected sends (oversized `OP_RETURN`) reach the network even
+    /// when the Esplora upstream won't relay them — the node still has to accept
+    /// them (Core 30+, or `-datacarriersize` raised). Address / history / fee
+    /// reads still use `--btc-upstream`.
+    #[arg(long, value_name = "URL")]
+    btc_rpc_url: Option<String>,
+    /// `user:pass` for `--btc-rpc-url` (a bitcoin.conf `rpcauth` line).
+    #[arg(long, value_name = "USER:PASS")]
+    btc_rpc_auth: Option<String>,
+    /// RPC cookie file for `--btc-rpc-url` (alternative to `--btc-rpc-auth`).
+    #[arg(long, value_name = "FILE")]
+    btc_rpc_cookie: Option<PathBuf>,
     /// HMAC secret file for tokens. Default: <home>/fortis-edge.secret.
     #[arg(long)]
     secret_file: Option<PathBuf>,
@@ -148,6 +162,7 @@ struct State {
     allow_origin: String,
     xbt: Option<Upstream>,
     btc: Option<Upstream>,
+    btc_broadcast: Option<fortis_node::Rpc>,
     btc_price: Option<price::PriceSource>,
     xbt_price: Option<price::PriceSource>,
     btc_haskoin: Option<haskoin::HaskoinStore>,
@@ -212,6 +227,27 @@ fn run() -> Result<()> {
         None => None,
     };
 
+    let btc_broadcast = match &args.btc_rpc_url {
+        None => None,
+        Some(url) => {
+            let auth = match (&args.btc_rpc_auth, &args.btc_rpc_cookie) {
+                (Some(a), _) => a.trim().to_string(),
+                (None, Some(cf)) => std::fs::read_to_string(cf)
+                    .with_context(|| format!("reading {}", cf.display()))?
+                    .trim()
+                    .to_string(),
+                (None, None) => {
+                    return Err(anyhow!("--btc-rpc-url needs --btc-rpc-auth or --btc-rpc-cookie"))
+                }
+            };
+            let rpc = fortis_node::Rpc::new(url, &auth);
+            let cs = fortis_node::chain_status(&rpc)
+                .with_context(|| format!("reaching the BTC node at {url}"))?;
+            eprintln!("  btc broadcast  via node {url}  ({}, chain {})", cs.subversion, cs.chain);
+            Some(rpc)
+        }
+    };
+
     let state = Arc::new(State {
         secret,
         require_token: args.require_token,
@@ -219,6 +255,7 @@ fn run() -> Result<()> {
         allow_origin: args.allow_origin.clone(),
         xbt: args.xbt_upstream.as_deref().map(Upstream::new),
         btc: args.btc_upstream.as_deref().map(Upstream::new),
+        btc_broadcast,
         btc_price: args.btc_price_url.as_deref().map(price::PriceSource::new),
         xbt_price: xbt_price_url.as_deref().map(price::PriceSource::new),
         btc_haskoin: (!args.btc_haskoin_url.trim().is_empty())
@@ -241,6 +278,7 @@ fn run() -> Result<()> {
     eprintln!("fortis-edge listening on  http://{}", args.bind);
     eprintln!("  xbt upstream   {}", args.xbt_upstream.as_deref().unwrap_or("(none)"));
     eprintln!("  btc upstream   {}", args.btc_upstream.as_deref().unwrap_or("(none)"));
+    eprintln!("  btc broadcast  {}", args.btc_rpc_url.as_deref().unwrap_or("(via btc upstream)"));
     eprintln!("  btc price      {}", args.btc_price_url.as_deref().unwrap_or("(via btc upstream)"));
     eprintln!("  xbt price    {}", xbt_price_url.as_deref().unwrap_or("(none)"));
     eprintln!(
@@ -577,6 +615,22 @@ fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query
                 Metrics::inc(&st.metrics.fee_rejected);
                 return err(402, &msg);
             }
+        }
+    }
+
+    // Broadcast BTC transactions through the local node when configured — it
+    // reaches the network directly, relaying what a public Esplora won't (an
+    // oversized OP_RETURN). Everything else on `/btc/*` still hits `--btc-upstream`.
+    if method == &Method::Post && chain == "btc" && rest == "tx" {
+        if let Some(rpc) = &st.btc_broadcast {
+            let hex = String::from_utf8_lossy(&body);
+            return match fortis_node::broadcast(rpc, hex.trim()) {
+                Ok(txid) => Reply::Raw(200, "text/plain".into(), txid.to_string().into_bytes()),
+                Err(e) => {
+                    Metrics::inc(&st.metrics.upstream_errors);
+                    err(400, &format!("node rejected the transaction: {e:#}"))
+                }
+            };
         }
     }
 

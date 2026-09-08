@@ -30,6 +30,9 @@ ExecStart=/usr/local/bin/fortis-edge \
   # --btc-haskoin-url (default api.haskoin.com/btc) enables POST /btc/prewarm:
   # the app batch-loads its whole address set in ~2 calls, so the scan is served
   # from cache and never touches --btc-upstream. Empty string disables.
+  # --btc-rpc-url http://127.0.0.1:8332 (+ --btc-rpc-cookie <.cookie> or
+  # --btc-rpc-auth user:pass) broadcasts POST /btc/tx via your own node so
+  # replay-protected sends (oversized OP_RETURN) reach the network.
 Restart=on-failure
 RestartSec=5
 StateDirectory=fortis

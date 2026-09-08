@@ -12,6 +12,7 @@ name = "fortis-edge"
 path = "src/main.rs"
 
 [dependencies]
+fortis-node = { path = "../fortis-node" }
 anyhow = "1"
 bitcoin = { workspace = true }
 clap = { version = "4", features = ["derive"] }
