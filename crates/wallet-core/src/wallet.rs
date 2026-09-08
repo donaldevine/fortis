@@ -610,6 +610,32 @@ mod tests {
     }
 
     #[test]
+    fn op_return_plus_fee_from_amount() {
+        let mut v = view();
+        let utxos = [utxo(1_000_000, 3, 1)];
+        let sf = ServiceFee { bps: 100, floor_sat: 400, cap_sat: 0, fee_spk: fee_addr_spk() };
+        let mut outs = vec![htlc_out(200_000)];
+        outs.push(super::op_return_output(&[7u8; 100]).unwrap()); // replay-protection blob
+        let plan = v.plan_payment(&utxos, outs, 10, 1, Some(&sf), true).unwrap();
+        // OP_RETURN survives, recipient shrank by all the fees (incl. its ~112 vB)
+        assert_eq!(plan.tx.output.iter().filter(|o| o.script_pubkey.is_op_return()).count(), 1);
+        let inputs = 1_000_000i64;
+        let change = plan.change.map_or(0, |c| c.to_sat() as i64);
+        let svc = plan.service_fee.map_or(0, |c| c.to_sat() as i64);
+        let recipient = plan
+            .tx
+            .output
+            .iter()
+            .find(|o| o.script_pubkey == ScriptBuf::from(vec![0u8; 34]))
+            .unwrap()
+            .value
+            .to_sat() as i64;
+        assert_eq!(inputs - change, 200_000); // wallet is out exactly the amount asked
+        assert_eq!(recipient + svc + plan.fee.to_sat() as i64, 200_000);
+        assert!(plan.fee.to_sat() >= 100 * 10); // paid for the oversized OP_RETURN
+    }
+
+    #[test]
     fn fee_from_amount_carves_fees_out_of_the_destination() {
         let mut v = view();
         let utxos = [utxo(1_000_000, 3, 1)];
