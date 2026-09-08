@@ -474,6 +474,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     fun buildPayment(
         to: String, amountSat: Long, sweep: Boolean,
         feerateOverride: Long?, confTarget: Int, replayProtect: Boolean,
+        feeFromAmount: Boolean = false,
     ) = wrap {
         require(sweep || amountSat > 0L) { str(R.string.error_enter_amount) }
         val to = to.trim()
@@ -489,7 +490,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         }
         val plan = if (sweep) s.view.planSweep(utxos, to, feerate.toULong(), 1u, serviceFee)
         else s.view.planPayment(
-            utxos, listOf(uniffi.wallet_ffi.PayTo(to, amountSat.toULong())), feerate.toULong(), 1u, opReturn, serviceFee,
+            utxos, listOf(uniffi.wallet_ffi.PayTo(to, amountSat.toULong())), feerate.toULong(), 1u, opReturn, serviceFee, feeFromAmount,
         )
         pending = PlanPreview(plan, feerate.toULong(), to, sweep, replayProtected = opReturn != null)
     }

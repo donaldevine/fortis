@@ -75,9 +75,10 @@ export class Session {
   receiveAddress(index) {
     return this.addressAt(0, index);
   }
-  planPayment(utxos, outputs, feerate, minConf, opReturnHex, serviceFee) {
+  planPayment(utxos, outputs, feerate, minConf, opReturnHex, serviceFee, feeFromAmount = false) {
     return this.view.planPayment(
       utxos, outputs, BigInt(feerate), minConf >>> 0, opReturnHex || undefined, serviceFee || undefined,
+      !!feeFromAmount,
     );
   }
   planSweep(utxos, destAddress, feerate, minConf, serviceFee) {

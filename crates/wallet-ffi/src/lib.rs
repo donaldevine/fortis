@@ -347,7 +347,10 @@ impl WalletView {
     /// On the Bitcoin chain, ~100 random bytes make the tx consensus-invalid on
     /// the BLAKE2b fork (over its 82-byte datacarrier cap) — replay protection.
     /// `service_fee` (optional, from the backend's status) appends the hosted
-    /// backend's fee output.
+    /// backend's fee output. `fee_from_amount`: carve the network + service fee
+    /// out of the amount (the recipient gets `amount − fees`) rather than adding
+    /// them on top.
+    #[allow(clippy::too_many_arguments)]
     pub fn plan_payment(
         &self,
         utxos: Vec<WalletUtxo>,
@@ -356,6 +359,7 @@ impl WalletView {
         min_confirmations: u32,
         op_return: Option<Vec<u8>>,
         service_fee: Option<ServiceFee>,
+        fee_from_amount: bool,
     ) -> Result<FundingPlan> {
         let coins = to_core_utxos(&utxos)?;
         let mut outs: Vec<TxOut> = outputs
@@ -377,6 +381,7 @@ impl WalletView {
             feerate_sat_vb,
             min_confirmations,
             sf.as_ref(),
+            fee_from_amount,
         )?;
         Ok(FundingPlan::from_core(&plan))
     }

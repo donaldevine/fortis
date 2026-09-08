@@ -313,7 +313,7 @@ fn wallet_flow_through_the_edge() {
         .collect();
 
     let plan = view
-        .plan_payment(&coins, vec![TxOut { value: Amount::from_sat(100_000_000), script_pubkey: dest_spk }], 2, 1, None)
+        .plan_payment(&coins, vec![TxOut { value: Amount::from_sat(100_000_000), script_pubkey: dest_spk }], 2, 1, None, false)
         .unwrap();
     let (_, next_change) = view.next_indices();
     let change_addr = view.address_at(1, next_change - 1).unwrap();

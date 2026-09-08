@@ -276,7 +276,7 @@ impl WalletView {
         };
         let plan = self
             .inner
-            .plan_payment(&utxos, vec![out], feerate_sat_vb, min_confirmations, None)
+            .plan_payment(&utxos, vec![out], feerate_sat_vb, min_confirmations, None, false)
             .map_err(js)?;
         serde_wasm_bindgen::to_value(&dto::JsFundingPlan::from_core(&plan)).map_err(js)
     }
@@ -286,9 +286,12 @@ impl WalletView {
     /// `OP_RETURN` carrying those bytes — pass ~100 random bytes on the Bitcoin
     /// chain to make the tx consensus-invalid on the BLAKE2b fork (replay
     /// protection). `serviceFee` (optional, from the backend's `/v1/status`)
-    /// appends the hosted backend's fee output. Returns `{ tx_hex, fee_sat,
-    /// change_sat|null, service_fee_sat|null, selected }`.
+    /// appends the hosted backend's fee output. `feeFromAmount`: carve the
+    /// network + service fee out of the amount (recipient gets `amount − fees`)
+    /// instead of adding them on top. Returns `{ tx_hex, fee_sat, change_sat|null,
+    /// service_fee_sat|null, selected }`.
     #[wasm_bindgen(js_name = planPayment)]
+    #[allow(clippy::too_many_arguments)]
     pub fn plan_payment(
         &mut self,
         utxos: JsValue,
@@ -297,6 +300,7 @@ impl WalletView {
         min_confirmations: u32,
         op_return_hex: Option<String>,
         service_fee: JsValue,
+        fee_from_amount: bool,
     ) -> Result<JsValue, JsError> {
         let js_utxos: Vec<dto::JsUtxo> = serde_wasm_bindgen::from_value(utxos).map_err(js)?;
         let utxos: Vec<_> =
@@ -318,7 +322,7 @@ impl WalletView {
         let sf = parse_service_fee(&service_fee, net)?;
         let plan = self
             .inner
-            .plan_payment(&utxos, outs, feerate_sat_vb, min_confirmations, sf.as_ref())
+            .plan_payment(&utxos, outs, feerate_sat_vb, min_confirmations, sf.as_ref(), fee_from_amount)
             .map_err(js)?;
         serde_wasm_bindgen::to_value(&dto::JsFundingPlan::from_core(&plan)).map_err(js)
     }

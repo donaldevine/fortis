@@ -711,7 +711,7 @@ fn cmd_send(home: &Path, mut cfg: WalletConfig, rpc: &Rpc, a: &SendArgs) -> Resu
         Some(v) => {
             let mut outs = vec![TxOut { value: v, script_pubkey: dest_spk.clone() }];
             outs.append(&mut extra_outs);
-            view.plan_payment(&utxos, outs, feerate, a.min_conf, None)?
+            view.plan_payment(&utxos, outs, feerate, a.min_conf, None, false)?
         }
     };
     let (_, next_change_after) = view.next_indices();

@@ -834,6 +834,7 @@ private fun SendTab(vm: WalletViewModel) {
     var amount by remember { mutableStateOf("") }
     var amountInSat by remember { mutableStateOf(true) }
     var sweep by remember { mutableStateOf(false) }
+    var feeFromAmount by remember { mutableStateOf(false) }
     var target by remember { mutableStateOf(6) }
     var custom by remember { mutableStateOf("") }
     var replayProtect by remember { mutableStateOf(false) }
@@ -882,6 +883,14 @@ private fun SendTab(vm: WalletViewModel) {
                     ?.let { stringResource(R.string.send_alt_fiat, fmtUsd(it)) } ?: ""
                 Text(alt + fiat, color = Fx.textFaint, fontSize = 12.sp)
             }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(feeFromAmount, { feeFromAmount = it })
+                Text(stringResource(R.string.send_fee_from_amount), color = Fx.text)
+            }
+            if (feeFromAmount) Text(
+                stringResource(R.string.send_fee_from_amount_note),
+                color = Fx.textFaint, fontSize = 12.sp,
+            )
         }
         Segmented(
             listOf(
@@ -910,7 +919,7 @@ private fun SendTab(vm: WalletViewModel) {
             stringResource(R.string.action_review),
             enabled = to.isNotBlank() && (sweep || (amountSat != null && amountSat > 0)),
         ) {
-            vm.buildPayment(to, amountSat ?: 0L, sweep, custom.toLongOrNull(), target, replayProtect && isBtc)
+            vm.buildPayment(to, amountSat ?: 0L, sweep, custom.toLongOrNull(), target, replayProtect && isBtc, feeFromAmount && !sweep)
         }
     }
 }
@@ -1040,7 +1049,8 @@ private fun ConfirmSheet(vm: WalletViewModel, p: PlanPreview, unit: String) {
             }
 
             kv(stringResource(R.string.confirm_to), p.to)
-            kv(stringResource(R.string.confirm_amount), amountLine(out))
+            kv(stringResource(R.string.confirm_you_send), amountLine(total))
+            kv(stringResource(R.string.confirm_recipient_gets), amountLine(out))
             kv(
                 stringResource(R.string.confirm_network_fee),
                 stringResource(R.string.confirm_network_fee_value, fmt(p.plan.feeSat.toLong()), unit, p.feerate.toInt()),
@@ -1048,7 +1058,6 @@ private fun ConfirmSheet(vm: WalletViewModel, p: PlanPreview, unit: String) {
             if (svcFee > 0) kv(stringResource(R.string.confirm_service_fee), "${fmt(svcFee)} $unit")
             p.plan.changeSat?.let { kv(stringResource(R.string.confirm_change), "${fmt(it.toLong())} $unit") }
             if (p.replayProtected) kv(stringResource(R.string.confirm_replay), stringResource(R.string.confirm_replay_value))
-            kv(stringResource(R.string.confirm_total), amountLine(total))
             ErrorText(vm.error)
             Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
                 GhostButton(stringResource(R.string.action_cancel), Modifier.weight(1f)) { vm.cancelPending() }

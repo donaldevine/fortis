@@ -232,9 +232,20 @@ impl WalletView {
         feerate_sat_vb: u64,
         min_confirmations: u32,
         service_fee: Option<&ServiceFee>,
+        fee_from_amount: bool,
     ) -> Result<FundingPlan> {
         check_feerate(feerate_sat_vb)?;
         check_not_dust(&outputs)?;
+
+        if fee_from_amount {
+            return self.plan_payment_fee_inclusive(
+                utxos,
+                outputs,
+                feerate_sat_vb,
+                min_confirmations,
+                service_fee,
+            );
+        }
 
         let service_fee_amt = service_fee.and_then(|sf| {
             let send_amount_sat = checked_sum(outputs.iter().map(|o| o.value)).ok()?.to_sat();
@@ -302,6 +313,124 @@ impl WalletView {
         Err(WalletError::InsufficientFunds { need: need.to_sat(), have: acc.to_sat() })
     }
 
+    /// `plan_payment` where the amount the caller asked for is the *total* leaving
+    /// the wallet for this payment (excluding change): the network fee and the
+    /// service fee are carved out of the destination output, so the recipient
+    /// receives `amount − network_fee − service_fee`. Exactly one non-`OP_RETURN`
+    /// output is expected.
+    fn plan_payment_fee_inclusive(
+        &mut self,
+        utxos: &[Utxo],
+        outputs: Vec<TxOut>,
+        feerate_sat_vb: u64,
+        min_confirmations: u32,
+        service_fee: Option<&ServiceFee>,
+    ) -> Result<FundingPlan> {
+        let dest_idx = {
+            let spendable: Vec<usize> = outputs
+                .iter()
+                .enumerate()
+                .filter(|(_, o)| !o.script_pubkey.is_op_return())
+                .map(|(i, _)| i)
+                .collect();
+            match spendable.as_slice() {
+                [i] => *i,
+                _ => {
+                    return Err(WalletError::InvalidInput(
+                        "fee-from-amount needs exactly one destination".into(),
+                    ))
+                }
+            }
+        };
+        let dest_spk = outputs[dest_idx].script_pubkey.clone();
+        let dest_dust = dest_spk.minimal_non_dust();
+        // The user's number: everything this payment costs the wallet bar change.
+        let budget = outputs[dest_idx].value;
+
+        let sf_out = service_fee.and_then(|sf| sf.output(budget.to_sat()));
+        let sf_value = sf_out.as_ref().map_or(Amount::ZERO, |o| o.value);
+        let sf_vb = sf_out.as_ref().map_or(0, |o| output_vb(&o.script_pubkey));
+        // vsize of every output except a possible change output.
+        let non_change_vb: u64 = outputs
+            .iter()
+            .map(|o| output_vb(&o.script_pubkey))
+            .fold(0u64, u64::saturating_add)
+            .saturating_add(sf_vb);
+
+        let mut eligible: Vec<&Utxo> =
+            utxos.iter().filter(|u| u.confirmations >= min_confirmations).collect();
+        eligible.sort_by_key(|u| std::cmp::Reverse(u.value));
+
+        let change_spk = self.address_at(1, self.next_change)?.script_pubkey();
+        let change_vb = output_vb(&change_spk);
+
+        let too_small = |fees: Amount| {
+            WalletError::InvalidInput(format!(
+                "amount too small: {} sat of fees leaves the recipient below the dust limit",
+                fees.to_sat()
+            ))
+        };
+
+        let mut selected: Vec<Utxo> = Vec::new();
+        let mut acc = Amount::ZERO;
+        for u in eligible {
+            selected.push(u.clone());
+            acc = acc.checked_add(u.value).ok_or_else(|| {
+                WalletError::InvalidInput("selected input value overflows".into())
+            })?;
+            if acc < budget {
+                continue;
+            }
+            let n = selected.len() as u64;
+            let base_vb = TX_OVERHEAD_VB
+                .saturating_add(n.saturating_mul(P2WPKH_INPUT_VB))
+                .saturating_add(non_change_vb);
+            let surplus = acc - budget; // safe: acc >= budget
+
+            let mut outs = outputs.clone();
+            if surplus.to_sat() >= CHANGE_DUST_SAT {
+                // Keep `surplus` as change; fees come out of `budget`.
+                let net_fee = Amount::from_sat(
+                    base_vb.saturating_add(change_vb).saturating_mul(feerate_sat_vb),
+                );
+                let recipient = budget
+                    .checked_sub(sf_value)
+                    .and_then(|v| v.checked_sub(net_fee))
+                    .filter(|r| *r >= dest_dust)
+                    .ok_or_else(|| too_small(sf_value + net_fee))?;
+                outs[dest_idx].value = recipient;
+                if let Some(o) = &sf_out {
+                    outs.push(o.clone());
+                }
+                outs.push(TxOut { value: surplus, script_pubkey: change_spk });
+                self.next_change += 1;
+                return Ok(assemble(
+                    selected,
+                    outs,
+                    net_fee,
+                    Some(surplus),
+                    sf_out.as_ref().map(|o| o.value),
+                ));
+            }
+            // No change: the sub-dust surplus goes to the miner fee; the recipient
+            // still gets exactly `budget − fees`.
+            let net_fee = Amount::from_sat(base_vb.saturating_mul(feerate_sat_vb));
+            let recipient = budget
+                .checked_sub(sf_value)
+                .and_then(|v| v.checked_sub(net_fee))
+                .filter(|r| *r >= dest_dust)
+                .ok_or_else(|| too_small(sf_value + net_fee))?;
+            outs[dest_idx].value = recipient;
+            if let Some(o) = &sf_out {
+                outs.push(o.clone());
+            }
+            let real_fee = acc - recipient - sf_value; // net_fee + surplus
+            return Ok(assemble(selected, outs, real_fee, None, sf_out.as_ref().map(|o| o.value)));
+        }
+
+        Err(WalletError::InsufficientFunds { need: budget.to_sat(), have: acc.to_sat() })
+    }
+
     /// Send every input confirmed at least `min_confirmations` deep to a single
     /// destination, with the fee taken from the total (no change output). For
     /// "empty this wallet" / sweeps.
@@ -356,7 +485,7 @@ impl WalletView {
         feerate_sat_vb: u64,
         min_confirmations: u32,
     ) -> Result<FundingPlan> {
-        self.plan_payment(utxos, vec![contract.funding_output()], feerate_sat_vb, min_confirmations, None)
+        self.plan_payment(utxos, vec![contract.funding_output()], feerate_sat_vb, min_confirmations, None, false)
     }
 }
 
@@ -433,7 +562,7 @@ mod tests {
     fn funds_with_change() {
         let mut v = view();
         let utxos = [utxo(1_000_000, 3, 1)];
-        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1, None).unwrap();
+        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1, None, false).unwrap();
         assert_eq!(plan.selected.len(), 1);
         assert_eq!(plan.tx.output.len(), 2); // htlc + change
         let change = plan.change.unwrap();
@@ -451,7 +580,7 @@ mod tests {
         // base vsize = 11 + 68 + 43 = 122; no-change fee @10 sat/vB = 1220.
         // A change output would cost ~310 more, so a ~100 sat leftover folds into fee.
         let utxos = [utxo(200_000 + 1_320, 3, 1)];
-        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1, None).unwrap();
+        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1, None, false).unwrap();
         assert_eq!(plan.tx.output.len(), 1);
         assert!(plan.change.is_none());
         assert_eq!(plan.fee.to_sat(), 1_320);
@@ -461,7 +590,7 @@ mod tests {
     fn accumulates_multiple_inputs() {
         let mut v = view();
         let utxos = [utxo(100_000, 3, 1), utxo(90_000, 3, 2), utxo(80_000, 3, 3)];
-        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1, None).unwrap();
+        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1, None, false).unwrap();
         assert_eq!(plan.selected.len(), 3);
     }
 
@@ -469,7 +598,7 @@ mod tests {
     fn rejects_insufficient_funds() {
         let mut v = view();
         let utxos = [utxo(50_000, 3, 1)];
-        let err = v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1, None).unwrap_err();
+        let err = v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1, None, false).unwrap_err();
         // `need` covers the outputs *and* the network fee, not just the output total.
         match err {
             WalletError::InsufficientFunds { need, have } => {
@@ -481,6 +610,39 @@ mod tests {
     }
 
     #[test]
+    fn fee_from_amount_carves_fees_out_of_the_destination() {
+        let mut v = view();
+        let utxos = [utxo(1_000_000, 3, 1)];
+        let sf = ServiceFee { bps: 100, floor_sat: 400, cap_sat: 0, fee_spk: fee_addr_spk() };
+        // "Send 200_000, fees included" — recipient gets 200_000 − netfee − 2_000 (1%).
+        let plan = v
+            .plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1, Some(&sf), true)
+            .unwrap();
+        let inputs = 1_000_000i64;
+        let change = plan.change.map_or(0, |c| c.to_sat() as i64);
+        let svc = plan.service_fee.map_or(0, |c| c.to_sat() as i64);
+        let recipient = plan.tx.output.iter().find(|o| o.script_pubkey != fee_addr_spk() && o.value.to_sat() != change as u64).unwrap().value.to_sat() as i64;
+        // the wallet is out exactly 200_000 for this payment (the rest is change)
+        assert_eq!(inputs - change, 200_000);
+        // recipient + service fee + network fee == 200_000
+        assert_eq!(recipient + svc + plan.fee.to_sat() as i64, 200_000);
+        assert_eq!(svc, 2_000); // 1% of 200_000, above the 400 floor
+        assert!(recipient < 200_000);
+    }
+
+    #[test]
+    fn fee_from_amount_rejects_when_fees_eat_the_whole_amount() {
+        let mut v = view();
+        let utxos = [utxo(1_000_000, 3, 1)];
+        let sf = ServiceFee { bps: 100, floor_sat: 400, cap_sat: 0, fee_spk: fee_addr_spk() };
+        // Sending 900 fee-inclusive: 400 service + ~1500 network > 900 → nothing left.
+        let err = v
+            .plan_payment(&utxos, vec![htlc_out(900)], 10, 1, Some(&sf), true)
+            .unwrap_err();
+        assert!(matches!(err, WalletError::InvalidInput(_)), "{err:?}");
+    }
+
+    #[test]
     fn insufficient_funds_need_includes_the_service_fee() {
         let mut v = view();
         let utxos = [utxo(1_200, 3, 1)];
@@ -488,7 +650,7 @@ mod tests {
         // 1000 to send + the 546-sat service-fee floor = 1546 in outputs alone,
         // so `need` must be at least that (plus the network fee).
         let err = v
-            .plan_payment(&utxos, vec![htlc_out(1_000)], 2, 1, Some(&sf))
+            .plan_payment(&utxos, vec![htlc_out(1_000)], 2, 1, Some(&sf), false)
             .unwrap_err();
         match err {
             WalletError::InsufficientFunds { need, .. } => assert!(need >= 1_546, "need {need}"),
@@ -500,7 +662,7 @@ mod tests {
     fn excludes_unconfirmed_below_threshold() {
         let mut v = view();
         let utxos = [utxo(1_000_000, 0, 1)];
-        assert!(v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1, None).is_err());
+        assert!(v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1, None, false).is_err());
     }
 
     #[test]
@@ -539,7 +701,7 @@ mod tests {
         let utxos = [utxo(1_000_000, 3, 1)];
         let mut outs = vec![htlc_out(200_000)];
         outs.push(super::op_return_output(&[9u8; 100]).unwrap());
-        let plan = v.plan_payment(&utxos, outs, 10, 1, None).unwrap();
+        let plan = v.plan_payment(&utxos, outs, 10, 1, None, false).unwrap();
         assert_eq!(plan.tx.output.iter().filter(|o| o.script_pubkey.is_op_return()).count(), 1);
         // fee covers the ~112 vB OP_RETURN output on top of the base tx
         assert!(plan.fee.to_sat() >= (11 + 68 + 43 + 31 + 112) * 10 - 20);
@@ -551,7 +713,7 @@ mod tests {
         v.set_next_indices(7, 4);
         assert_eq!(v.next_indices(), (7, 4));
         let utxos = [utxo(1_000_000, 3, 1)];
-        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1, None).unwrap();
+        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1, None, false).unwrap();
         assert!(plan.change.is_some());
         assert_eq!(v.next_indices().1, 5); // change index advanced 4 -> 5
     }
@@ -589,7 +751,7 @@ mod tests {
         let mut v = view();
         let utxos = [utxo(1_000_000, 3, 1)];
         let sf = ServiceFee { bps: 100, floor_sat: 200, cap_sat: 0, fee_spk: fee_addr_spk() };
-        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1, Some(&sf)).unwrap();
+        let plan = v.plan_payment(&utxos, vec![htlc_out(200_000)], 10, 1, Some(&sf), false).unwrap();
         // 1% of 200,000 = 2,000
         assert_eq!(plan.service_fee, Some(Amount::from_sat(2_000)));
         assert_eq!(
@@ -607,12 +769,12 @@ mod tests {
     fn rejects_a_zero_or_absurd_feerate() {
         let mut v = view();
         let utxos = [utxo(100_000_000, 3, 1)];
-        let zero = v.plan_payment(&utxos, vec![htlc_out(200_000)], 0, 1, None);
+        let zero = v.plan_payment(&utxos, vec![htlc_out(200_000)], 0, 1, None, false);
         assert!(matches!(zero, Err(WalletError::InvalidInput(_))));
-        let huge = v.plan_payment(&utxos, vec![htlc_out(200_000)], MAX_FEERATE_SAT_VB + 1, 1, None);
+        let huge = v.plan_payment(&utxos, vec![htlc_out(200_000)], MAX_FEERATE_SAT_VB + 1, 1, None, false);
         assert!(matches!(huge, Err(WalletError::InvalidInput(_))));
         // the ceiling itself is allowed (funds permitting)
-        assert!(v.plan_payment(&utxos, vec![htlc_out(200_000)], MAX_FEERATE_SAT_VB, 1, None).is_ok());
+        assert!(v.plan_payment(&utxos, vec![htlc_out(200_000)], MAX_FEERATE_SAT_VB, 1, None, false).is_ok());
 
         let sv = view();
         let dest = ScriptBuf::from(vec![0u8; 22]);
@@ -632,7 +794,7 @@ mod tests {
         let utxos = [utxo(1_000_000, 3, 1)];
         // 100 sat to a P2WPKH-shaped script is below the dust limit.
         let dust = TxOut { value: Amount::from_sat(100), script_pubkey: ScriptBuf::from(vec![0u8; 34]) };
-        assert!(v.plan_payment(&utxos, vec![dust], 10, 1, None).is_err());
+        assert!(v.plan_payment(&utxos, vec![dust], 10, 1, None, false).is_err());
     }
 
     #[test]
@@ -641,13 +803,13 @@ mod tests {
         let utxos = [utxo(u64::MAX, 3, 1)];
         // A payment whose target + fee overflows u64 must be rejected, not panic —
         // a hostile backend can report absurd UTXO / output values.
-        let r = v.plan_payment(&utxos, vec![htlc_out(u64::MAX)], 10, 1, None);
+        let r = v.plan_payment(&utxos, vec![htlc_out(u64::MAX)], 10, 1, None, false);
         assert!(matches!(r, Err(WalletError::InvalidInput(_))));
 
         // And an overflowing input accumulation, likewise.
         let mut v2 = view();
         let many = [utxo(u64::MAX, 3, 1), utxo(u64::MAX, 3, 2)];
-        let r2 = v2.plan_payment(&many, vec![htlc_out(u64::MAX)], 10, 1, None);
+        let r2 = v2.plan_payment(&many, vec![htlc_out(u64::MAX)], 10, 1, None, false);
         assert!(matches!(r2, Err(WalletError::InvalidInput(_))));
     }
 

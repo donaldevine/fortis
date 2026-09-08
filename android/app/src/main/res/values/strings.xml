@@ -165,6 +165,8 @@
     <string name="send_replay_protect">XBT replay protection (100-byte OP_RETURN)</string>
     <string name="send_replay_note">Adds ~110 vB of fee. Non-standard on default Bitcoin relay — broadcast via a node/service that accepts large OP_RETURN.</string>
     <string name="send_service_fee">Service fee: %1$s%% of the amount sent (min %2$d sat) — supports this hosted node.</string>
+    <string name="send_fee_from_amount">Take the fees out of this amount</string>
+    <string name="send_fee_from_amount_note">The recipient receives the amount minus the network and service fees, instead of the fees being added on top.</string>
     <string name="cd_amount_unit">amount unit</string>
     <string name="unit_sat">sat</string>
 
@@ -185,13 +187,15 @@
     <string name="confirm_payment_title">Confirm payment</string>
     <string name="confirm_to">To</string>
     <string name="confirm_amount">Amount</string>
+    <string name="confirm_total">Total</string>
+    <string name="confirm_you_send">You send</string>
+    <string name="confirm_recipient_gets">Recipient gets</string>
     <string name="confirm_network_fee">Network fee</string>
     <string name="confirm_network_fee_value">%1$s %2$s · %3$d sat/vB</string>
     <string name="confirm_service_fee">Service fee</string>
-    <string name="confirm_change">Change</string>
+    <string name="confirm_change">Change (back to you)</string>
     <string name="confirm_replay">Replay protection</string>
     <string name="confirm_replay_value">on · 100-byte OP_RETURN</string>
-    <string name="confirm_total">Total</string>
     <string name="value_with_fiat">%1$s %2$s  ·  %3$s</string>
 
     <!-- mnemonic input -->
