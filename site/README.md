@@ -41,7 +41,19 @@ the tunnel, free, global, auto-TLS.
 Pages only takes the apex + `www`. Don't add `api` as a Pages custom domain.
 
 **Updating:** with Git connected, every push to the default branch redeploys.
-With direct upload, drag the `site/` folder into the Pages project again.
+
+For direct upload, run the helper (needs Node + a one-time `npx wrangler login`,
+or a `CLOUDFLARE_API_TOKEN` env var with the *Cloudflare Pages: Edit* permission):
+
+```
+deploy\publish-site.ps1            # or: deploy\publish-site.bat  (double-click)
+deploy\publish-site.ps1 -Preview   # throwaway preview build with its own URL
+```
+
+It uploads the current `site/` as a production deploy, tagging it with the git
+commit. First run creates the Pages project (`fortis-rest`); if you already made
+one under a different name, pass `-Project <name>`. `README.md` is skipped via
+`site/.assetsignore`.
 
 ## Keeping the icon in sync
 
