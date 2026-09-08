@@ -52,7 +52,11 @@ impl ChainParams {
         }
     }
 
-    /// NOTE: verify coin type / HRP against the Knots BLAKE2b release before mainnet.
+    /// The BLAKE2b fork keeps Bitcoin's `bc` address HRP and BIP-84 layout, so a
+    /// seed derives the *same* addresses on both chains — verified end-to-end on
+    /// mainnet (receive + `SIGHASH_UNIFIED` send + broadcast, 2026-09) against a
+    /// live Knots BLAKE2b node. A future Knots release changing the HRP or coin
+    /// type would need this revisited.
     pub fn blake2b() -> Self {
         Self {
             chain: Chain::Btcb2,

@@ -10,6 +10,7 @@
 mod handlers;
 mod state;
 
+use std::io::Read;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -244,12 +245,21 @@ fn err(status: u16, msg: impl std::fmt::Display) -> Reply {
 
 fn read_body(req: &mut Request) -> String {
     if req.method() == &Method::Post {
+        // Bodies here are small JSON commands / a tx hex. Cap the read at 2 MiB so
+        // an unauthenticated request with a bogus Content-Length can't exhaust
+        // memory (the body is read before the bearer-token check).
         let mut buf = String::new();
-        let _ = req.as_reader().read_to_string(&mut buf);
+        let _ = req.as_reader().take(2 * 1024 * 1024).read_to_string(&mut buf);
         buf
     } else {
         String::new()
     }
+}
+
+/// Length-then-content compare with no early exit on a content mismatch, so a
+/// network attacker can't time their way to the bearer token byte by byte.
+fn ct_eq(a: &[u8], b: &[u8]) -> bool {
+    a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
 }
 
 fn handle(
@@ -291,7 +301,11 @@ fn handle(
     }
 
     let authorized = req.headers().iter().any(|h| {
-        h.field.equiv("Authorization") && h.value.as_str().strip_prefix("Bearer ") == Some(token)
+        h.field.equiv("Authorization")
+            && h.value
+                .as_str()
+                .strip_prefix("Bearer ")
+                .is_some_and(|t| ct_eq(t.as_bytes(), token.as_bytes()))
     });
     if !authorized {
         return err(401, "missing or invalid bearer token");
