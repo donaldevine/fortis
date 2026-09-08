@@ -846,7 +846,9 @@ private fun SendTab(vm: WalletViewModel) {
     }
     GlassCard {
         Text(stringResource(R.string.tab_send), color = Fx.text, fontWeight = FontWeight.SemiBold)
-        Field(to, { to = it }, stringResource(R.string.field_to_address), mono = true)
+        // An address never contains whitespace; stripping it on input kills the
+        // cryptic "base58 error" you otherwise get from a pasted trailing newline.
+        Field(to, { new -> to = new.filterNot(Char::isWhitespace) }, stringResource(R.string.field_to_address), mono = true)
         GhostButton(stringResource(R.string.action_scan_qr)) {
             scan.launch(
                 ScanOptions().apply {

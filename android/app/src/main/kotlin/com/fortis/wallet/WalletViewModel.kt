@@ -476,6 +476,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         feerateOverride: Long?, confTarget: Int, replayProtect: Boolean,
     ) = wrap {
         require(sweep || amountSat > 0L) { str(R.string.error_enter_amount) }
+        val to = to.trim()
         val b = active(); val s = session!!; val c = config!!
         val feerate = (feerateOverride ?: b.feerateSatVb(confTarget).toLong()).coerceAtLeast(1)
         val utxos = b.utxos(1u)

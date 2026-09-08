@@ -349,9 +349,12 @@ impl WalletView {
 }
 
 fn address_spk(addr: &str, net: wallet_core::bitcoin::Network) -> Result<ScriptBuf, JsError> {
+    // Trim first: a stray newline/space makes rust-bitcoin report a misleading
+    // "base58 error" for an otherwise-valid bech32 address.
+    let addr = addr.trim();
     Ok(addr
         .parse::<Address<NetworkUnchecked>>()
-        .map_err(|e| JsError::new(&format!("bad address {addr}: {e}")))?
+        .map_err(|_| JsError::new(&format!("\"{addr}\" is not a valid address")))?
         .require_network(net)
         .map_err(|_| JsError::new(&format!("address {addr} is not valid on this network")))?
         .script_pubkey())

@@ -417,8 +417,11 @@ fn to_core_utxos(utxos: &[WalletUtxo]) -> Result<Vec<wallet_core::Utxo>> {
 }
 
 fn address_spk(addr: &str, net: wallet_core::bitcoin::Network) -> Result<ScriptBuf> {
+    // Paste often carries a trailing newline/space; rust-bitcoin then reports a
+    // baffling "base58 error" for what is really a valid bech32 address.
+    let addr = addr.trim();
     Ok(Address::<NetworkUnchecked>::from_str(addr)
-        .map_err(|e| err(format!("bad address {addr}: {e}")))?
+        .map_err(|_| err(format!("\"{addr}\" is not a valid address")))?
         .require_network(net)
         .map_err(|_| err(format!("address {addr} is not valid on this network")))?
         .script_pubkey())
