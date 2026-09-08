@@ -204,6 +204,8 @@
     <string name="error_enter_amount">enter an amount</string>
     <string name="error_no_coins">no confirmed coins to spend</string>
     <string name="error_open_wallet">could not open wallet</string>
+    <string name="error_confirm_phrase">First confirm you\'ve written the recovery phrase down.</string>
+    <string name="error_enter_phrase">Enter your recovery phrase first.</string>
 
     <plurals name="word_count">
         <item quantity="one">%1$d word</item>

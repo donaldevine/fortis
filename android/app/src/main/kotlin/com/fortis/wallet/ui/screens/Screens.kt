@@ -207,6 +207,7 @@ fun GenScreen(vm: WalletViewModel) {
 
 @Composable
 fun CreateScreen(vm: WalletViewModel) {
+    val ctx = LocalContext.current
     var name by remember { mutableStateOf("") }
     var chain by remember { mutableStateOf("btcb2") }
     var passphrase by remember { mutableStateOf("") }
@@ -234,13 +235,24 @@ fun CreateScreen(vm: WalletViewModel) {
         ErrorText(vm.error)
         Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
             GhostButton(stringResource(R.string.action_back), Modifier.weight(1f)) { vm.cancelOnboard() }
-            PrimaryButton(stringResource(R.string.action_continue), Modifier.weight(1f), enabled = ack && (!settingUp || choice.ready)) {
-                scope.launch {
-                    val lock = if (settingUp) {
-                        runCatching { choice.resolve(act) }
-                            .getOrElse { vm.error = it.message ?: lockFailed; null } ?: return@launch
-                    } else null
-                    vm.createWallet(name, chain, "mainnet", passphrase, lock)
+            PrimaryButton(stringResource(R.string.action_continue), Modifier.weight(1f)) {
+                val problem = when {
+                    !ack -> ctx.getString(R.string.error_confirm_phrase)
+                    settingUp -> choice.problem(ctx)
+                    else -> null
+                }
+                if (problem != null) {
+                    vm.error = problem
+                    Toast.makeText(ctx, problem, Toast.LENGTH_SHORT).show()
+                } else {
+                    vm.error = null
+                    scope.launch {
+                        val lock = if (settingUp) {
+                            runCatching { choice.resolve(act) }
+                                .getOrElse { vm.error = it.message ?: lockFailed; null } ?: return@launch
+                        } else null
+                        vm.createWallet(name, chain, "mainnet", passphrase, lock)
+                    }
                 }
             }
         }
@@ -249,6 +261,7 @@ fun CreateScreen(vm: WalletViewModel) {
 
 @Composable
 fun RestoreScreen(vm: WalletViewModel) {
+    val ctx = LocalContext.current
     var name by remember { mutableStateOf("") }
     var phrase by remember { mutableStateOf("") }
     var passphrase by remember { mutableStateOf("") }
@@ -273,13 +286,24 @@ fun RestoreScreen(vm: WalletViewModel) {
         ErrorText(vm.error)
         Row(horizontalArrangement = Arrangement.spacedBy(Fx.s2)) {
             GhostButton(stringResource(R.string.action_back), Modifier.weight(1f)) { vm.cancelOnboard() }
-            PrimaryButton(stringResource(R.string.action_restore), Modifier.weight(1f), enabled = phrase.isNotBlank() && (!settingUp || choice.ready)) {
-                scope.launch {
-                    val lock = if (settingUp) {
-                        runCatching { choice.resolve(act) }
-                            .getOrElse { vm.error = it.message ?: lockFailed; null } ?: return@launch
-                    } else null
-                    vm.restoreWallet(name, phrase, passphrase, chain, "mainnet", lock)
+            PrimaryButton(stringResource(R.string.action_restore), Modifier.weight(1f)) {
+                val problem = when {
+                    phrase.isBlank() -> ctx.getString(R.string.error_enter_phrase)
+                    settingUp -> choice.problem(ctx)
+                    else -> null
+                }
+                if (problem != null) {
+                    vm.error = problem
+                    Toast.makeText(ctx, problem, Toast.LENGTH_SHORT).show()
+                } else {
+                    vm.error = null
+                    scope.launch {
+                        val lock = if (settingUp) {
+                            runCatching { choice.resolve(act) }
+                                .getOrElse { vm.error = it.message ?: lockFailed; null } ?: return@launch
+                        } else null
+                        vm.restoreWallet(name, phrase, passphrase, chain, "mainnet", lock)
+                    }
                 }
             }
         }

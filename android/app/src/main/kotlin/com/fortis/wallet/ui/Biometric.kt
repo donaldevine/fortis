@@ -102,7 +102,18 @@ class LockChoice(val biometricAvailable: Boolean) {
     var useBiometric by mutableStateOf(biometricAvailable)
     var pw by mutableStateOf("")
     var pw2 by mutableStateOf("")
-    val ready: Boolean get() = if (useBiometric) true else pw.length >= MIN_PW && pw == pw2
+    val ready: Boolean get() = problemRes == null
+
+    /** A string-res id for why the choice isn't usable yet, or null when it's ready. */
+    val problemRes: Int? get() = when {
+        useBiometric -> null
+        pw.length < MIN_PW -> R.string.lock_password_hint
+        pw != pw2 -> R.string.lock_password_mismatch
+        else -> null
+    }
+
+    /** The same, resolved to text. */
+    fun problem(ctx: Context): String? = problemRes?.let { ctx.getString(it, MIN_PW) }
 
     companion object { const val MIN_PW = 8 }
 }
@@ -129,12 +140,8 @@ fun LockChoiceFields(choice: LockChoice) {
         Text(stringResource(R.string.lock_choice_password_note), color = Fx.textFaint, fontSize = 12.sp)
         Field(choice.pw, { choice.pw = it }, stringResource(R.string.field_app_password), password = true)
         Field(choice.pw2, { choice.pw2 = it }, stringResource(R.string.field_confirm_password), password = true)
-        // say why Continue is disabled
-        when {
-            choice.pw.length < LockChoice.MIN_PW ->
-                Text(stringResource(R.string.lock_password_hint, LockChoice.MIN_PW), color = Fx.textFaint, fontSize = 12.sp)
-            choice.pw != choice.pw2 ->
-                Text(stringResource(R.string.lock_password_mismatch), color = Fx.bad, fontSize = 12.sp)
+        choice.problemRes?.let {
+            Text(stringResource(it, LockChoice.MIN_PW), color = Fx.textFaint, fontSize = 12.sp)
         }
     }
 }
