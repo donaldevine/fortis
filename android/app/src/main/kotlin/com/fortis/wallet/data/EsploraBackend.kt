@@ -233,7 +233,10 @@ class EsploraBackend(
                     send = send,
                     amountSat = if (send) delta + fee else delta,
                     confirmations = if (confirmed) maxOf(1L, tipH - stTx.optLong("block_height") + 1) else 0L,
-                    time = stTx?.optLong("block_time") ?: (System.currentTimeMillis() / 1000),
+                    // `optLong` yields 0 for a missing key (unconfirmed txs carry no
+                    // block_time); treat that as "now" so a pending tx sorts to the top.
+                    time = stTx?.optLong("block_time")?.takeIf { it > 0L }
+                        ?: (System.currentTimeMillis() / 1000),
                 )
             }
         }
