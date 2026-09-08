@@ -99,6 +99,8 @@
     <string name="lock_choice_use_biometric">Lock the app with fingerprint or PIN</string>
     <string name="lock_choice_biometric_note">One unlock opens all your wallets. No password to remember — your device\'s fingerprint/face or screen-lock PIN gets you in.</string>
     <string name="lock_choice_password_note">This password unlocks the app and every wallet in it.</string>
+    <string name="lock_password_hint">Choose a password of at least %1$d characters to continue.</string>
+    <string name="lock_password_mismatch">The passwords don\'t match.</string>
 
     <!-- settings -->
     <string name="settings_title">Settings</string>
