@@ -131,10 +131,10 @@ struct Args {
     #[arg(long, default_value_t = 100)]
     service_fee_bps: u32,
     /// Minimum service fee per transaction, satoshis. This is what the edge
-    /// enforces on broadcast. Keep it at or above the dust limit (~294 for a
-    /// bech32 address) — a smaller output makes the whole transaction
-    /// non-standard and the node rejects it.
-    #[arg(long, default_value_t = 546)]
+    /// enforces on broadcast. Keep it above the dust limit for the fee address
+    /// (294 for a bech32 P2WPKH, 546 for legacy P2PKH) — a smaller output makes
+    /// the whole transaction non-standard and the node rejects it.
+    #[arg(long, default_value_t = 400)]
     service_fee_floor_sat: u64,
     /// Maximum service fee per transaction, satoshis (0 = uncapped). Advertised only.
     #[arg(long, default_value_t = 0)]

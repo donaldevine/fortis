@@ -51,8 +51,8 @@ Without the flag `/crash` is 404. Rotate the file yourself (logrotate / a cron).
 `--service-fee-address <addr>` turns on the service fee: `GET /pricing`
 advertises `{address, bps, floor_sat, cap_sat}` (the client reads it and adds the
 percentage output) and `POST /<chain>/tx` is rejected `402` unless the
-transaction pays at least `--service-fee-floor-sat` (default 546 — keep it above
-the ~294-sat dust limit or the node rejects the whole tx) to that address.
+transaction pays at least `--service-fee-floor-sat` (default 400 — keep it above
+the fee address's dust limit, 294 for bech32 P2WPKH) to that address.
 `--service-fee-bps` (default 100 = 1%) and `--service-fee-cap-sat` (default 0 =
 uncapped) are advertised only. `--network` (default `bitcoin`)
 validates the address. Unset → no fee, `/pricing` 404s.
