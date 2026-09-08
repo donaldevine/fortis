@@ -561,9 +561,12 @@ fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query
         return err(429, "rate limit exceeded");
     }
 
+    // The only POST that reaches here is `/tx`; a 1 MB (consensus-max) transaction
+    // is ~2 MB of hex. Cap the read so a bogus Content-Length can't make a worker
+    // allocate unbounded memory.
     let mut body = Vec::new();
     if method == &Method::Post {
-        let _ = req.as_reader().read_to_end(&mut body);
+        let _ = req.as_reader().take(2 * 1024 * 1024).read_to_end(&mut body);
     }
 
     // Enforce the service fee on broadcast: the transaction must pay at least

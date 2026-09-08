@@ -3,6 +3,7 @@
 //! `/v1/fees/recommended`, and `POST /tx`. Public chain data only — no auth; bind
 //! to localhost or a trusted network, or front it with a TLS/rate-limiting proxy.
 
+use std::io::Read;
 use std::sync::{Arc, RwLock};
 
 use anyhow::{anyhow, Context, Result};
@@ -285,8 +286,10 @@ fn err(status: u16, msg: impl std::fmt::Display) -> Reply {
 
 fn read_body(req: &mut Request) -> String {
     if req.method() == &Method::Post {
+        // Only `POST /tx` has a body — a consensus-max tx is ~2 MB of hex. Cap the
+        // read so a bogus Content-Length can't exhaust memory.
         let mut s = String::new();
-        let _ = req.as_reader().read_to_string(&mut s);
+        let _ = req.as_reader().take(2 * 1024 * 1024).read_to_string(&mut s);
         s
     } else {
         String::new()

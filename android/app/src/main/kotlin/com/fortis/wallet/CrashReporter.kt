@@ -45,10 +45,27 @@ object CrashReporter {
             put("manufacturer", Build.MANUFACTURER)
             put("thread", thread.name)
             put("exception", error.javaClass.name)
-            put("message", error.message ?: "")
-            put("stack", trace.take(12_000))
+            put("message", redact(error.message ?: ""))
+            put("stack", redact(trace).take(12_000))
         }.toString()
 
+        post(body)
+    }
+
+    /**
+     * Strip anything that could be wallet data before a report leaves the device:
+     * bech32 addresses, extended keys, and long hex runs (private keys, script
+     * hex, txids). Defensive — no current code path puts these in an exception
+     * message or stack trace, and the recovery phrase never appears in either
+     * (`crypto::unseal` only ever returns it as a success value) — but the report
+     * must not carry them even if that changes.
+     */
+    private fun redact(s: String): String = s
+        .replace(Regex("(?i)\\b(bc|tb|bcrt)1[a-z0-9]{8,}"), "<addr>")
+        .replace(Regex("\\b[xt]p(ub|rv)[1-9A-HJ-NP-Za-km-z]{40,}"), "<xkey>")
+        .replace(Regex("\\b[0-9a-fA-F]{64,}\\b"), "<hex>")
+
+    private fun post(body: String) {
         (URL(ENDPOINT).openConnection() as HttpURLConnection).run {
             requestMethod = "POST"
             connectTimeout = 2_000
