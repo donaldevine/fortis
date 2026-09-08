@@ -143,7 +143,7 @@
     <string name="fee_fast">Хурдан</string>
     <string name="fee_normal">Хэвийн</string>
     <string name="fee_slow">Удаан</string>
-    <string name="send_replay_protect">BTCB2 давталтаас хамгаалах (100 байт OP_RETURN)</string>
+    <string name="send_replay_protect">XBT давталтаас хамгаалах (100 байт OP_RETURN)</string>
     <string name="send_replay_note">~110 vB шимтгэл нэмнэ. Bitcoin-ийн үндсэн реле дээр стандарт бус — том OP_RETURN хүлээн авдаг зангилаа/үйлчилгээгээр дамжуулан цацна уу.</string>
     <string name="send_service_fee">Үйлчилгээний шимтгэл: илгээсэн дүнгийн %1$s%% (доод тал нь %2$d sat) — энэ байршуулсан зангилааг дэмждэг.</string>
     <string name="cd_amount_unit">дүнгийн нэгж</string>

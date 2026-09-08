@@ -143,7 +143,7 @@
     <string name="fee_fast">快速</string>
     <string name="fee_normal">正常</string>
     <string name="fee_slow">慢速</string>
-    <string name="send_replay_protect">BTCB2 重放保護（100 位元組 OP_RETURN）</string>
+    <string name="send_replay_protect">XBT 重放保護（100 位元組 OP_RETURN）</string>
     <string name="send_replay_note">增加約 110 vB 手續費。在預設的 Bitcoin 中繼上屬於非標準——請透過接受大型 OP_RETURN 的節點/服務廣播。</string>
     <string name="send_service_fee">服務費：傳送金額的 %1$s%%（最低 %2$d sat）——用於支持此託管節點。</string>
     <string name="cd_amount_unit">金額單位</string>

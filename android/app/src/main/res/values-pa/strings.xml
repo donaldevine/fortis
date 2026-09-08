@@ -143,7 +143,7 @@
     <string name="fee_fast">ਤੇਜ਼</string>
     <string name="fee_normal">ਸਧਾਰਨ</string>
     <string name="fee_slow">ਹੌਲੀ</string>
-    <string name="send_replay_protect">BTCB2 ਰੀਪਲੇ ਸੁਰੱਖਿਆ (100-ਬਾਈਟ OP_RETURN)</string>
+    <string name="send_replay_protect">XBT ਰੀਪਲੇ ਸੁਰੱਖਿਆ (100-ਬਾਈਟ OP_RETURN)</string>
     <string name="send_replay_note">~110 vB ਫ਼ੀਸ ਜੋੜਦਾ ਹੈ। ਡਿਫਾਲਟ Bitcoin ਰੀਲੇ ਉੱਤੇ ਗੈਰ-ਮਿਆਰੀ — ਵੱਡੇ OP_RETURN ਸਵੀਕਾਰ ਕਰਨ ਵਾਲੇ ਨੋਡ/ਸੇਵਾ ਰਾਹੀਂ ਪ੍ਰਸਾਰਿਤ ਕਰੋ।</string>
     <string name="send_service_fee">ਸੇਵਾ ਫ਼ੀਸ: ਭੇਜੀ ਰਕਮ ਦਾ %1$s%% (ਘੱਟੋ-ਘੱਟ %2$d sat) — ਇਹ ਇਸ ਹੋਸਟ ਕੀਤੇ ਨੋਡ ਦਾ ਸਮਰਥਨ ਕਰਦਾ ਹੈ।</string>
     <string name="cd_amount_unit">ਰਕਮ ਦੀ ਇਕਾਈ</string>

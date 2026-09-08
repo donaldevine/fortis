@@ -143,7 +143,7 @@
     <string name="fee_fast">Shpejt</string>
     <string name="fee_normal">Normal</string>
     <string name="fee_slow">Ngadalë</string>
-    <string name="send_replay_protect">Mbrojtje nga ripërsëritja BTCB2 (OP_RETURN 100 bajt)</string>
+    <string name="send_replay_protect">Mbrojtje nga ripërsëritja XBT (OP_RETURN 100 bajt)</string>
     <string name="send_replay_note">Shton ~110 vB tarifë. Jostandarde në relenë e parazgjedhur të Bitcoin — transmeto përmes një nyjeje/shërbimi që pranon OP_RETURN të mëdha.</string>
     <string name="send_service_fee">Tarifë shërbimi: %1$s%% e shumës së dërguar (min. %2$d sat) — mbështet këtë nyje të strehuar.</string>
     <string name="cd_amount_unit">njësia e shumës</string>

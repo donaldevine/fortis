@@ -45,7 +45,7 @@ Open `http://localhost:5173`, create or restore a wallet, then choose a backend.
 The default. A [`fortis-edge`](../crates/fortis-edge) URL — the app does
 `POST {url}/register` for a per-install token on first use, stores it, and sends
 it as `Authorization: Bearer` on every request (re-registering once on a 401).
-Requests go to `{url}/btcb2/…` or `{url}/btc/…`. Runs a local edge by default
+Requests go to `{url}/xbt/…` or `{url}/btc/…`. Runs a local edge by default
 (`http://127.0.0.1:8098`); point it at the deployed service once there is one.
 
 ### Backend B — public explorer (no node)
@@ -77,7 +77,7 @@ watch-only descriptor on the node.
 
 ### Serving both chains from one `fortisd`
 
-One process can serve BTCB2 from a Knots node and BTC from a public explorer, and —
+One process can serve XBT from a Knots node and BTC from a public explorer, and —
 when you also run a local Bitcoin Core — route BTC **broadcast + fee estimation**
 through your own node while address/history reads still come from the explorer:
 
@@ -88,7 +88,7 @@ cargo run -p fortisd -- \
   --btc-rpc-url http://127.0.0.1:8532 --btc-datadir "C:\Bitcoin\Core"
 ```
 
-- BTCB2 wallet → gateway URL `http://<host>:8088`
+- XBT wallet → gateway URL `http://<host>:8088`
 - BTC wallet → explorer URL `http://<host>:8088/esplora`
 
 `--btc-*` needs no address index (a pruned node is fine); it only does

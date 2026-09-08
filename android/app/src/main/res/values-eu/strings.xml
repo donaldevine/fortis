@@ -143,7 +143,7 @@
     <string name="fee_fast">Azkarra</string>
     <string name="fee_normal">Normala</string>
     <string name="fee_slow">Motela</string>
-    <string name="send_replay_protect">BTCB2 errepikatze-babesa (100 byteko OP_RETURN)</string>
+    <string name="send_replay_protect">XBT errepikatze-babesa (100 byteko OP_RETURN)</string>
     <string name="send_replay_note">~110 vB komisio gehitzen du. Ez-estandarra Bitcoinen erreleu lehenetsian — igorri OP_RETURN handiak onartzen dituen nodo/zerbitzu baten bidez.</string>
     <string name="send_service_fee">Zerbitzu-komisioa: bidalitako zenbatekoaren %1$s%% (gutx. %2$d sat) — nodo ostatatu hau babesten du.</string>
     <string name="cd_amount_unit">zenbatekoaren unitatea</string>

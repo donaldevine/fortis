@@ -143,7 +143,7 @@
     <string name="fee_fast">Nopea</string>
     <string name="fee_normal">Normaali</string>
     <string name="fee_slow">Hidas</string>
-    <string name="send_replay_protect">BTCB2-toistosuojaus (100 tavun OP_RETURN)</string>
+    <string name="send_replay_protect">XBT-toistosuojaus (100 tavun OP_RETURN)</string>
     <string name="send_replay_note">Lisää ~110 vB maksua. Ei-standardi Bitcoinin oletusreleessä — lähetä solmun/palvelun kautta, joka hyväksyy suuret OP_RETURN.</string>
     <string name="send_service_fee">Palvelumaksu: %1$s%% lähetetystä määrästä (väh. %2$d sat) — tukee tätä isännöityä solmua.</string>
     <string name="cd_amount_unit">määrän yksikkö</string>

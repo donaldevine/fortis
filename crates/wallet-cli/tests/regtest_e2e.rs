@@ -187,7 +187,7 @@ fn send_over_regtest_blake2b() {
         &home,
         &node,
         &[
-            "init", "--restore", "--chain", "btcb2", "--network", "regtest",
+            "init", "--restore", "--chain", "xbt", "--network", "regtest",
             "--datadir", &datadir, "--rpc-url", &rpc_url,
         ],
         Some(&format!("{PHRASE}\n")),
@@ -195,7 +195,7 @@ fn send_over_regtest_blake2b() {
 
     fortis(&home, &node, &["connect"], None);
 
-    // fund a fortis receive address with 4 BTCB2
+    // fund a fortis receive address with 4 XBT
     let addr = fortis(&home, &node, &["address"], None);
     let addr = addr.lines().next().unwrap().trim();
     node.wallet("miner", &["sendtoaddress", addr, "4"]);
@@ -204,7 +204,7 @@ fn send_over_regtest_blake2b() {
     let bal = fortis(&home, &node, &["balance"], None);
     assert!(bal.contains("4.00000000"), "unexpected balance:\n{bal}");
 
-    // send 1 BTCB2, phrase piped
+    // send 1 XBT, phrase piped
     let dest = node.wallet("miner", &["getnewaddress"]);
     let summary = fortis(
         &home,
@@ -217,7 +217,7 @@ fn send_over_regtest_blake2b() {
 
     assert!((btc(&node.wallet("miner", &["getreceivedbyaddress", &dest])) - 1.0).abs() < 1e-8);
     let utxos = fortis(&home, &node, &["utxos"], None);
-    assert!(utxos.contains("2.999"), "expected ~3 BTCB2 change:\n{utxos}");
+    assert!(utxos.contains("2.999"), "expected ~3 XBT change:\n{utxos}");
 
     // seal the seed, then send again using the sealed seed (no --phrase-stdin)
     fortis(&home, &node, &["import-seed", "--phrase-stdin"], Some(&format!("{PHRASE}\n\n")));
@@ -228,6 +228,6 @@ fn send_over_regtest_blake2b() {
     node.mine(1);
 
     // check the node's own view of the fortis wallet, not fortis's formatting
-    let swept = btc(&node.wallet("fortis-btcb2", &["getbalance"]));
-    assert!(swept.abs() < 1e-8, "wallet not swept, node still sees {swept} BTCB2");
+    let swept = btc(&node.wallet("fortis-xbt", &["getbalance"]));
+    assert!(swept.abs() < 1e-8, "wallet not swept, node still sees {swept} XBT");
 }

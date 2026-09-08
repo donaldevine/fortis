@@ -143,7 +143,7 @@
     <string name="fee_fast">Sürətli</string>
     <string name="fee_normal">Normal</string>
     <string name="fee_slow">Yavaş</string>
-    <string name="send_replay_protect">BTCB2 təkrar oynatma qoruması (100 baytlıq OP_RETURN)</string>
+    <string name="send_replay_protect">XBT təkrar oynatma qoruması (100 baytlıq OP_RETURN)</string>
     <string name="send_replay_note">~110 vB komissiya əlavə edir. Susmaya görə Bitcoin releyində qeyri-standartdır — böyük OP_RETURN qəbul edən node/xidmət vasitəsilə yayımlayın.</string>
     <string name="send_service_fee">Xidmət haqqı: göndərilən məbləğin %1$s%%\'i (min. %2$d sat) — bu hostlaşdırılmış node-u dəstəkləyir.</string>
     <string name="cd_amount_unit">məbləğ vahidi</string>

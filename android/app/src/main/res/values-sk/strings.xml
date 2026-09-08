@@ -143,7 +143,7 @@
     <string name="fee_fast">Rýchlo</string>
     <string name="fee_normal">Normálne</string>
     <string name="fee_slow">Pomaly</string>
-    <string name="send_replay_protect">Ochrana proti prehratiu BTCB2 (100-bajtový OP_RETURN)</string>
+    <string name="send_replay_protect">Ochrana proti prehratiu XBT (100-bajtový OP_RETURN)</string>
     <string name="send_replay_note">Pridáva ~110 vB poplatku. Neštandardné na predvolenom Bitcoin relay — vysielajte cez uzol/službu, ktorá prijíma veľké OP_RETURN.</string>
     <string name="send_service_fee">Servisný poplatok: %1$s%% z odoslanej sumy (min. %2$d sat) — podporuje tento hostovaný uzol.</string>
     <string name="cd_amount_unit">jednotka sumy</string>

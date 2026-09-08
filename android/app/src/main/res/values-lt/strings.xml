@@ -143,7 +143,7 @@
     <string name="fee_fast">Greitai</string>
     <string name="fee_normal">Įprastai</string>
     <string name="fee_slow">Lėtai</string>
-    <string name="send_replay_protect">BTCB2 apsauga nuo pakartojimo (100 baitų OP_RETURN)</string>
+    <string name="send_replay_protect">XBT apsauga nuo pakartojimo (100 baitų OP_RETURN)</string>
     <string name="send_replay_note">Prideda ~110 vB mokesčio. Nestandartinis numatytajame Bitcoin relay — transliuokite per mazgą / paslaugą, priimančią didelius OP_RETURN.</string>
     <string name="send_service_fee">Paslaugos mokestis: %1$s%% siunčiamos sumos (min. %2$d sat) — palaiko šį talpinamą mazgą.</string>
     <string name="cd_amount_unit">sumos vienetas</string>

@@ -143,7 +143,7 @@
     <string name="fee_fast">Pantas</string>
     <string name="fee_normal">Biasa</string>
     <string name="fee_slow">Perlahan</string>
-    <string name="send_replay_protect">Perlindungan main semula BTCB2 (OP_RETURN 100 bait)</string>
+    <string name="send_replay_protect">Perlindungan main semula XBT (OP_RETURN 100 bait)</string>
     <string name="send_replay_note">Menambah yuran ~110 vB. Bukan standard pada relay Bitcoin lalai — siarkan melalui nod/perkhidmatan yang menerima OP_RETURN besar.</string>
     <string name="send_service_fee">Yuran perkhidmatan: %1$s%% daripada jumlah yang dihantar (min %2$d sat) — menyokong nod dihoskan ini.</string>
     <string name="cd_amount_unit">unit jumlah</string>

@@ -143,7 +143,7 @@
     <string name="fee_fast">Cepat</string>
     <string name="fee_normal">Normal</string>
     <string name="fee_slow">Lambat</string>
-    <string name="send_replay_protect">Perlindungan replay BTCB2 (OP_RETURN 100 byte)</string>
+    <string name="send_replay_protect">Perlindungan replay XBT (OP_RETURN 100 byte)</string>
     <string name="send_replay_note">Menambah biaya ~110 vB. Non-standar pada relay Bitcoin default — siarkan melalui node/layanan yang menerima OP_RETURN besar.</string>
     <string name="send_service_fee">Biaya layanan: %1$s%% dari jumlah yang dikirim (min %2$d sat) — mendukung node hosting ini.</string>
     <string name="cd_amount_unit">satuan jumlah</string>

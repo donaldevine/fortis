@@ -143,7 +143,7 @@
     <string name="fee_fast">빠름</string>
     <string name="fee_normal">보통</string>
     <string name="fee_slow">느림</string>
-    <string name="send_replay_protect">BTCB2 재전송 방지(100바이트 OP_RETURN)</string>
+    <string name="send_replay_protect">XBT 재전송 방지(100바이트 OP_RETURN)</string>
     <string name="send_replay_note">수수료가 약 110 vB 추가됩니다. 기본 Bitcoin 릴레이에서는 비표준입니다 — 큰 OP_RETURN을 허용하는 노드/서비스를 통해 브로드캐스트하세요.</string>
     <string name="send_service_fee">서비스 수수료: 보낸 금액의 %1$s%%(최소 %2$d sat) — 이 호스팅 노드를 지원합니다.</string>
     <string name="cd_amount_unit">금액 단위</string>

@@ -143,7 +143,7 @@
     <string name="fee_fast">ವೇಗ</string>
     <string name="fee_normal">ಸಾಮಾನ್ಯ</string>
     <string name="fee_slow">ನಿಧಾನ</string>
-    <string name="send_replay_protect">BTCB2 ರೀಪ್ಲೇ ರಕ್ಷಣೆ (100-ಬೈಟ್ OP_RETURN)</string>
+    <string name="send_replay_protect">XBT ರೀಪ್ಲೇ ರಕ್ಷಣೆ (100-ಬೈಟ್ OP_RETURN)</string>
     <string name="send_replay_note">~110 vB ಶುಲ್ಕ ಸೇರಿಸುತ್ತದೆ. ಡೀಫಾಲ್ಟ್ Bitcoin ರಿಲೇಯಲ್ಲಿ ಪ್ರಮಾಣಿತವಲ್ಲ — ದೊಡ್ಡ OP_RETURN ಸ್ವೀಕರಿಸುವ ನೋಡ್/ಸೇವೆ ಮೂಲಕ ಪ್ರಸಾರ ಮಾಡಿ.</string>
     <string name="send_service_fee">ಸೇವಾ ಶುಲ್ಕ: ಕಳುಹಿಸಿದ ಮೊತ್ತದ %1$s%% (ಕನಿಷ್ಠ %2$d sat) — ಇದು ಈ ಹೋಸ್ಟ್ ಮಾಡಿದ ನೋಡ್‌ಗೆ ಬೆಂಬಲ ನೀಡುತ್ತದೆ.</string>
     <string name="cd_amount_unit">ಮೊತ್ತದ ಘಟಕ</string>

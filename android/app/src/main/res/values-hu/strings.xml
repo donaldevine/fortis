@@ -143,7 +143,7 @@
     <string name="fee_fast">Gyors</string>
     <string name="fee_normal">Normál</string>
     <string name="fee_slow">Lassú</string>
-    <string name="send_replay_protect">BTCB2 visszajátszás elleni védelem (100 bájtos OP_RETURN)</string>
+    <string name="send_replay_protect">XBT visszajátszás elleni védelem (100 bájtos OP_RETURN)</string>
     <string name="send_replay_note">~110 vB díjat ad hozzá. Nem szabványos az alapértelmezett Bitcoin relayen — sugározd olyan csomóponton/szolgáltatáson keresztül, amely elfogadja a nagy OP_RETURN-t.</string>
     <string name="send_service_fee">Szolgáltatási díj: az elküldött összeg %1$s%%-a (min. %2$d sat) — támogatja ezt a tárolt csomópontot.</string>
     <string name="cd_amount_unit">összeg mértékegysége</string>

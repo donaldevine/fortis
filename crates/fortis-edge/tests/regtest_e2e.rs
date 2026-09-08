@@ -246,7 +246,7 @@ fn wallet_flow_through_the_edge() {
         &edge_bin,
         &[
             "--bind", &format!("127.0.0.1:{edge_port}"),
-            "--btcb2-upstream", &format!("http://127.0.0.1:{idx_port}"),
+            "--xbt-upstream", &format!("http://127.0.0.1:{idx_port}"),
             "--secret-file", node.datadir.join("edge.secret").to_str().unwrap(),
             "--require-token",
             "--rate-per-min", "6000",
@@ -260,24 +260,24 @@ fn wallet_flow_through_the_edge() {
     let edge = format!("http://127.0.0.1:{edge_port}");
 
     // --- token gate ---
-    assert_eq!(req(&a, "GET", &format!("{edge}/btcb2/blocks/tip/height"), None, None).0, 401, "no token must 401");
+    assert_eq!(req(&a, "GET", &format!("{edge}/xbt/blocks/tip/height"), None, None).0, 401, "no token must 401");
     let (s, body) = req(&a, "POST", &format!("{edge}/register"), None, Some(""));
     assert_eq!(s, 200, "register failed: {body}");
     let token = serde_json::from_str::<serde_json::Value>(&body).unwrap()["token"].as_str().unwrap().to_string();
 
     // --- wallet from the phrase ---
-    let params = ChainParams::resolve(Chain::Btcb2, "regtest").unwrap();
+    let params = ChainParams::resolve(Chain::Xbt, "regtest").unwrap();
     let key = MasterKey::from_phrase(PHRASE, "").unwrap();
     let xpub = key.account_xpub(&params, 0).unwrap();
     let mut view = WalletView::new(params.clone(), xpub);
     let recv0 = view.address_at(0, 0).unwrap();
 
-    // fund receive address 0 with 4 BTCB2, confirm
+    // fund receive address 0 with 4 XBT, confirm
     node.wallet("miner", &["sendtoaddress", &recv0.to_string(), "4"]);
     node.mine(1);
 
     // --- the index sees the confirmed UTXO through the edge ---
-    let utxo_url = format!("{edge}/btcb2/address/{recv0}/utxo");
+    let utxo_url = format!("{edge}/xbt/address/{recv0}/utxo");
     let utxos: serde_json::Value = poll_json(|| {
         let (s, b) = req(&a, "GET", &utxo_url, Some(&token), None);
         if s != 200 {
@@ -290,7 +290,7 @@ fn wallet_flow_through_the_edge() {
     assert_eq!(utxos[0]["value"].as_u64().unwrap(), 400_000_000);
     assert_eq!(utxos[0]["status"]["confirmed"], serde_json::Value::Bool(true));
 
-    // --- build + sign a 1 BTCB2 payment (wallet-core, exactly as the app does) ---
+    // --- build + sign a 1 XBT payment (wallet-core, exactly as the app does) ---
     let dest = node.wallet("miner", &["getnewaddress", "", "bech32"]);
     let dest_spk = Address::<NetworkUnchecked>::from_str(&dest)
         .unwrap()
@@ -334,7 +334,7 @@ fn wallet_flow_through_the_edge() {
             &edge_bin,
             &[
                 "--bind", &format!("127.0.0.1:{fee_port}"),
-                "--btcb2-upstream", &format!("http://127.0.0.1:{idx_port}"),
+                "--xbt-upstream", &format!("http://127.0.0.1:{idx_port}"),
                 "--secret-file", node.datadir.join("edge2.secret").to_str().unwrap(),
                 "--network", "regtest",
                 "--service-fee-address", &fee_addr,
@@ -345,17 +345,17 @@ fn wallet_flow_through_the_edge() {
         let (ps, pb) = req(&a, "GET", &format!("http://127.0.0.1:{fee_port}/pricing"), None, None);
         assert_eq!(ps, 200, "pricing: {pb}");
         assert!(pb.contains("\"floor_sat\":200") && pb.contains(&fee_addr), "pricing shape: {pb}");
-        let (fs, fb) = req(&a, "POST", &format!("http://127.0.0.1:{fee_port}/btcb2/tx"), None, Some(&raw_hex));
+        let (fs, fb) = req(&a, "POST", &format!("http://127.0.0.1:{fee_port}/xbt/tx"), None, Some(&raw_hex));
         assert_eq!(fs, 402, "a tx that doesn't pay the fee must be rejected: {fb}");
     }
 
     // --- broadcast through the edge ---
-    let (s, txid_body) = req(&a, "POST", &format!("{edge}/btcb2/tx"), Some(&token), Some(&raw_hex));
+    let (s, txid_body) = req(&a, "POST", &format!("{edge}/xbt/tx"), Some(&token), Some(&raw_hex));
     assert_eq!(s, 200, "broadcast failed: {txid_body}");
     assert_eq!(txid_body.trim().len(), 64, "not a txid: {txid_body}");
 
     // --- mempool overlay: the change output is visible, unconfirmed ---
-    let change_url = format!("{edge}/btcb2/address/{change_addr}/utxo");
+    let change_url = format!("{edge}/xbt/address/{change_addr}/utxo");
     let mp: serde_json::Value = poll_json(|| {
         let (_, b) = req(&a, "GET", &change_url, Some(&token), None);
         let v: serde_json::Value = serde_json::from_str(&b).ok()?;
@@ -372,14 +372,14 @@ fn wallet_flow_through_the_edge() {
         let first = v.as_array()?.first()?.clone();
         (first["status"]["confirmed"] == serde_json::Value::Bool(true)).then_some(v)
     });
-    assert!(confirmed[0]["value"].as_u64().unwrap() > 250_000_000, "change ~3 BTCB2 expected");
+    assert!(confirmed[0]["value"].as_u64().unwrap() > 250_000_000, "change ~3 XBT expected");
 
-    // node's own view: the destination received 1 BTCB2
+    // node's own view: the destination received 1 XBT
     let got: f64 = node.wallet("miner", &["getreceivedbyaddress", &dest]).parse().unwrap();
-    assert!((got - 1.0).abs() < 1e-8, "dest got {got} BTCB2");
+    assert!((got - 1.0).abs() < 1e-8, "dest got {got} XBT");
 
     // --- /txs shape the client parses ---
-    let (_, txs_b) = req(&a, "GET", &format!("{edge}/btcb2/address/{recv0}/txs"), Some(&token), None);
+    let (_, txs_b) = req(&a, "GET", &format!("{edge}/xbt/address/{recv0}/txs"), Some(&token), None);
     let txs: serde_json::Value = serde_json::from_str(&txs_b).unwrap();
     let spend = txs
         .as_array()
@@ -392,13 +392,13 @@ fn wallet_flow_through_the_edge() {
     assert!(spend["fee"].as_u64().unwrap() > 0);
 
     // --- cache hits are free: hammering one cached URL never trips the limiter ---
-    let tip_url = format!("{edge}/btcb2/blocks/tip/height");
+    let tip_url = format!("{edge}/xbt/blocks/tip/height");
     let limited_cached = (0..300).filter(|_| req(&a, "GET", &tip_url, Some(&token), None).0 == 429).count();
     assert_eq!(limited_cached, 0, "cached responses must not spend rate budget");
 
     // --- distinct uncached requests do: burst 100, fire 160 -> some 429s ---
     let limited = (0..160)
-        .filter(|i| req(&a, "GET", &format!("{edge}/btcb2/address/{recv0}/txs?x={i}"), Some(&token), None).0 == 429)
+        .filter(|i| req(&a, "GET", &format!("{edge}/xbt/address/{recv0}/txs?x={i}"), Some(&token), None).0 == 429)
         .count();
     assert!(limited > 0, "expected the limiter to reject some of a 160-request burst of distinct queries");
 }

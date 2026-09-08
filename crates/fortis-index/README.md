@@ -6,7 +6,7 @@ REST subset the fortis wallet's `EsploraBackend` already speaks.
 Where [`fortisd`](../fortisd)'s gateway holds one account at a time (it imports an
 xpub as a watch-only descriptor on the node), `fortis-index` keeps **no per-user
 state** — the client derives its own addresses and scans them, so one instance
-serves any number of wallets concurrently. That's what the BTCB2 side needs to go
+serves any number of wallets concurrently. That's what the XBT side needs to go
 multi-tenant, since no public Esplora exists for the fork.
 
 ## How it works

@@ -1,7 +1,7 @@
 # Deploying the fortis backend
 
 ```
-wallet ──HTTPS──▶ Caddy / Tailscale ──▶ fortis-edge :8098 ─┬─▶ fortis-index :8094 ──▶ Knots (BTCB2) RPC
+wallet ──HTTPS──▶ Caddy / Tailscale ──▶ fortis-edge :8098 ─┬─▶ fortis-index :8094 ──▶ Knots (XBT) RPC
    (per-install token)                  (tokens, rate-limit,  │
                                          cache, CORS, metrics) └─▶ Esplora upstream (BTC)
 ```
@@ -30,7 +30,7 @@ hash) is what `--rpc-auth` takes.
 ```sh
 cargo build --release -p fortis-index -p fortis-edge
 
-# terminal 1 — the BTCB2 index
+# terminal 1 — the XBT index
 ./target/release/fortis-index \
   --network mainnet --rpc-url http://127.0.0.1:8332 \
   --rpc-auth fortis:YOURPASS \
@@ -40,10 +40,10 @@ cargo build --release -p fortis-index -p fortis-edge
 # terminal 2 — the edge
 ./target/release/fortis-edge \
   --bind 127.0.0.1:8098 \
-  --btcb2-upstream http://127.0.0.1:8094 \
+  --xbt-upstream http://127.0.0.1:8094 \
   --btc-upstream https://mempool.space/api \
   --btc-price-url 'https://api.kraken.com/0/public/Ticker?pair=XBTUSD' \
-  --btcb2-price-url https://mempool.kilombino.com/api/v1/prices \
+  --xbt-price-url https://mempool.kilombino.com/api/v1/prices \
   --btc-upstream-rate 5 --btc-haskoin-url https://api.haskoin.com/btc \
   --require-token --trust-forwarded-for \
   --crash-log /var/log/fortis/crashes.ndjson \
@@ -57,7 +57,7 @@ copy to `/etc/systemd/system/`, edit the `--rpc-auth` / `--allow-origin`, then
 ### Docker Compose
 
 ```sh
-cp deploy/.env.example deploy/.env      # fill in BTCB2_RPC_AUTH etc.
+cp deploy/.env.example deploy/.env      # fill in XBT_RPC_AUTH etc.
 docker compose -f deploy/docker-compose.yml up -d --build
 ```
 

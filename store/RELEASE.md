@@ -257,7 +257,7 @@ about crypto-restricted regions — deselect those.
 - Play App Signing: **accept** letting Google generate the app signing key
   (first upload only). Your `fortis-upload.jks` is now the enrolled upload key.
 - Release name: `0.1.0 (1)`.
-- Release notes: `First beta. Non-custodial wallet for BTC and BTCB2 (mainnet). Use small amounts only.`
+- Release notes: `First beta. Non-custodial wallet for BTC and XBT (mainnet). Use small amounts only.`
 - Save → **Review release** → **Start rollout to Closed testing**.
 
 First review of a new app can take **a few hours to ~7 days**. You can't invite

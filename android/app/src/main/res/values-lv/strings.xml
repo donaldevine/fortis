@@ -143,7 +143,7 @@
     <string name="fee_fast">Ātri</string>
     <string name="fee_normal">Normāli</string>
     <string name="fee_slow">Lēni</string>
-    <string name="send_replay_protect">BTCB2 aizsardzība pret atkārtošanu (100 baitu OP_RETURN)</string>
+    <string name="send_replay_protect">XBT aizsardzība pret atkārtošanu (100 baitu OP_RETURN)</string>
     <string name="send_replay_note">Pievieno ~110 vB maksas. Nestandarta noklusējuma Bitcoin relejā — pārraidiet, izmantojot mezglu/pakalpojumu, kas pieņem lielus OP_RETURN.</string>
     <string name="send_service_fee">Pakalpojuma maksa: %1$s%% no nosūtītās summas (min. %2$d sat) — atbalsta šo mitināto mezglu.</string>
     <string name="cd_amount_unit">summas vienība</string>

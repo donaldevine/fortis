@@ -143,7 +143,7 @@
     <string name="fee_fast">Hızlı</string>
     <string name="fee_normal">Normal</string>
     <string name="fee_slow">Yavaş</string>
-    <string name="send_replay_protect">BTCB2 yeniden yürütme koruması (100 baytlık OP_RETURN)</string>
+    <string name="send_replay_protect">XBT yeniden yürütme koruması (100 baytlık OP_RETURN)</string>
     <string name="send_replay_note">~110 vB ücret ekler. Varsayılan Bitcoin rölesinde standart dışıdır — büyük OP_RETURN kabul eden bir düğüm/hizmet üzerinden yayın yapın.</string>
     <string name="send_service_fee">Hizmet ücreti: gönderilen tutarın %1$s%%\'i (en az %2$d sat) — bu barındırılan düğümü destekler.</string>
     <string name="cd_amount_unit">tutar birimi</string>

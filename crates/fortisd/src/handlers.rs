@@ -53,9 +53,9 @@ fn default_range() -> u32 {
 
 pub fn connect(rpc: &Rpc, state: &mut State, home: &Path, req: ConnectReq) -> Result<Value> {
     let chain = match req.chain.as_str() {
-        "btcb2" => Chain::Btcb2,
+        "xbt" => Chain::Xbt,
         "btc" => Chain::Btc,
-        other => bail!("chain must be \"btcb2\" or \"btc\", got {other:?}"),
+        other => bail!("chain must be \"xbt\" or \"btc\", got {other:?}"),
     };
     let params = ChainParams::resolve(chain, &req.network)
         .ok_or_else(|| anyhow!("unknown chain/network {}/{}", req.chain, req.network))?;

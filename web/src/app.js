@@ -11,9 +11,9 @@ import { ensureWasm, newMnemonic, validateMnemonic, seal, unseal, Session } from
 import { EntropyPool } from './entropy.js';
 import { el, mount, toast, copy, fmt, parseAmount, shortTxid, timeAgo, countUp, initParallax } from './ui.js';
 
-const UNIT = { btcb2: 'BTCB2', btc: 'BTC' };
-const DEFAULT_ESPLORA = { btcb2: 'https://mempool.guide/api', btc: 'https://mempool.space/api' };
-const EXPLORER = { btc: 'https://mempool.space', btcb2: 'https://mempool.guide' };
+const UNIT = { xbt: 'XBT', btc: 'BTC' };
+const DEFAULT_ESPLORA = { xbt: 'https://mempool.guide/api', btc: 'https://mempool.space/api' };
+const EXPLORER = { btc: 'https://mempool.space', xbt: 'https://mempool.guide' };
 
 /** Public block-explorer URL for a tx, or null (non-mainnet / unknown chain). */
 function explorerTxUrl(txid) {
@@ -52,6 +52,7 @@ function migrate(s) {
     delete s.gateway_url;
     delete s.gateway_token;
   }
+  if (s && s.chain === 'btcb2') s.chain = 'xbt'; // ticker rename
   return s;
 }
 
@@ -204,9 +205,9 @@ async function onGenerate() {
   }
 }
 
-function chainPicker(current = 'btcb2') {
+function chainPicker(current = 'xbt') {
   return el('select', { id: 'chain' },
-    el('option', { value: 'btcb2', selected: current === 'btcb2' }, 'BLAKE2b fork (BTCB2)'),
+    el('option', { value: 'xbt', selected: current === 'xbt' }, 'BLAKE2b fork (XBT)'),
     el('option', { value: 'btc', selected: current === 'btc' }, 'Bitcoin (BTC)'));
 }
 function networkPicker(current = 'mainnet') {
@@ -315,7 +316,7 @@ function renderBackendPicker() {
       el('h2', {}, 'Public explorer'),
       el('p', {}, 'A third-party Esplora API, directly.'),
       el('label', {}, 'Esplora API URL'),
-      el('input', { id: 'esplora', value: DEFAULT_ESPLORA[state.chain] || DEFAULT_ESPLORA.btcb2 }),
+      el('input', { id: 'esplora', value: DEFAULT_ESPLORA[state.chain] || DEFAULT_ESPLORA.xbt }),
       el('div', { class: 'hint' }, "If it can't connect (missing CORS headers), run  fortisd --esplora-proxy <that URL>  and use  http://127.0.0.1:8088/esplora  here."),
       el('button', { class: 'ghost wide', onclick: onUseEsplora }, 'Use this explorer')),
     el('div', { class: 'card stack' },
@@ -543,7 +544,7 @@ function paneSend() {
       ? el('label', { class: 'row', style: 'align-items:center;gap:.5rem' },
           el('input', { type: 'checkbox', style: 'width:auto;flex:0', checked: d.replayProtect,
             onchange: (e) => (d.replayProtect = e.target.checked) }),
-          el('span', {}, 'BTCB2 replay protection (100-byte OP_RETURN)'))
+          el('span', {}, 'XBT replay protection (100-byte OP_RETURN)'))
       : null,
     state.chain === 'btc' && !d.sweep && d.replayProtect
       ? el('div', { class: 'hint' }, 'Adds ~110 vB of fee. Non-standard on default Bitcoin relay — broadcast via a node/service that accepts large OP_RETURN.')

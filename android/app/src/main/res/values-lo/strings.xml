@@ -143,7 +143,7 @@
     <string name="fee_fast">ໄວ</string>
     <string name="fee_normal">ປົກກະຕິ</string>
     <string name="fee_slow">ຊ້າ</string>
-    <string name="send_replay_protect">ການປ້ອງກັນການຫຼິ້ນຄືນ BTCB2 (OP_RETURN 100 ໄບຕ໌)</string>
+    <string name="send_replay_protect">ການປ້ອງກັນການຫຼິ້ນຄືນ XBT (OP_RETURN 100 ໄບຕ໌)</string>
     <string name="send_replay_note">ເພີ່ມຄ່າທຳນຽມ ~110 vB. ບໍ່ໄດ້ມາດຕະຖານໃນ relay Bitcoin ຄ່າເລີ່ມຕົ້ນ — ອອກອາກາດຜ່ານ node/ບໍລິການ ທີ່ຮັບ OP_RETURN ຂະໜາດໃຫຍ່.</string>
     <string name="send_service_fee">ຄ່າບໍລິການ: %1$s%% ຂອງຈຳນວນທີ່ສົ່ງ (ຢ່າງໜ້ອຍ %2$d sat) — ຮອງຮັບ node ທີ່ໂຮສນີ້.</string>
     <string name="cd_amount_unit">ໜ່ວຍຈຳນວນ</string>

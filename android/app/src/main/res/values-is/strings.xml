@@ -143,7 +143,7 @@
     <string name="fee_fast">Hratt</string>
     <string name="fee_normal">Venjulegt</string>
     <string name="fee_slow">Hægt</string>
-    <string name="send_replay_protect">BTCB2 endurspilunarvörn (100 bæta OP_RETURN)</string>
+    <string name="send_replay_protect">XBT endurspilunarvörn (100 bæta OP_RETURN)</string>
     <string name="send_replay_note">Bætir við ~110 vB í gjald. Óstaðlað á sjálfgefnu Bitcoin-relái — sendu út um hnút/þjónustu sem tekur við stórum OP_RETURN.</string>
     <string name="send_service_fee">Þjónustugjald: %1$s%% af sendri upphæð (lágm. %2$d sat) — styður þennan hýsta hnút.</string>
     <string name="cd_amount_unit">eining upphæðar</string>

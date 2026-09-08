@@ -143,7 +143,7 @@
     <string name="fee_fast">تیز</string>
     <string name="fee_normal">عام</string>
     <string name="fee_slow">سست</string>
-    <string name="send_replay_protect">BTCB2 ری پلے تحفظ (100 بائٹ OP_RETURN)</string>
+    <string name="send_replay_protect">XBT ری پلے تحفظ (100 بائٹ OP_RETURN)</string>
     <string name="send_replay_note">~110 vB فیس شامل کرتا ہے۔ ڈیفالٹ Bitcoin ریلے پر غیر معیاری ہے — بڑے OP_RETURN قبول کرنے والے نوڈ/سروس کے ذریعے نشر کریں۔</string>
     <string name="send_service_fee">سروس فیس: بھیجی گئی رقم کا %1$s%% (کم از کم %2$d sat) — اس میزبان نوڈ کی معاونت کرتی ہے۔</string>
     <string name="cd_amount_unit">رقم کی اکائی</string>

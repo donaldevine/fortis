@@ -143,7 +143,7 @@
     <string name="fee_fast">Γρήγορα</string>
     <string name="fee_normal">Κανονικά</string>
     <string name="fee_slow">Αργά</string>
-    <string name="send_replay_protect">Προστασία επανάληψης BTCB2 (OP_RETURN 100 byte)</string>
+    <string name="send_replay_protect">Προστασία επανάληψης XBT (OP_RETURN 100 byte)</string>
     <string name="send_replay_note">Προσθέτει ~110 vB τέλους. Μη τυπικό στο προεπιλεγμένο relay του Bitcoin — μεταδώστε μέσω κόμβου/υπηρεσίας που δέχεται μεγάλα OP_RETURN.</string>
     <string name="send_service_fee">Τέλος υπηρεσίας: %1$s%% του ποσού που στέλνεται (ελάχ. %2$d sat) — στηρίζει αυτόν τον φιλοξενούμενο κόμβο.</string>
     <string name="cd_amount_unit">μονάδα ποσού</string>

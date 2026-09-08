@@ -143,7 +143,7 @@
     <string name="fee_fast">სწრაფი</string>
     <string name="fee_normal">ჩვეულებრივი</string>
     <string name="fee_slow">ნელი</string>
-    <string name="send_replay_protect">BTCB2 გამეორების დაცვა (100-ბაიტიანი OP_RETURN)</string>
+    <string name="send_replay_protect">XBT გამეორების დაცვა (100-ბაიტიანი OP_RETURN)</string>
     <string name="send_replay_note">ამატებს ~110 vB საკომისიოს. არასტანდარტულია Bitcoin-ის ნაგულისხმევ რელეზე — გაავრცელეთ დიდი OP_RETURN-ის მიმღები კვანძის/სერვისის მეშვეობით.</string>
     <string name="send_service_fee">სერვისის საკომისიო: გაგზავნილი თანხის %1$s%% (მინ. %2$d sat) — მხარს უჭერს ამ ჰოსტინგ კვანძს.</string>
     <string name="cd_amount_unit">თანხის ერთეული</string>

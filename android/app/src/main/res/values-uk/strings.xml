@@ -143,7 +143,7 @@
     <string name="fee_fast">Швидко</string>
     <string name="fee_normal">Звичайно</string>
     <string name="fee_slow">Повільно</string>
-    <string name="send_replay_protect">Захист від повтору BTCB2 (OP_RETURN 100 байтів)</string>
+    <string name="send_replay_protect">Захист від повтору XBT (OP_RETURN 100 байтів)</string>
     <string name="send_replay_note">Додає ~110 vB комісії. Нестандартно для стандартного relay Bitcoin — транслюйте через вузол/сервіс, що приймає великі OP_RETURN.</string>
     <string name="send_service_fee">Сервісна комісія: %1$s%% від суми надсилання (мін. %2$d sat) — підтримує цей розміщений вузол.</string>
     <string name="cd_amount_unit">одиниця суми</string>

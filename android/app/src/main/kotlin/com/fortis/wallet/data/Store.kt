@@ -15,6 +15,10 @@ private val Context.dataStore by preferencesDataStore("fortis")
 const val LOCK_BIOMETRIC = "biometric"
 const val LOCK_PASSWORD = "password"
 
+/** The XBT chain was persisted as "btcb2" before the ticker rename — upgrade any
+ *  value read back from storage. */
+private fun normalizeChain(chain: String) = if (chain == "btcb2") "xbt" else chain
+
 /** One wallet on this device. `sealed` is the seed, already encrypted under the
  *  app secret — safe at rest. Chain-independent: the same seed can be listed on
  *  both chains (addresses are identical), so a "clone" just copies `sealed`. */
@@ -30,9 +34,9 @@ data class WalletConfig(
     /** The per-install token for the hosted edge. */
     val backendToken: String? = null,
 ) {
-    /** e.g. `BTCB2 · Savings` — the label the picker shows. */
+    /** e.g. `XBT · Savings` — the label the picker shows. */
     val display: String get() = "${chain.uppercase()} · $name"
-    val otherChain: String get() = if (chain == "btc") "btcb2" else "btc"
+    val otherChain: String get() = if (chain == "btc") "xbt" else "btc"
 
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id); put("name", name); put("chain", chain); put("network", network)
@@ -45,7 +49,7 @@ data class WalletConfig(
         fun fromJson(o: JSONObject) = WalletConfig(
             id = o.getString("id"),
             name = o.optString("name", "Wallet"),
-            chain = o.optString("chain", "btcb2"),
+            chain = normalizeChain(o.optString("chain", "xbt")),
             network = o.optString("network", "mainnet"),
             sealed = o.getString("sealed"),
             salt = o.getString("salt"),
@@ -92,6 +96,8 @@ class Store(private val ctx: Context) {
 
         p[K.wallets]?.let { raw ->
             val list = decode(raw)
+            // Persist the btcb2 → xbt rename so the stored JSON stops carrying the old code.
+            if (raw.contains("btcb2")) ctx.dataStore.edit { it[K.wallets] = encode(list) }
             val sel = p[K.selected]?.takeIf { id -> list.any { it.id == id } } ?: list.firstOrNull()?.id
             val lock = p[K.lockMode] ?: if (list.isNotEmpty()) LOCK_PASSWORD else null
             return WalletState(list, sel, lock, p[K.appWrapped])
@@ -104,7 +110,7 @@ class Store(private val ctx: Context) {
             val w = WalletConfig(
                 id = UUID.randomUUID().toString(),
                 name = "Wallet",
-                chain = p[K.chain] ?: "btcb2",
+                chain = normalizeChain(p[K.chain] ?: "xbt"),
                 network = p[K.network] ?: "mainnet",
                 sealed = legacySealed,
                 salt = legacySalt,

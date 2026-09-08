@@ -143,7 +143,7 @@
     <string name="fee_fast">Rapide</string>
     <string name="fee_normal">Normale</string>
     <string name="fee_slow">Lente</string>
-    <string name="send_replay_protect">Protection contre le rejeu BTCB2 (OP_RETURN de 100 octets)</string>
+    <string name="send_replay_protect">Protection contre le rejeu XBT (OP_RETURN de 100 octets)</string>
     <string name="send_replay_note">Ajoute ~110 vB de frais. Non standard sur le relais Bitcoin par défaut — diffusez via un nœud/service qui accepte les gros OP_RETURN.</string>
     <string name="send_service_fee">Frais de service : %1$s%% du montant envoyé (min. %2$d sat) — soutient ce nœud hébergé.</string>
     <string name="cd_amount_unit">unité du montant</string>

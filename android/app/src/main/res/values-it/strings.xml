@@ -143,7 +143,7 @@
     <string name="fee_fast">Veloce</string>
     <string name="fee_normal">Normale</string>
     <string name="fee_slow">Lenta</string>
-    <string name="send_replay_protect">Protezione replay BTCB2 (OP_RETURN da 100 byte)</string>
+    <string name="send_replay_protect">Protezione replay XBT (OP_RETURN da 100 byte)</string>
     <string name="send_replay_note">Aggiunge ~110 vB di commissione. Non standard sul relay Bitcoin predefinito — trasmetti tramite un nodo/servizio che accetta OP_RETURN grandi.</string>
     <string name="send_service_fee">Commissione di servizio: %1$s%% dell\'importo inviato (min %2$d sat) — sostiene questo nodo ospitato.</string>
     <string name="cd_amount_unit">unità dell\'importo</string>

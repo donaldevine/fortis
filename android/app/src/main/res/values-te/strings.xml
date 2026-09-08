@@ -143,7 +143,7 @@
     <string name="fee_fast">వేగవంతం</string>
     <string name="fee_normal">సాధారణం</string>
     <string name="fee_slow">నెమ్మది</string>
-    <string name="send_replay_protect">BTCB2 రీప్లే రక్షణ (100-బైట్ OP_RETURN)</string>
+    <string name="send_replay_protect">XBT రీప్లే రక్షణ (100-బైట్ OP_RETURN)</string>
     <string name="send_replay_note">~110 vB ఫీజును జోడిస్తుంది. డిఫాల్ట్ Bitcoin రిలేపై నాన్-స్టాండర్డ్ — పెద్ద OP_RETURN ను అంగీకరించే నోడ్/సేవ ద్వారా ప్రసారం చేయండి.</string>
     <string name="send_service_fee">సేవా ఫీజు: పంపిన మొత్తంలో %1$s%% (కనిష్ఠం %2$d sat) — ఇది ఈ హోస్ట్ చేసిన నోడ్‌కు మద్దతు ఇస్తుంది.</string>
     <string name="cd_amount_unit">మొత్తం యూనిట్</string>

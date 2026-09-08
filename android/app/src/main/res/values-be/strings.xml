@@ -143,7 +143,7 @@
     <string name="fee_fast">Хутка</string>
     <string name="fee_normal">Звычайна</string>
     <string name="fee_slow">Павольна</string>
-    <string name="send_replay_protect">Абарона ад паўтору BTCB2 (100-байтавы OP_RETURN)</string>
+    <string name="send_replay_protect">Абарона ад паўтору XBT (100-байтавы OP_RETURN)</string>
     <string name="send_replay_note">Дадае ~110 vB камісіі. Нестандартна для прадвызначанага рэлея Bitcoin — трансліруйце праз вузел/сэрвіс, які прымае вялікія OP_RETURN.</string>
     <string name="send_service_fee">Камісія за сэрвіс: %1$s%% ад адпраўленай сумы (мін. %2$d sat) — падтрымлівае гэты хостынгавы вузел.</string>
     <string name="cd_amount_unit">адзінка сумы</string>

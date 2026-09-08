@@ -162,7 +162,7 @@
     <string name="fee_fast">Fast</string>
     <string name="fee_normal">Normal</string>
     <string name="fee_slow">Slow</string>
-    <string name="send_replay_protect">BTCB2 replay protection (100-byte OP_RETURN)</string>
+    <string name="send_replay_protect">XBT replay protection (100-byte OP_RETURN)</string>
     <string name="send_replay_note">Adds ~110 vB of fee. Non-standard on default Bitcoin relay — broadcast via a node/service that accepts large OP_RETURN.</string>
     <string name="send_service_fee">Service fee: %1$s%% of the amount sent (min %2$d sat) — supports this hosted node.</string>
     <string name="cd_amount_unit">amount unit</string>

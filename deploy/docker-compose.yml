@@ -1,4 +1,4 @@
-# The fortis backend stack: fortis-index (BTCB2) + fortis-edge, optionally Caddy.
+# The fortis backend stack: fortis-index (XBT) + fortis-edge, optionally Caddy.
 #
 # The Bitcoin Knots / Bitcoin Core nodes stay on the host — the containers reach
 # them at host.docker.internal. Copy .env.example to .env and fill it in.
@@ -22,8 +22,8 @@ services:
     # add `--start-height N` here to index from somewhere other than the fork height
     command: >
       --network ${NETWORK:-mainnet}
-      --rpc-url ${BTCB2_RPC_URL:-http://host.docker.internal:8332}
-      --rpc-auth ${BTCB2_RPC_AUTH}
+      --rpc-url ${XBT_RPC_URL:-http://host.docker.internal:8332}
+      --rpc-auth ${XBT_RPC_AUTH}
       --db /data/fortis-index.sqlite
       --bind 0.0.0.0:8094
     volumes:
@@ -36,10 +36,10 @@ services:
     <<: *image
     command: >
       --bind 0.0.0.0:8098
-      --btcb2-upstream http://index:8094
+      --xbt-upstream http://index:8094
       --btc-upstream ${BTC_UPSTREAM:-https://mempool.space/api}
       --btc-price-url ${BTC_PRICE_URL:-https://api.kraken.com/0/public/Ticker?pair=XBTUSD}
-      --btcb2-price-url ${BTCB2_PRICE_URL:-https://mempool.kilombino.com/api/v1/prices}
+      --xbt-price-url ${XBT_PRICE_URL:-https://mempool.kilombino.com/api/v1/prices}
       --btc-upstream-rate ${BTC_UPSTREAM_RATE:-5}
       --btc-haskoin-url ${BTC_HASKOIN_URL:-https://api.haskoin.com/btc}
       --secret-file /data/fortis-edge.secret

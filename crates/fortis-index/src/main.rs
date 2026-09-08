@@ -29,7 +29,7 @@ use sync::Syncer;
 
 /// BLAKE2b fork activation height on mainnet — the natural place to start
 /// indexing (every in-app wallet's activity is at or after it).
-const BTCB2_FORK_HEIGHT: u64 = 961_640;
+const XBT_FORK_HEIGHT: u64 = 961_640;
 
 #[derive(Parser)]
 #[command(name = "fortis-index", version, about = "address index → Esplora REST (holds no keys)")]
@@ -102,7 +102,7 @@ fn run() -> Result<()> {
 
     let cs = fortis_node::chain_status(&rpc).context("reaching the node")?;
     let network = if regtest { bitcoin::Network::Regtest } else { bitcoin::Network::Bitcoin };
-    let start_height = args.start_height.unwrap_or(if regtest { 0 } else { BTCB2_FORK_HEIGHT });
+    let start_height = args.start_height.unwrap_or(if regtest { 0 } else { XBT_FORK_HEIGHT });
 
     eprintln!("fortis-index → {rpc_url}  ({}, chain {})", cs.subversion, cs.chain);
     eprintln!("             db {}  ·  indexing from height {start_height}", args.db);

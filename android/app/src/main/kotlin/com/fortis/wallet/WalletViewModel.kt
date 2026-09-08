@@ -37,7 +37,7 @@ const val HOSTED_EDGE = "https://api.fortis.rest"
 
 /** Public Esplora fallbacks, used when [HOSTED_EDGE] is unreachable. */
 const val PUBLIC_BTC_ESPLORA = "https://mempool.space/api"
-const val PUBLIC_BTCB2_ESPLORA = "https://mempool.guide/api"
+const val PUBLIC_XBT_ESPLORA = "https://mempool.guide/api"
 
 data class PlanPreview(
     val plan: FundingPlan, val feerate: ULong, val to: String,
@@ -92,7 +92,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     var status by mutableStateOf<ChainStatus?>(null); private set
     var balances by mutableStateOf<Balances?>(null); private set
 
-    /** USD per whole coin, keyed by chain ("btc" / "btcb2"). Shared by every
+    /** USD per whole coin, keyed by chain ("btc" / "xbt"). Shared by every
      *  wallet on that chain; absent = no fiat value shown. */
     var coinUsd by mutableStateOf<Map<String, Double>>(emptyMap()); private set
 
@@ -444,7 +444,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         val view = session?.view ?: return
         if (backend == null) backend = edgeBackend(c.backendToken ?: "")
         if (fallback == null) {
-            val esplora = if (c.chain == "btc") PUBLIC_BTC_ESPLORA else PUBLIC_BTCB2_ESPLORA
+            val esplora = if (c.chain == "btc") PUBLIC_BTC_ESPLORA else PUBLIC_XBT_ESPLORA
             fallback = EsploraBackend(http, esplora, view, { config!!.nextReceive to config!!.nextChange })
         }
     }

@@ -143,7 +143,7 @@
     <string name="fee_fast">เร็ว</string>
     <string name="fee_normal">ปกติ</string>
     <string name="fee_slow">ช้า</string>
-    <string name="send_replay_protect">การป้องกันการเล่นซ้ำ BTCB2 (OP_RETURN 100 ไบต์)</string>
+    <string name="send_replay_protect">การป้องกันการเล่นซ้ำ XBT (OP_RETURN 100 ไบต์)</string>
     <string name="send_replay_note">เพิ่มค่าธรรมเนียมประมาณ 110 vB ไม่เป็นมาตรฐานบนรีเลย์ Bitcoin เริ่มต้น — ออกอากาศผ่านโหนด/บริการที่รับ OP_RETURN ขนาดใหญ่</string>
     <string name="send_service_fee">ค่าบริการ: %1$s%% ของจำนวนที่ส่ง (ขั้นต่ำ %2$d sat) — สนับสนุนโหนดที่โฮสต์นี้</string>
     <string name="cd_amount_unit">หน่วยของจำนวน</string>

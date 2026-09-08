@@ -143,7 +143,7 @@
     <string name="fee_fast">מהיר</string>
     <string name="fee_normal">רגיל</string>
     <string name="fee_slow">איטי</string>
-    <string name="send_replay_protect">הגנת שידור חוזר של BTCB2 (‏OP_RETURN של 100 בתים)</string>
+    <string name="send_replay_protect">הגנת שידור חוזר של XBT (‏OP_RETURN של 100 בתים)</string>
     <string name="send_replay_note">מוסיף עמלה של ~110 vB. לא תקני על ממסר Bitcoin ברירת המחדל — שדרו דרך צומת/שירות שמקבל OP_RETURN גדולים.</string>
     <string name="send_service_fee">עמלת שירות: %1$s%% מהסכום שנשלח (מינימום %2$d sat) — תומך בצומת המתארח הזה.</string>
     <string name="cd_amount_unit">יחידת סכום</string>

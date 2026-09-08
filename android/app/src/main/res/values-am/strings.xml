@@ -143,7 +143,7 @@
     <string name="fee_fast">ፈጣን</string>
     <string name="fee_normal">መደበኛ</string>
     <string name="fee_slow">ዝግተኛ</string>
-    <string name="send_replay_protect">BTCB2 የድጋሚ ጥበቃ (100-ባይት OP_RETURN)</string>
+    <string name="send_replay_protect">XBT የድጋሚ ጥበቃ (100-ባይት OP_RETURN)</string>
     <string name="send_replay_note">~110 vB ክፍያ ይጨምራል። በነባሪ የ Bitcoin ማስተላለፊያ ላይ ደረጃውን ያልጠበቀ ነው — ትልቅ OP_RETURN የሚቀበል ኖድ/አገልግሎት በኩል አሰራጭ።</string>
     <string name="send_service_fee">የአገልግሎት ክፍያ፦ ከተላከው መጠን %1$s%% (ቢያንስ %2$d sat) — ይህን የተስተናገደ ኖድ ይደግፋል።</string>
     <string name="cd_amount_unit">የመጠን አሃድ</string>

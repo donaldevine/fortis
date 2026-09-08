@@ -143,7 +143,7 @@
     <string name="fee_fast">වේගවත්</string>
     <string name="fee_normal">සාමාන්‍ය</string>
     <string name="fee_slow">මන්දගාමී</string>
-    <string name="send_replay_protect">BTCB2 නැවත ධාවන ආරක්ෂාව (බයිට් 100 OP_RETURN)</string>
+    <string name="send_replay_protect">XBT නැවත ධාවන ආරක්ෂාව (බයිට් 100 OP_RETURN)</string>
     <string name="send_replay_note">~110 vB ගාස්තුවක් එක් කරයි. පෙරනිමි Bitcoin රිලේ හි සම්මත නොවේ — විශාල OP_RETURN පිළිගන්නා node/සේවාවක් හරහා විකාශනය කරන්න.</string>
     <string name="send_service_fee">සේවා ගාස්තුව: යවන ලද මුදලෙන් %1$s%% (අවම %2$d sat) — මෙය මෙම සත්කාරක node ට සහාය වේ.</string>
     <string name="cd_amount_unit">මුදල් ඒකකය</string>

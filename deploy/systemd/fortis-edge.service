@@ -11,10 +11,10 @@ User=fortis
 Group=fortis
 ExecStart=/usr/local/bin/fortis-edge \
   --bind 127.0.0.1:8098 \
-  --btcb2-upstream http://127.0.0.1:8094 \
+  --xbt-upstream http://127.0.0.1:8094 \
   --btc-upstream https://mempool.space/api \
   --btc-price-url 'https://api.kraken.com/0/public/Ticker?pair=XBTUSD' \
-  --btcb2-price-url https://mempool.kilombino.com/api/v1/prices \
+  --xbt-price-url https://mempool.kilombino.com/api/v1/prices \
   --btc-upstream-rate 5 \
   --btc-haskoin-url https://api.haskoin.com/btc \
   --secret-file /var/lib/fortis/fortis-edge.secret \

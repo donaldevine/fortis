@@ -143,7 +143,7 @@
     <string name="fee_fast">দ্রুত</string>
     <string name="fee_normal">সাধারণ</string>
     <string name="fee_slow">ধীর</string>
-    <string name="send_replay_protect">BTCB2 রিপ্লে সুরক্ষা (১০০-বাইট OP_RETURN)</string>
+    <string name="send_replay_protect">XBT রিপ্লে সুরক্ষা (১০০-বাইট OP_RETURN)</string>
     <string name="send_replay_note">~110 vB ফি যোগ করে। ডিফল্ট Bitcoin রিলেতে অ-মানক — বড় OP_RETURN গ্রহণ করে এমন নোড/পরিষেবার মাধ্যমে সম্প্রচার করুন।</string>
     <string name="send_service_fee">পরিষেবা ফি: পাঠানো পরিমাণের %1$s%% (সর্বনিম্ন %2$d sat) — এই হোস্ট করা নোডকে সমর্থন করে।</string>
     <string name="cd_amount_unit">পরিমাণের একক</string>

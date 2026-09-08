@@ -143,7 +143,7 @@
     <string name="fee_fast">លឿន</string>
     <string name="fee_normal">ធម្មតា</string>
     <string name="fee_slow">យឺត</string>
-    <string name="send_replay_protect">ការការពារការចាក់ឡើងវិញ BTCB2 (OP_RETURN 100 បៃ)</string>
+    <string name="send_replay_protect">ការការពារការចាក់ឡើងវិញ XBT (OP_RETURN 100 បៃ)</string>
     <string name="send_replay_note">បន្ថែមថ្លៃសេវា ~110 vB។ មិនស្តង់ដារនៅលើ relay Bitcoin លំនាំដើម — ផ្សព្វផ្សាយតាមរយៈ node/សេវាដែលទទួលយក OP_RETURN ធំ។</string>
     <string name="send_service_fee">ថ្លៃសេវា៖ %1$s%% នៃចំនួនដែលបានផ្ញើ (យ៉ាងតិច %2$d sat) — គាំទ្រ node ដែលបង្ហោះនេះ។</string>
     <string name="cd_amount_unit">ឯកតាចំនួន</string>

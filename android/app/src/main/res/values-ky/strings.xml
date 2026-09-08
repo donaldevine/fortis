@@ -143,7 +143,7 @@
     <string name="fee_fast">Ылдам</string>
     <string name="fee_normal">Кадимки</string>
     <string name="fee_slow">Жай</string>
-    <string name="send_replay_protect">BTCB2 кайра ойнотуудан коргоо (100 байттык OP_RETURN)</string>
+    <string name="send_replay_protect">XBT кайра ойнотуудан коргоо (100 байттык OP_RETURN)</string>
     <string name="send_replay_note">~110 vB комиссия кошот. Демейки Bitcoin релесинде стандарттуу эмес — чоң OP_RETURN кабыл алган түйүн/кызмат аркылуу таратыңыз.</string>
     <string name="send_service_fee">Кызмат акысы: жөнөтүлгөн суммунун %1$s%%\'и (кеминде %2$d sat) — бул жайгаштырылган түйүндү колдойт.</string>
     <string name="cd_amount_unit">сумма бирдиги</string>

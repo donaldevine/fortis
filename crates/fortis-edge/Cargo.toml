@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "public edge for the fortis wallet backends: per-install tokens, rate limiting, response caching, CORS, metrics — in front of fortis-index (BTCB2) and an Esplora upstream (BTC)."
+description = "public edge for the fortis wallet backends: per-install tokens, rate limiting, response caching, CORS, metrics — in front of fortis-index (XBT) and an Esplora upstream (BTC)."
 
 [[bin]]
 name = "fortis-edge"

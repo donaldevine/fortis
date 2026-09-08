@@ -143,7 +143,7 @@
     <string name="fee_fast">Szybko</string>
     <string name="fee_normal">Normalnie</string>
     <string name="fee_slow">Wolno</string>
-    <string name="send_replay_protect">Ochrona przed powtórzeniem BTCB2 (OP_RETURN 100 bajtów)</string>
+    <string name="send_replay_protect">Ochrona przed powtórzeniem XBT (OP_RETURN 100 bajtów)</string>
     <string name="send_replay_note">Dodaje ~110 vB opłaty. Niestandardowe w domyślnym relayu Bitcoina — rozgłoś przez węzeł/usługę akceptującą duże OP_RETURN.</string>
     <string name="send_service_fee">Opłata za usługę: %1$s%% wysyłanej kwoty (min. %2$d sat) — wspiera ten hostowany węzeł.</string>
     <string name="cd_amount_unit">jednostka kwoty</string>

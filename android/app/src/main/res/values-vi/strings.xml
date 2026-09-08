@@ -143,7 +143,7 @@
     <string name="fee_fast">Nhanh</string>
     <string name="fee_normal">Bình thường</string>
     <string name="fee_slow">Chậm</string>
-    <string name="send_replay_protect">Bảo vệ chống phát lại BTCB2 (OP_RETURN 100 byte)</string>
+    <string name="send_replay_protect">Bảo vệ chống phát lại XBT (OP_RETURN 100 byte)</string>
     <string name="send_replay_note">Thêm ~110 vB phí. Không tiêu chuẩn trên relay Bitcoin mặc định — phát qua nút/dịch vụ chấp nhận OP_RETURN lớn.</string>
     <string name="send_service_fee">Phí dịch vụ: %1$s%% số tiền gửi (tối thiểu %2$d sat) — hỗ trợ nút được lưu trữ này.</string>
     <string name="cd_amount_unit">đơn vị số tiền</string>

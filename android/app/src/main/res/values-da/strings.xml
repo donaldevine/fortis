@@ -143,7 +143,7 @@
     <string name="fee_fast">Hurtig</string>
     <string name="fee_normal">Normal</string>
     <string name="fee_slow">Langsom</string>
-    <string name="send_replay_protect">BTCB2-replaybeskyttelse (100-byte OP_RETURN)</string>
+    <string name="send_replay_protect">XBT-replaybeskyttelse (100-byte OP_RETURN)</string>
     <string name="send_replay_note">Tilføjer ~110 vB i gebyr. Ikke-standard på Bitcoins standardrelæ — udsend via en node/tjeneste, der accepterer store OP_RETURN.</string>
     <string name="send_service_fee">Servicegebyr: %1$s%% af det sendte beløb (min. %2$d sat) — støtter denne hostede node.</string>
     <string name="cd_amount_unit">beløbsenhed</string>

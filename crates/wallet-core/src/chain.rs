@@ -12,16 +12,16 @@ pub enum Chain {
     /// Canonical Bitcoin (SHA256d proof-of-work).
     Btc,
     /// Bitcoin Knots BLAKE2b hard fork.
-    Btcb2,
+    Xbt,
 }
 
 impl Chain {
-    pub const ALL: [Chain; 2] = [Chain::Btc, Chain::Btcb2];
+    pub const ALL: [Chain; 2] = [Chain::Btc, Chain::Xbt];
 
     pub fn as_str(self) -> &'static str {
         match self {
             Chain::Btc => "btc",
-            Chain::Btcb2 => "btcb2",
+            Chain::Xbt => "xbt",
         }
     }
 }
@@ -59,7 +59,7 @@ impl ChainParams {
     /// type would need this revisited.
     pub fn blake2b() -> Self {
         Self {
-            chain: Chain::Btcb2,
+            chain: Chain::Xbt,
             network: Network::Bitcoin,
             bip44_coin_type: 0,
             // Wider than Bitcoin: BLAKE2b confirmations are slow and reorg-prone.
@@ -96,21 +96,21 @@ impl ChainParams {
     pub fn for_chain(chain: Chain) -> Self {
         match chain {
             Chain::Btc => Self::bitcoin(),
-            Chain::Btcb2 => Self::blake2b(),
+            Chain::Xbt => Self::blake2b(),
         }
     }
 
     /// `network` accepts `"mainnet"` / `"bitcoin"`, `"regtest"`, or
-    /// `"regtest-legacy"` (regtest but the BTCB2 leg signs plain segwit-v0 rather than
+    /// `"regtest-legacy"` (regtest but the XBT leg signs plain segwit-v0 rather than
     /// `SIGHASH_UNIFIED` — for smoke-testing swap mechanics on two vanilla nodes
     /// before a real BLAKE2b node is available).
     pub fn resolve(chain: Chain, network: &str) -> Option<Self> {
         Some(match (chain, network) {
             (Chain::Btc, "mainnet" | "bitcoin") => Self::bitcoin(),
             (Chain::Btc, "regtest" | "regtest-legacy") => Self::bitcoin_regtest(),
-            (Chain::Btcb2, "mainnet" | "bitcoin") => Self::blake2b(),
-            (Chain::Btcb2, "regtest") => Self::blake2b_regtest(),
-            (Chain::Btcb2, "regtest-legacy") => Self {
+            (Chain::Xbt, "mainnet" | "bitcoin") => Self::blake2b(),
+            (Chain::Xbt, "regtest") => Self::blake2b_regtest(),
+            (Chain::Xbt, "regtest-legacy") => Self {
                 require_unified_sighash: false,
                 ..Self::blake2b_regtest()
             },

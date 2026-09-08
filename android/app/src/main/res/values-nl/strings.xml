@@ -143,7 +143,7 @@
     <string name="fee_fast">Snel</string>
     <string name="fee_normal">Normaal</string>
     <string name="fee_slow">Langzaam</string>
-    <string name="send_replay_protect">BTCB2-replaybescherming (OP_RETURN van 100 bytes)</string>
+    <string name="send_replay_protect">XBT-replaybescherming (OP_RETURN van 100 bytes)</string>
     <string name="send_replay_note">Voegt ~110 vB aan kosten toe. Niet-standaard op de standaard Bitcoin-relay — verzend via een node/dienst die grote OP_RETURN accepteert.</string>
     <string name="send_service_fee">Servicekosten: %1$s%% van het verzonden bedrag (min. %2$d sat) — ondersteunt deze gehoste node.</string>
     <string name="cd_amount_unit">bedrageenheid</string>

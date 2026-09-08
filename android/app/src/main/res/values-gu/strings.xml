@@ -143,7 +143,7 @@
     <string name="fee_fast">ઝડપી</string>
     <string name="fee_normal">સામાન્ય</string>
     <string name="fee_slow">ધીમું</string>
-    <string name="send_replay_protect">BTCB2 રિપ્લે સુરક્ષા (100-બાઇટ OP_RETURN)</string>
+    <string name="send_replay_protect">XBT રિપ્લે સુરક્ષા (100-બાઇટ OP_RETURN)</string>
     <string name="send_replay_note">~110 vB ફી ઉમેરે છે. ડિફૉલ્ટ Bitcoin રિલે પર બિન-માનક — મોટા OP_RETURN સ્વીકારતા નોડ/સેવા દ્વારા બ્રોડકાસ્ટ કરો.</string>
     <string name="send_service_fee">સેવા ફી: મોકલેલી રકમના %1$s%% (ન્યૂનતમ %2$d sat) — આ હોસ્ટ કરેલા નોડને સમર્થન આપે છે.</string>
     <string name="cd_amount_unit">રકમનું એકમ</string>

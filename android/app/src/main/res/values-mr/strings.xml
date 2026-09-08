@@ -143,7 +143,7 @@
     <string name="fee_fast">जलद</string>
     <string name="fee_normal">सामान्य</string>
     <string name="fee_slow">हळू</string>
-    <string name="send_replay_protect">BTCB2 रिप्ले संरक्षण (100-बाइट OP_RETURN)</string>
+    <string name="send_replay_protect">XBT रिप्ले संरक्षण (100-बाइट OP_RETURN)</string>
     <string name="send_replay_note">~110 vB शुल्क जोडते. डीफॉल्ट Bitcoin रिलेवर गैर-मानक — मोठे OP_RETURN स्वीकारणाऱ्या नोड/सेवेद्वारे प्रसारित करा.</string>
     <string name="send_service_fee">सेवा शुल्क: पाठवलेल्या रकमेच्या %1$s%% (किमान %2$d sat) — हे या होस्ट केलेल्या नोडला समर्थन देते.</string>
     <string name="cd_amount_unit">रकमेचे एकक</string>

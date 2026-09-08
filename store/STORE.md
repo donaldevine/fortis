@@ -23,7 +23,7 @@ Non-custodial wallet for Bitcoin BLAKE2b and Bitcoin Legacy.
 ## Full description (≤ 4000 chars)
 
 ```
-fortis is a non-custodial wallet for Bitcoin BLAKE2b (BTCB2) and Bitcoin Legacy
+fortis is a non-custodial wallet for Bitcoin BLAKE2b (XBT) and Bitcoin Legacy
 (BTC).
 
 Your keys are yours. The recovery phrase is generated on your device and
@@ -39,7 +39,7 @@ WHAT YOU CAN DO
 • Send: scan a QR code with the camera or paste an address, choose a fee
   (fast / normal / slow, or a custom sat/vB rate), review, and sign.
 • Tap any transaction to open it in a public block explorer.
-• Switch between the Bitcoin and BTCB2 chains.
+• Switch between the Bitcoin and XBT chains.
 
 BUILT FOR SELF-CUSTODY
 • Keys are encrypted at rest with a key derived from your password.
@@ -47,7 +47,7 @@ BUILT FOR SELF-CUSTODY
   screenshots, screen recording, and the app switcher.
 • When you create a wallet, fortis stirs in extra randomness from your device's
   motion sensors and timing jitter, on top of the platform's secure generator.
-• BTCB2 spends use the fork's opt-in replay-protected signature type so a
+• XBT spends use the fork's opt-in replay-protected signature type so a
   transaction is bound to one chain.
 
 PRIVACY

@@ -4,7 +4,7 @@ import java.text.NumberFormat
 import java.util.Currency
 import java.util.Locale
 
-/** A coin amount (BTC / BTCB2): always 8 dp with a `.` decimal — the universal
+/** A coin amount (BTC / XBT): always 8 dp with a `.` decimal — the universal
  *  convention for on-chain values, independent of the device locale. */
 fun fmtCoin(sat: Long): String = "%.8f".format(Locale.ROOT, sat / 1e8)
 

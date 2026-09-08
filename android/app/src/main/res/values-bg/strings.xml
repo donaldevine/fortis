@@ -143,7 +143,7 @@
     <string name="fee_fast">Бързо</string>
     <string name="fee_normal">Нормално</string>
     <string name="fee_slow">Бавно</string>
-    <string name="send_replay_protect">BTCB2 защита срещу повторение (100-байтов OP_RETURN)</string>
+    <string name="send_replay_protect">XBT защита срещу повторение (100-байтов OP_RETURN)</string>
     <string name="send_replay_note">Добавя ~110 vB такса. Нестандартно за релето по подразбиране на Bitcoin — излъчете чрез възел/услуга, която приема големи OP_RETURN.</string>
     <string name="send_service_fee">Такса за услугата: %1$s%% от изпратената сума (мин. %2$d sat) — поддържа този хостван възел.</string>
     <string name="cd_amount_unit">единица за сумата</string>

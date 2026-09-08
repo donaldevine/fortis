@@ -143,7 +143,7 @@
     <string name="fee_fast">Rapid</string>
     <string name="fee_normal">Normal</string>
     <string name="fee_slow">Lent</string>
-    <string name="send_replay_protect">Protecție împotriva reluării BTCB2 (OP_RETURN de 100 de octeți)</string>
+    <string name="send_replay_protect">Protecție împotriva reluării XBT (OP_RETURN de 100 de octeți)</string>
     <string name="send_replay_note">Adaugă ~110 vB comision. Nestandard pe releul Bitcoin implicit — difuzează printr-un nod/serviciu care acceptă OP_RETURN mari.</string>
     <string name="send_service_fee">Comision de serviciu: %1$s%% din suma trimisă (min. %2$d sat) — susține acest nod găzduit.</string>
     <string name="cd_amount_unit">unitatea sumei</string>

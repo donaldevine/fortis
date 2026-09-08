@@ -69,7 +69,7 @@ enum Cmd {
 #[derive(Clone, Copy, ValueEnum)]
 enum ChainArg {
     /// The Bitcoin Knots BLAKE2b hard fork.
-    Btcb2,
+    Xbt,
     /// Canonical Bitcoin.
     Btc,
 }
@@ -77,13 +77,13 @@ enum ChainArg {
 impl ChainArg {
     fn as_str(self) -> &'static str {
         match self {
-            ChainArg::Btcb2 => "btcb2",
+            ChainArg::Xbt => "xbt",
             ChainArg::Btc => "btc",
         }
     }
     fn to_chain(self) -> Chain {
         match self {
-            ChainArg::Btcb2 => Chain::Btcb2,
+            ChainArg::Xbt => Chain::Xbt,
             ChainArg::Btc => Chain::Btc,
         }
     }
@@ -101,7 +101,7 @@ struct InitArgs {
     #[arg(long, default_value_t = 24)]
     words: u8,
     /// Chain this wallet tracks.
-    #[arg(long, value_enum, default_value_t = ChainArg::Btcb2)]
+    #[arg(long, value_enum, default_value_t = ChainArg::Xbt)]
     chain: ChainArg,
     /// Network: mainnet, regtest, or regtest-legacy.
     #[arg(long, default_value = "mainnet")]
@@ -234,7 +234,7 @@ fn with_ctx(home: &Path, f: impl FnOnce(&WalletConfig, &Rpc) -> Result<()>) -> R
 
 fn resolve_params(cfg: &WalletConfig) -> Result<ChainParams> {
     let chain = match cfg.chain.as_str() {
-        "btcb2" => Chain::Btcb2,
+        "xbt" => Chain::Xbt,
         "btc" => Chain::Btc,
         other => bail!("wallet.json has unknown chain {other:?}"),
     };
@@ -568,8 +568,8 @@ fn cmd_address(home: &Path, mut cfg: WalletConfig, rpc: &Rpc, a: &AddressArgs) -
 // ---------------------------------------------------------------------------
 
 fn unit(cfg: &WalletConfig) -> &'static str {
-    if cfg.chain == "btcb2" {
-        "BTCB2"
+    if cfg.chain == "xbt" {
+        "XBT"
     } else {
         "BTC"
     }
@@ -822,10 +822,10 @@ mod tests {
 
     fn sample_cfg() -> WalletConfig {
         let key = MasterKey::from_phrase(PHRASE, "").unwrap();
-        let params = ChainParams::resolve(Chain::Btcb2, "mainnet").unwrap();
+        let params = ChainParams::resolve(Chain::Xbt, "mainnet").unwrap();
         WalletConfig {
             version: CONFIG_VERSION,
-            chain: "btcb2".into(),
+            chain: "xbt".into(),
             network: "mainnet".into(),
             account_xpub: key.account_xpub(&params, 0).unwrap().to_string(),
             master_fingerprint: key.master_fingerprint().to_string(),
@@ -834,7 +834,7 @@ mod tests {
             node: NodeConfig {
                 datadir: "/x".into(),
                 rpc_url: "http://127.0.0.1:8332".into(),
-                watch_wallet: "fortis-btcb2".into(),
+                watch_wallet: "fortis-xbt".into(),
                 cookie_file: None,
                 rpc_user: None,
                 rpc_password: None,
@@ -864,7 +864,7 @@ mod tests {
     }
 
     #[test]
-    fn btcb2_wallet_requires_unified_sighash() {
+    fn xbt_wallet_requires_unified_sighash() {
         let params = resolve_params(&sample_cfg()).unwrap();
         assert!(params.require_unified_sighash);
     }

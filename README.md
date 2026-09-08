@@ -18,7 +18,7 @@ reimplementation of the crypto per platform.
 | [`crates/wallet-cli`](crates/wallet-cli) | `fortis` — desktop shell: watch-only reporting plus send / sweep (coin selection, `SIGHASH_UNIFIED` signing, fee estimation, broadcast). |
 | [`crates/fortisd`](crates/fortisd) | token-guarded local HTTP gateway over the node for the web wallet, or an Esplora CORS proxy (`--esplora-proxy`, no node). No keys. |
 | [`crates/fortis-index`](crates/fortis-index) | address index over a Knots / BLAKE2b node, served as the Esplora REST subset the wallet already speaks — stateless, so one instance serves many wallets. No keys. |
-| [`crates/fortis-edge`](crates/fortis-edge) | public front for the backends: per-install tokens, rate limiting, response caching, CORS, `/metrics` — in front of `fortis-index` (BTCB2) and an Esplora upstream (BTC). No keys. |
+| [`crates/fortis-edge`](crates/fortis-edge) | public front for the backends: per-install tokens, rate limiting, response caching, CORS, `/metrics` — in front of `fortis-index` (XBT) and an Esplora upstream (BTC). No keys. |
 | [`web/`](web) | the browser wallet — a static PWA; keys stay in wasm, encrypted seed in IndexedDB. Reads the chain via a public Esplora explorer or your own node. |
 | [`android/`](android) | native Android wallet — Jetpack Compose; keys via `wallet-ffi`, encrypted seed in DataStore. Same design language and backends as `web/`. |
 | [`deploy/`](deploy) | running the hosted backend (`fortis-index` + `fortis-edge` + Caddy) — systemd units, a Docker Compose stack, and the Tailscale / public-DNS paths. |

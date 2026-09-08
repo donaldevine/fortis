@@ -12,7 +12,7 @@ fun explorerTxUrl(chain: String, network: String, txid: String): String? {
     if (network != "mainnet") return null
     val base = when (chain) {
         "btc" -> "https://mempool.space"
-        "btcb2" -> "https://mempool.guide"
+        "xbt" -> "https://mempool.guide"
         else -> return null
     }
     return "$base/tx/$txid"

@@ -143,7 +143,7 @@
     <string name="fee_fast">Snabb</string>
     <string name="fee_normal">Normal</string>
     <string name="fee_slow">Långsam</string>
-    <string name="send_replay_protect">BTCB2-replayskydd (100-byte OP_RETURN)</string>
+    <string name="send_replay_protect">XBT-replayskydd (100-byte OP_RETURN)</string>
     <string name="send_replay_note">Lägger till ~110 vB i avgift. Icke-standard på Bitcoins standardrelä — sänd via en nod/tjänst som accepterar stora OP_RETURN.</string>
     <string name="send_service_fee">Serviceavgift: %1$s%% av det skickade beloppet (min %2$d sat) — stödjer denna hostade nod.</string>
     <string name="cd_amount_unit">beloppsenhet</string>

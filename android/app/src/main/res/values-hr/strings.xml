@@ -143,7 +143,7 @@
     <string name="fee_fast">Brzo</string>
     <string name="fee_normal">Normalno</string>
     <string name="fee_slow">Sporo</string>
-    <string name="send_replay_protect">BTCB2 zaštita od ponavljanja (100-bajtni OP_RETURN)</string>
+    <string name="send_replay_protect">XBT zaštita od ponavljanja (100-bajtni OP_RETURN)</string>
     <string name="send_replay_note">Dodaje ~110 vB naknade. Nestandardno na zadanom Bitcoin releju — emitirajte putem čvora/usluge koja prihvaća velike OP_RETURN.</string>
     <string name="send_service_fee">Naknada za uslugu: %1$s%% poslanog iznosa (min. %2$d sat) — podupire ovaj hostirani čvor.</string>
     <string name="cd_amount_unit">jedinica iznosa</string>

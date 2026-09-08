@@ -262,19 +262,19 @@ mod tests {
     }
 
     #[test]
-    fn btcb2_redeem_roundtrip_uses_unified_sighash_and_verifies() {
+    fn xbt_redeem_roundtrip_uses_unified_sighash_and_verifies() {
         use crate::keys::MasterKey;
         use bitcoin::secp256k1::Message;
 
         let (_m, key) = MasterKey::generate(&[42u8; 32]).unwrap();
-        let btcb2 = ChainParams::blake2b();
-        let redeem_pk = key.swap_pubkey(&btcb2, 0, 3).unwrap();
+        let xbt = ChainParams::blake2b();
+        let redeem_pk = key.swap_pubkey(&xbt, 0, 3).unwrap();
         let refund_pk = pk(9);
         let preimage = [7u8; 32];
         let hashlock = sha256::Hash::hash(&preimage);
 
         let c = HtlcContract::build(
-            &btcb2,
+            &xbt,
             hashlock,
             &redeem_pk,
             &refund_pk,
@@ -287,7 +287,7 @@ mod tests {
         let mut tx = c.redeem_tx(prevout, ScriptBuf::from(vec![0u8; 22]), Amount::from_sat(400)).unwrap();
 
         let msg = c.spend_sighash(&tx, 0).unwrap();
-        let sig = key.sign_swap(&btcb2, 0, 3, &msg).unwrap();
+        let sig = key.sign_swap(&xbt, 0, 3, &msg).unwrap();
         assert_eq!(sig.last(), Some(&0x21)); // ALL | UNIFIED
 
         c.finalize_redeem(&mut tx, 0, &sig, &redeem_pk, &preimage);

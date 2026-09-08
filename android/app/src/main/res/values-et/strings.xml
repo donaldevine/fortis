@@ -143,7 +143,7 @@
     <string name="fee_fast">Kiire</string>
     <string name="fee_normal">Tavaline</string>
     <string name="fee_slow">Aeglane</string>
-    <string name="send_replay_protect">BTCB2 kordusrünnaku kaitse (100-baidine OP_RETURN)</string>
+    <string name="send_replay_protect">XBT kordusrünnaku kaitse (100-baidine OP_RETURN)</string>
     <string name="send_replay_note">Lisab ~110 vB tasu. Mittestandardne Bitcoini vaikereleel — edasta sõlme/teenuse kaudu, mis aktsepteerib suuri OP_RETURN-e.</string>
     <string name="send_service_fee">Teenustasu: %1$s%% saadetud summast (min %2$d sat) — toetab seda majutatud sõlme.</string>
     <string name="cd_amount_unit">summa ühik</string>

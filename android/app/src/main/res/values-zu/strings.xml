@@ -143,7 +143,7 @@
     <string name="fee_fast">Shesha</string>
     <string name="fee_normal">Okujwayelekile</string>
     <string name="fee_slow">Nensa</string>
-    <string name="send_replay_protect">Ukuvikela ukudlala kabusha kwe-BTCB2 (i-OP_RETURN yamabhayithi angu-100)</string>
+    <string name="send_replay_protect">Ukuvikela ukudlala kabusha kwe-XBT (i-OP_RETURN yamabhayithi angu-100)</string>
     <string name="send_replay_note">Yengeza imali engu-~110 vB. Akujwayelekile ku-relay ezenzakalelayo ye-Bitcoin — sakaza ngenodi/isevisi eyamukela ama-OP_RETURN amakhulu.</string>
     <string name="send_service_fee">Imali yesevisi: %1$s%% yenani elithunyelwe (okuncane %2$d sat) — isekela le nodi ebanjiwe.</string>
     <string name="cd_amount_unit">iyunithi yenani</string>

@@ -143,7 +143,7 @@
     <string name="fee_fast">سريع</string>
     <string name="fee_normal">عادي</string>
     <string name="fee_slow">بطيء</string>
-    <string name="send_replay_protect">حماية إعادة التشغيل لـ BTCB2 (OP_RETURN بحجم 100 بايت)</string>
+    <string name="send_replay_protect">حماية إعادة التشغيل لـ XBT (OP_RETURN بحجم 100 بايت)</string>
     <string name="send_replay_note">يضيف ~110 vB رسومًا. غير قياسي على مُرحّل Bitcoin الافتراضي — أذِع عبر عقدة/خدمة تقبل OP_RETURN الكبيرة.</string>
     <string name="send_service_fee">رسوم الخدمة: %1$s%% من المبلغ المُرسَل (بحد أدنى %2$d sat) — تدعم هذه العقدة المستضافة.</string>
     <string name="cd_amount_unit">وحدة المبلغ</string>

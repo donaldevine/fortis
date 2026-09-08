@@ -73,7 +73,7 @@ private fun fmt(sat: Long) = fmtCoin(sat)
 
 /** Parse what the user typed in the Amount field into satoshis.
  *  [sat] true → a plain integer number of sats; false → a decimal coin amount
- *  (BTC / BTCB2). Returns null for anything unparseable or negative. */
+ *  (BTC / XBT). Returns null for anything unparseable or negative. */
 private fun amountToSat(text: String, sat: Boolean): Long? = runCatching {
     val t = text.trim().replace(",", "").replace("_", "").replace(" ", "")
     when {
@@ -209,7 +209,7 @@ fun GenScreen(vm: WalletViewModel) {
 fun CreateScreen(vm: WalletViewModel) {
     val ctx = LocalContext.current
     var name by remember { mutableStateOf("") }
-    var chain by remember { mutableStateOf("btcb2") }
+    var chain by remember { mutableStateOf("xbt") }
     var passphrase by remember { mutableStateOf("") }
     var ack by remember { mutableStateOf(false) }
     val words = (vm.draftMnemonic ?: "").split(" ")
@@ -265,7 +265,7 @@ fun RestoreScreen(vm: WalletViewModel) {
     var name by remember { mutableStateOf("") }
     var phrase by remember { mutableStateOf("") }
     var passphrase by remember { mutableStateOf("") }
-    var chain by remember { mutableStateOf("btcb2") }
+    var chain by remember { mutableStateOf("xbt") }
     val settingUp = vm.settingUp
     val choice = rememberLockChoice()
     val act = rememberFragmentActivity()
@@ -279,7 +279,7 @@ fun RestoreScreen(vm: WalletViewModel) {
         Field(passphrase, { passphrase = it }, stringResource(R.string.field_passphrase), password = true)
         ChainRow(chain) { chain = it }
         Text(
-            stringResource(R.string.restore_clone_hint, if (chain == "btc") "BTCB2" else "BTC"),
+            stringResource(R.string.restore_clone_hint, if (chain == "btc") "XBT" else "BTC"),
             color = Fx.textFaint, fontSize = 12.sp,
         )
         if (settingUp) LockChoiceFields(choice)
@@ -312,7 +312,7 @@ fun RestoreScreen(vm: WalletViewModel) {
 
 @Composable
 private fun ChainRow(chain: String, onChain: (String) -> Unit) {
-    Segmented(listOf("btcb2" to "BTCB2", "btc" to "BTC"), chain, onChain)
+    Segmented(listOf("xbt" to "XBT", "btc" to "BTC"), chain, onChain)
 }
 
 /** Numbered 3-column grid of mnemonic words. Caller supplies the surrounding card. */
@@ -394,7 +394,7 @@ fun Segmented(options: List<Pair<String, String>>, selected: String, onSelect: (
  */
 @Composable
 fun Shell(vm: WalletViewModel) {
-    val unit = if (vm.config?.chain == "btc") "BTC" else "BTCB2"
+    val unit = if (vm.config?.chain == "btc") "BTC" else "XBT"
     LaunchedEffect(vm.nav, vm.wallets.map { it.id }) {
         while (vm.nav == NavTab.Home || vm.nav == NavTab.Settings) {
             vm.refreshAllBalances()
@@ -463,7 +463,7 @@ private fun HomeTab(vm: WalletViewModel) = Column(
     GlassCard {
         vm.wallets.forEach { w ->
             val current = w.id == vm.selectedId
-            val wUnit = if (w.chain == "btc") "BTC" else "BTCB2"
+            val wUnit = if (w.chain == "btc") "BTC" else "XBT"
             val bal = vm.walletBalances[w.id]
             Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(Fx.rSm))
@@ -535,7 +535,7 @@ private fun SettingsTab(vm: WalletViewModel) {
             Text(stringResource(R.string.settings_wallets), color = Fx.text, fontWeight = FontWeight.SemiBold)
             vm.wallets.forEach { w ->
                 val current = w.id == vm.selectedId
-                val wUnit = if (w.chain == "btc") "BTC" else "BTCB2"
+                val wUnit = if (w.chain == "btc") "BTC" else "XBT"
                 val bal = vm.walletBalances[w.id]
                 Column(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(Fx.rSm))
@@ -670,7 +670,7 @@ private fun WalletTab(vm: WalletViewModel) {
         return
     }
     var tab by remember { mutableStateOf(0) }
-    val unit = if (c.chain == "btc") "BTC" else "BTCB2"
+    val unit = if (c.chain == "btc") "BTC" else "XBT"
     val b = vm.balances
 
     LaunchedEffect(vm.selectedId) {
@@ -838,7 +838,7 @@ private fun SendTab(vm: WalletViewModel) {
     var custom by remember { mutableStateOf("") }
     var replayProtect by remember { mutableStateOf(false) }
     val isBtc = vm.config?.chain == "btc"
-    val coinUnit = if (isBtc) "BTC" else "BTCB2"
+    val coinUnit = if (isBtc) "BTC" else "XBT"
     val amountSat = amountToSat(amount, amountInSat)
     val scanPrompt = stringResource(R.string.scan_prompt)
     val scan = rememberLauncherForActivityResult(ScanContract()) { r ->
@@ -876,7 +876,7 @@ private fun SendTab(vm: WalletViewModel) {
             amountSat?.let { sat ->
                 val alt = if (amountInSat) stringResource(R.string.send_alt_coin, fmt(sat), coinUnit)
                     else stringResource(R.string.send_alt_sat, sat.toString())
-                val fiat = vm.usdValue(sat, if (isBtc) "btc" else "btcb2")
+                val fiat = vm.usdValue(sat, if (isBtc) "btc" else "xbt")
                     ?.let { stringResource(R.string.send_alt_fiat, fmtUsd(it)) } ?: ""
                 Text(alt + fiat, color = Fx.textFaint, fontSize = 12.sp)
             }
@@ -913,7 +913,7 @@ private fun SendTab(vm: WalletViewModel) {
     }
 }
 
-/** The "sat / BTC" (or "sat / BTCB2") unit picker that sits beside the Amount
+/** The "sat / BTC" (or "sat / XBT") unit picker that sits beside the Amount
  *  field. Styled to match [Field] so the two line up. */
 @Composable
 private fun AmountUnitPicker(isSat: Boolean, coinUnit: String, onChange: (Boolean) -> Unit) {
@@ -954,7 +954,7 @@ private fun AmountUnitPicker(isSat: Boolean, coinUnit: String, onChange: (Boolea
 @Composable
 private fun HistoryTab(vm: WalletViewModel, unit: String) {
     val ctx = LocalContext.current
-    val chain = vm.config?.chain ?: "btcb2"
+    val chain = vm.config?.chain ?: "xbt"
     val network = vm.config?.network ?: "mainnet"
     if (vm.history.isEmpty()) {
         GlassCard { Text(stringResource(R.string.history_empty), color = Fx.textFaint) }
@@ -1015,7 +1015,7 @@ private fun ConfirmSheet(vm: WalletViewModel, p: PlanPreview, unit: String) {
                 if (p.sweep) stringResource(R.string.confirm_sweep_title) else stringResource(R.string.confirm_payment_title),
                 style = MaterialTheme.typography.titleMedium, color = Fx.text,
             )
-            val chain = vm.config?.chain ?: "btcb2"
+            val chain = vm.config?.chain ?: "xbt"
             val inTotal = p.plan.selected.sumOf { it.valueSat.toLong() }
             val svcFee = p.plan.serviceFeeSat?.toLong() ?: 0L
             val out = inTotal - p.plan.feeSat.toLong() - svcFee - (p.plan.changeSat?.toLong() ?: 0L)

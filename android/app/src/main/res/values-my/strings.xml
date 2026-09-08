@@ -143,7 +143,7 @@
     <string name="fee_fast">မြန်</string>
     <string name="fee_normal">ပုံမှန်</string>
     <string name="fee_slow">နှေး</string>
-    <string name="send_replay_protect">BTCB2 ပြန်ဖွင့်ခြင်း ကာကွယ်မှု (100-byte OP_RETURN)</string>
+    <string name="send_replay_protect">XBT ပြန်ဖွင့်ခြင်း ကာကွယ်မှု (100-byte OP_RETURN)</string>
     <string name="send_replay_note">အခကြေးငွေ ~110 vB ထပ်ပေါင်းသည်။ မူရင်း Bitcoin relay တွင် စံမမီပါ — OP_RETURN ကြီးများကို လက်ခံသည့် node/ဝန်ဆောင်မှုမှတစ်ဆင့် ထုတ်လွှင့်ပါ။</string>
     <string name="send_service_fee">ဝန်ဆောင်ခ: ပို့လိုက်သည့် ပမာဏ၏ %1$s%% (အနည်းဆုံး %2$d sat) — ဤ ဟုတ်စ်လုပ်ထားသော node ကို ပံ့ပိုးသည်။</string>
     <string name="cd_amount_unit">ပမာဏ ယူနစ်</string>

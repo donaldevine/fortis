@@ -143,7 +143,7 @@
     <string name="fee_fast">Mabilis</string>
     <string name="fee_normal">Normal</string>
     <string name="fee_slow">Mabagal</string>
-    <string name="send_replay_protect">BTCB2 replay protection (100-byte OP_RETURN)</string>
+    <string name="send_replay_protect">XBT replay protection (100-byte OP_RETURN)</string>
     <string name="send_replay_note">Nagdadagdag ng ~110 vB na bayad. Non-standard sa default na Bitcoin relay — mag-broadcast sa pamamagitan ng node/serbisyong tumatanggap ng malalaking OP_RETURN.</string>
     <string name="send_service_fee">Bayad sa serbisyo: %1$s%% ng halagang ipinadala (min %2$d sat) — sumusuporta sa hosted node na ito.</string>
     <string name="cd_amount_unit">unit ng halaga</string>

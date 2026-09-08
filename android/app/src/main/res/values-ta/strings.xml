@@ -143,7 +143,7 @@
     <string name="fee_fast">வேகம்</string>
     <string name="fee_normal">சாதாரணம்</string>
     <string name="fee_slow">மெதுவாக</string>
-    <string name="send_replay_protect">BTCB2 மறு-இயக்கப் பாதுகாப்பு (100-பைட் OP_RETURN)</string>
+    <string name="send_replay_protect">XBT மறு-இயக்கப் பாதுகாப்பு (100-பைட் OP_RETURN)</string>
     <string name="send_replay_note">~110 vB கட்டணத்தைச் சேர்க்கிறது. இயல்புநிலை Bitcoin ரிலேயில் தரமற்றது — பெரிய OP_RETURN ஐ ஏற்கும் நோட்/சேவை மூலம் ஒளிபரப்பவும்.</string>
     <string name="send_service_fee">சேவைக் கட்டணம்: அனுப்பப்பட்ட தொகையில் %1$s%% (குறைந்தது %2$d sat) — இந்த ஹோஸ்ட் செய்யப்பட்ட நோட்டை ஆதரிக்கிறது.</string>
     <string name="cd_amount_unit">தொகை அலகு</string>

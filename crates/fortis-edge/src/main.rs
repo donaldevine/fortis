@@ -1,6 +1,6 @@
 //! fortis-edge — the public front for the fortis wallet backends.
 //!
-//! It sits in front of a `fortis-index` instance (BTCB2) and an Esplora upstream
+//! It sits in front of a `fortis-index` instance (XBT) and an Esplora upstream
 //! (BTC — a public explorer, or a `fortisd --esplora-proxy`) and adds what a
 //! backend exposed to many wallets needs: per-install tokens, per-key rate
 //! limiting, short-TTL response caching, locked-down CORS, and `/metrics`.
@@ -39,9 +39,9 @@ struct Args {
     /// Address to bind to.
     #[arg(long, default_value = "127.0.0.1:8098")]
     bind: String,
-    /// BTCB2 upstream — a `fortis-index` base URL, e.g. http://127.0.0.1:8094.
+    /// XBT upstream — a `fortis-index` base URL, e.g. http://127.0.0.1:8094.
     #[arg(long)]
-    btcb2_upstream: Option<String>,
+    xbt_upstream: Option<String>,
     /// BTC upstream — an Esplora base URL, e.g. https://mempool.space/api or
     /// http://127.0.0.1:8088/esplora.
     #[arg(long)]
@@ -53,16 +53,16 @@ struct Args {
     /// proxies to `--btc-upstream/v1/prices` as before.
     #[arg(long)]
     btc_price_url: Option<String>,
-    /// USD price source for `GET /btcb2/v1/prices` — same rules as
-    /// `--btc-price-url`. A `fortis-index` (`--btcb2-upstream`) has no price feed,
-    /// so without this (or `--btcb2-price-upstream`) the route 404s and the
+    /// USD price source for `GET /xbt/v1/prices` — same rules as
+    /// `--btc-price-url`. A `fortis-index` (`--xbt-upstream`) has no price feed,
+    /// so without this (or `--xbt-price-upstream`) the route 404s and the
     /// wallet shows no fiat value.
     #[arg(long)]
-    btcb2_price_url: Option<String>,
-    /// Deprecated alias for `--btcb2-price-url`: a mempool-style *base* URL whose
+    xbt_price_url: Option<String>,
+    /// Deprecated alias for `--xbt-price-url`: a mempool-style *base* URL whose
     /// `/v1/prices` carries the feed (e.g. https://mempool.kilombino.com/api).
     #[arg(long)]
-    btcb2_price_upstream: Option<String>,
+    xbt_price_upstream: Option<String>,
     /// Cap on `/btc/address/*` lookups per second sent to `--btc-upstream`.
     /// A wallet scan fans out ~40 of them at once and public explorers
     /// (mempool.space, blockstream.info) 429 the burst; the edge queues them
@@ -84,7 +84,7 @@ struct Args {
     /// HMAC secret file for tokens. Default: <home>/fortis-edge.secret.
     #[arg(long)]
     secret_file: Option<PathBuf>,
-    /// Reject `/btc/*` and `/btcb2/*` without a valid `Authorization: Bearer`
+    /// Reject `/btc/*` and `/xbt/*` without a valid `Authorization: Bearer`
     /// (or `?token=`) minted by `POST /register`.
     #[arg(long)]
     require_token: bool,
@@ -146,10 +146,10 @@ struct State {
     require_token: bool,
     trust_forwarded_for: bool,
     allow_origin: String,
-    btcb2: Option<Upstream>,
+    xbt: Option<Upstream>,
     btc: Option<Upstream>,
     btc_price: Option<price::PriceSource>,
-    btcb2_price: Option<price::PriceSource>,
+    xbt_price: Option<price::PriceSource>,
     btc_haskoin: Option<haskoin::HaskoinStore>,
     btc_pacer: Option<Pacer>,
     limiter: RateLimiter,
@@ -184,8 +184,8 @@ fn default_home() -> PathBuf {
 
 fn run() -> Result<()> {
     let args = Args::parse();
-    if args.btcb2_upstream.is_none() && args.btc_upstream.is_none() {
-        return Err(anyhow!("set at least one of --btcb2-upstream / --btc-upstream"));
+    if args.xbt_upstream.is_none() && args.btc_upstream.is_none() {
+        return Err(anyhow!("set at least one of --xbt-upstream / --btc-upstream"));
     }
     let secret_file = args
         .secret_file
@@ -193,10 +193,10 @@ fn run() -> Result<()> {
         .unwrap_or_else(|| default_home().join("fortis-edge.secret"));
     let secret = token::load_or_create_secret(&secret_file)?;
 
-    // `--btcb2-price-url` wins; `--btcb2-price-upstream <base>` is the old form
+    // `--xbt-price-url` wins; `--xbt-price-upstream <base>` is the old form
     // that pointed at a mempool base and implied `/v1/prices`.
-    let btcb2_price_url = args.btcb2_price_url.clone().or_else(|| {
-        args.btcb2_price_upstream
+    let xbt_price_url = args.xbt_price_url.clone().or_else(|| {
+        args.xbt_price_upstream
             .as_deref()
             .map(|b| format!("{}/v1/prices", b.trim_end_matches('/')))
     });
@@ -217,10 +217,10 @@ fn run() -> Result<()> {
         require_token: args.require_token,
         trust_forwarded_for: args.trust_forwarded_for,
         allow_origin: args.allow_origin.clone(),
-        btcb2: args.btcb2_upstream.as_deref().map(Upstream::new),
+        xbt: args.xbt_upstream.as_deref().map(Upstream::new),
         btc: args.btc_upstream.as_deref().map(Upstream::new),
         btc_price: args.btc_price_url.as_deref().map(price::PriceSource::new),
-        btcb2_price: btcb2_price_url.as_deref().map(price::PriceSource::new),
+        xbt_price: xbt_price_url.as_deref().map(price::PriceSource::new),
         btc_haskoin: (!args.btc_haskoin_url.trim().is_empty())
             .then(|| haskoin::HaskoinStore::new(&args.btc_haskoin_url, args.btc_haskoin_key.clone())),
         btc_pacer: (args.btc_upstream_rate > 0.0).then(|| Pacer::new(args.btc_upstream_rate)),
@@ -239,10 +239,10 @@ fn run() -> Result<()> {
     );
 
     eprintln!("fortis-edge listening on  http://{}", args.bind);
-    eprintln!("  btcb2 upstream   {}", args.btcb2_upstream.as_deref().unwrap_or("(none)"));
+    eprintln!("  xbt upstream   {}", args.xbt_upstream.as_deref().unwrap_or("(none)"));
     eprintln!("  btc upstream   {}", args.btc_upstream.as_deref().unwrap_or("(none)"));
     eprintln!("  btc price      {}", args.btc_price_url.as_deref().unwrap_or("(via btc upstream)"));
-    eprintln!("  btcb2 price    {}", btcb2_price_url.as_deref().unwrap_or("(none)"));
+    eprintln!("  xbt price    {}", xbt_price_url.as_deref().unwrap_or("(none)"));
     eprintln!(
         "  btc pacing     {}",
         if args.btc_upstream_rate > 0.0 {
@@ -362,7 +362,7 @@ fn handle(req: &mut Request, st: &State) -> Reply {
                 "name": "fortis-edge",
                 "version": env!("CARGO_PKG_VERSION"),
                 "chains": {
-                    "btcb2": st.btcb2.is_some(),
+                    "xbt": st.xbt.is_some(),
                     "btc": st.btc.is_some(),
                 },
             }),
@@ -389,7 +389,7 @@ fn handle(req: &mut Request, st: &State) -> Reply {
             }
         }
         (Method::Post, "/crash") => crash_report(req, st),
-        (_, p) if p.starts_with("/btcb2/") || p.starts_with("/btc/") => {
+        (_, p) if p.starts_with("/xbt/") || p.starts_with("/btc/") => {
             proxy_chain(req, st, &method, p, query)
         }
         _ => err(404, "no such route"),
@@ -443,7 +443,7 @@ fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query
     if method == &Method::Get && rest == "v1/prices" {
         let source = match chain {
             "btc" => st.btc_price.as_ref(),
-            "btcb2" => st.btcb2_price.as_ref(),
+            "xbt" => st.xbt_price.as_ref(),
             _ => None,
         };
         if let Some(source) = source {
@@ -477,7 +477,7 @@ fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query
             };
         }
         // no source configured → fall through: /btc/v1/prices proxies to the BTC
-        // Esplora upstream; /btcb2/v1/prices has no fallback and 404s below.
+        // Esplora upstream; /xbt/v1/prices has no fallback and 404s below.
     }
 
     // `POST /btc/prewarm` — body is a JSON array of the wallet's addresses. Pull
@@ -529,7 +529,7 @@ fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query
     }
 
     let upstream = match chain {
-        "btcb2" => st.btcb2.as_ref(),
+        "xbt" => st.xbt.as_ref(),
         "btc" => st.btc.as_ref(),
         _ => None,
     };

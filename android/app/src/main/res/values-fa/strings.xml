@@ -143,7 +143,7 @@
     <string name="fee_fast">سریع</string>
     <string name="fee_normal">عادی</string>
     <string name="fee_slow">کند</string>
-    <string name="send_replay_protect">محافظت از بازپخش BTCB2 (‏OP_RETURN ۱۰۰ بایتی)</string>
+    <string name="send_replay_protect">محافظت از بازپخش XBT (‏OP_RETURN ۱۰۰ بایتی)</string>
     <string name="send_replay_note">حدود ۱۱۰ vB کارمزد اضافه می‌کند. روی رله پیش‌فرض Bitcoin غیراستاندارد است — از طریق نود/سرویسی که OP_RETURN بزرگ را می‌پذیرد پخش کنید.</string>
     <string name="send_service_fee">کارمزد سرویس: %1$s%% از مبلغ ارسالی (حداقل %2$d sat) — از این نود میزبانی‌شده پشتیبانی می‌کند.</string>
     <string name="cd_amount_unit">واحد مبلغ</string>

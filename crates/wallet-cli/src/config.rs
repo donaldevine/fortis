@@ -54,7 +54,7 @@ impl NodeConfig {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WalletConfig {
     pub version: u32,
-    /// `"btcb2"` (the BLAKE2b fork) or `"btc"`.
+    /// `"xbt"` (the BLAKE2b fork) or `"btc"`.
     pub chain: String,
     /// `"mainnet"`, `"regtest"`, or `"regtest-legacy"`.
     pub network: String,

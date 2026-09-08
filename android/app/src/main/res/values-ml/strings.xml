@@ -143,7 +143,7 @@
     <string name="fee_fast">വേഗം</string>
     <string name="fee_normal">സാധാരണം</string>
     <string name="fee_slow">പതുക്കെ</string>
-    <string name="send_replay_protect">BTCB2 റീപ്ലേ പരിരക്ഷ (100-ബൈറ്റ് OP_RETURN)</string>
+    <string name="send_replay_protect">XBT റീപ്ലേ പരിരക്ഷ (100-ബൈറ്റ് OP_RETURN)</string>
     <string name="send_replay_note">~110 vB ഫീസ് ചേർക്കുന്നു. ഡിഫോൾട്ട് Bitcoin റിലേയിൽ നിലവാരമില്ലാത്തത് — വലിയ OP_RETURN സ്വീകരിക്കുന്ന നോഡ്/സേവനം വഴി പ്രക്ഷേപണം ചെയ്യുക.</string>
     <string name="send_service_fee">സേവന ഫീസ്: അയച്ച തുകയുടെ %1$s%% (കുറഞ്ഞത് %2$d sat) — ഇത് ഈ ഹോസ്റ്റ് ചെയ്‌ത നോഡിനെ പിന്തുണയ്ക്കുന്നു.</string>
     <string name="cd_amount_unit">തുകയുടെ യൂണിറ്റ്</string>

@@ -143,7 +143,7 @@
     <string name="fee_fast">Vinnig</string>
     <string name="fee_normal">Normaal</string>
     <string name="fee_slow">Stadig</string>
-    <string name="send_replay_protect">BTCB2-herspeelbeskerming (100-greep OP_RETURN)</string>
+    <string name="send_replay_protect">XBT-herspeelbeskerming (100-greep OP_RETURN)</string>
     <string name="send_replay_note">Voeg ~110 vB fooi by. Nie-standaard op die verstek-Bitcoin-aflos — saai uit via \'n nodus/diens wat groot OP_RETURN aanvaar.</string>
     <string name="send_service_fee">Diensfooi: %1$s%% van die bedrag gestuur (min %2$d sat) — ondersteun hierdie gasheernodus.</string>
     <string name="cd_amount_unit">bedrag-eenheid</string>

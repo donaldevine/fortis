@@ -143,7 +143,7 @@
     <string name="fee_fast">Haraka</string>
     <string name="fee_normal">Kawaida</string>
     <string name="fee_slow">Polepole</string>
-    <string name="send_replay_protect">Ulinzi wa kurudia wa BTCB2 (OP_RETURN ya baiti 100)</string>
+    <string name="send_replay_protect">Ulinzi wa kurudia wa XBT (OP_RETURN ya baiti 100)</string>
     <string name="send_replay_note">Huongeza ada ya ~110 vB. Si ya kawaida kwenye relay chaguo-msingi ya Bitcoin — sambaza kupitia nodi/huduma inayokubali OP_RETURN kubwa.</string>
     <string name="send_service_fee">Ada ya huduma: %1$s%% ya kiasi kilichotumwa (chini kabisa %2$d sat) — inasaidia nodi hii inayopangishwa.</string>
     <string name="cd_amount_unit">kipimo cha kiasi</string>
