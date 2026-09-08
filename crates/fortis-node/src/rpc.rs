@@ -18,14 +18,20 @@ pub struct Rpc {
 
 impl Rpc {
     pub fn new(base_url: &str, auth_userpass: &str) -> Self {
+        // 600 s: `getblock` on a cold prune cache can genuinely take minutes.
+        Self::new_with_timeout(base_url, auth_userpass, Duration::from_secs(600))
+    }
+
+    /// Like [`new`](Self::new) but with an explicit request timeout — a caller
+    /// that only does quick calls (a reachability ping, `sendrawtransaction`)
+    /// wants to fail fast, not hang for 10 minutes on a wedged node.
+    pub fn new_with_timeout(base_url: &str, auth_userpass: &str, timeout: Duration) -> Self {
         let token =
             base64::engine::general_purpose::STANDARD.encode(auth_userpass.trim().as_bytes());
         Rpc {
             base_url: base_url.trim_end_matches('/').to_string(),
             auth_header: format!("Basic {token}"),
-            agent: ureq::AgentBuilder::new()
-                .timeout(Duration::from_secs(600))
-                .build(),
+            agent: ureq::AgentBuilder::new().timeout(timeout).build(),
         }
     }
 

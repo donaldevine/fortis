@@ -240,10 +240,23 @@ fn run() -> Result<()> {
                     return Err(anyhow!("--btc-rpc-url needs --btc-rpc-auth or --btc-rpc-cookie"))
                 }
             };
-            let rpc = fortis_node::Rpc::new(url, &auth);
-            let cs = fortis_node::chain_status(&rpc)
-                .with_context(|| format!("reaching the BTC node at {url}"))?;
-            eprintln!("  btc broadcast  via node {url}  ({}, chain {})", cs.subversion, cs.chain);
+            // Short timeout: broadcast + reachability pings should be instant on a
+            // local node; if it's wedged we fall back to --btc-upstream fast.
+            let rpc = fortis_node::Rpc::new_with_timeout(
+                url,
+                &auth,
+                std::time::Duration::from_secs(20),
+            );
+            match fortis_node::chain_status(&rpc) {
+                Ok(cs) => eprintln!(
+                    "  btc broadcast  node {url}  ({}, chain {})  [fallback: --btc-upstream]",
+                    cs.subversion, cs.chain
+                ),
+                Err(e) => eprintln!(
+                    "  btc broadcast  node {url} unreachable at startup ({e}); \
+                     will retry per request, fall back to --btc-upstream"
+                ),
+            }
             Some(rpc)
         }
     };
@@ -620,17 +633,29 @@ fn proxy_chain(req: &mut Request, st: &State, method: &Method, path: &str, query
 
     // Broadcast BTC transactions through the local node when configured — it
     // reaches the network directly, relaying what a public Esplora won't (an
-    // oversized OP_RETURN). Everything else on `/btc/*` still hits `--btc-upstream`.
+    // oversized OP_RETURN). Node-first: on failure, distinguish "node rejected
+    // the tx" (return that) from "node unreachable" (fall through to
+    // --btc-upstream). Address / history / fee reads always use --btc-upstream.
     if method == &Method::Post && chain == "btc" && rest == "tx" {
         if let Some(rpc) = &st.btc_broadcast {
-            let hex = String::from_utf8_lossy(&body);
-            return match fortis_node::broadcast(rpc, hex.trim()) {
-                Ok(txid) => Reply::Raw(200, "text/plain".into(), txid.to_string().into_bytes()),
-                Err(e) => {
-                    Metrics::inc(&st.metrics.upstream_errors);
-                    err(400, &format!("node rejected the transaction: {e:#}"))
+            let hex = String::from_utf8_lossy(&body).trim().to_string();
+            match fortis_node::broadcast(rpc, &hex) {
+                Ok(txid) => {
+                    return Reply::Raw(200, "text/plain".into(), txid.to_string().into_bytes())
                 }
-            };
+                Err(e) => {
+                    if rpc.call("getblockcount", json!([])).is_ok() {
+                        // node is up — it genuinely rejected the transaction
+                        Metrics::inc(&st.metrics.upstream_errors);
+                        return err(400, &format!("node rejected the transaction: {e:#}"));
+                    }
+                    Metrics::inc(&st.metrics.upstream_errors);
+                    eprintln!(
+                        "fortis-edge: BTC node unreachable ({e}); broadcasting via --btc-upstream"
+                    );
+                    // fall through to the Esplora upstream below
+                }
+            }
         }
     }
 
