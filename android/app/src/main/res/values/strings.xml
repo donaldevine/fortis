@@ -148,6 +148,7 @@
     <!-- receive -->
     <string name="cd_address_qr">address QR code</string>
     <string name="receive_address_n">address #%1$d · tap to copy</string>
+    <string name="receive_qr_hint">long-press or double-tap the QR to copy it as an image</string>
     <string name="share_address_chooser">Share address</string>
 
     <!-- send -->

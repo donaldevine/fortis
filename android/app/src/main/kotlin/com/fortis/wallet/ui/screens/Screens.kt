@@ -1,9 +1,11 @@
 package com.fortis.wallet.ui.screens
 
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -44,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import com.fortis.wallet.BuildConfig
 import com.fortis.wallet.MAX_WALLETS
 import com.fortis.wallet.MAX_WALLET_NAME
@@ -57,6 +60,7 @@ import com.fortis.wallet.wallet.EntropyCollector
 import com.fortis.wallet.wallet.entropyProgress
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -83,6 +87,24 @@ private fun copyToClipboard(ctx: Context, label: String, text: String) {
     val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     cm.setPrimaryClip(ClipData.newPlainText(label, text))
     Toast.makeText(ctx, ctx.getString(R.string.toast_copied), Toast.LENGTH_SHORT).show()
+}
+
+/** Put [bitmap] on the clipboard as a PNG so it can be pasted into a chat, email, etc.
+ *  Goes through a FileProvider content URI under cacheDir/shared/. */
+private fun copyImageToClipboard(ctx: Context, bitmap: Bitmap) {
+    runCatching {
+        val file = File(ctx.cacheDir, "shared").apply { mkdirs() }.resolve("qr.png")
+        file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.fileprovider", file)
+        val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cm.setPrimaryClip(
+            ClipData(
+                ClipDescription(ctx.getString(R.string.cd_address_qr), arrayOf("image/png")),
+                ClipData.Item(uri),
+            ),
+        )
+        Toast.makeText(ctx, ctx.getString(R.string.toast_copied), Toast.LENGTH_SHORT).show()
+    }
 }
 
 @Composable
@@ -705,6 +727,7 @@ private fun SentBanner(vm: WalletViewModel, txid: String) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ReceiveTab(vm: WalletViewModel) {
     val ctx = LocalContext.current
@@ -724,6 +747,7 @@ private fun ReceiveTab(vm: WalletViewModel) {
         Text(stringResource(R.string.tab_receive), color = Fx.text, fontWeight = FontWeight.SemiBold)
         if (addr.length > 3) {
             val qr = remember(addr) { qrBitmap(addr) }
+            val copyQr = { copyImageToClipboard(ctx, qr) }
             Image(
                 bitmap = qr.asImageBitmap(),
                 contentDescription = stringResource(R.string.cd_address_qr),
@@ -732,7 +756,14 @@ private fun ReceiveTab(vm: WalletViewModel) {
                     .size(224.dp)
                     .clip(RoundedCornerShape(Fx.rSm))
                     .background(Color.White)
+                    .combinedClickable(onClick = {}, onLongClick = copyQr, onDoubleClick = copyQr)
                     .padding(10.dp),
+            )
+            Text(
+                stringResource(R.string.receive_qr_hint),
+                color = Fx.textFaint,
+                fontSize = 12.sp,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
             )
         }
         Text(
