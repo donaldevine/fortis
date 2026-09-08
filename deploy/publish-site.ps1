@@ -134,10 +134,9 @@ if ($rc -ne 0) {
 Write-Host ''
 Write-Host '  Deployed.' -ForegroundColor Green
 if ($isProd) {
-    Write-Host '  Live on the fortis-rest.pages.dev URL above immediately.'
-    Write-Host '  https://fortis.rest/ follows once its DNS points at the fortis-rest'
-    Write-Host '  Pages project (dashboard -> Workers & Pages -> fortis-rest ->'
-    Write-Host '  Custom domains).'
+    Write-Host '  Live at https://fortis.rest/  and  https://www.fortis.rest/'
+    Write-Host '  (edge cache may hold the old page for a minute; the immutable'
+    Write-Host '   *.fortis-rest.pages.dev URL above is instant).'
 } else {
     Write-Host '  Preview build - see the *.pages.dev URL above.'
 }
