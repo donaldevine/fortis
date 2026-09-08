@@ -94,6 +94,10 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation(libs.datastore.preferences)
     implementation(libs.biometric)
+    // Force fragment forward off biometric-alpha's stale 1.2.5 — that
+    // FragmentActivity crashes the Activity Result API (QR scanner) launch with
+    // "Can only use lower 16 bits for requestCode".
+    implementation(libs.androidx.fragment)
     implementation(libs.okhttp)
     implementation(libs.zxing.android.embedded)
     debugImplementation(libs.compose.ui.tooling)
