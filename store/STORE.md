@@ -107,9 +107,11 @@ The operating entity is **Fortis Tech Labs** (address as in the privacy policy).
 | Feature graphic | `feature-graphic.png` | 1024×500 PNG |
 | Phone screenshots | `screenshots/0{1..4}-*.png` | 1344×2688 (2:1) |
 
-Screenshots 2–4 are from a debug build; the Home and Settings screens are
-identical in release. Re-grab from a release build if you want the exact status
-bar. Consider adding framed/captioned marketing versions later.
+Screenshots are from a debug build (identical to release for these screens),
+`Pixel_8_Pro_AVD`, status bar + gesture pill cropped off. Wallet "Savings" on
+XBT against the live `api.fortis.rest` ("connected"). Re-grab from a release
+build if you want the exact status bar. Consider adding framed/captioned
+marketing versions later.
 
 ## TODO before submitting
 
