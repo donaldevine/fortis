@@ -290,7 +290,16 @@ impl WalletView {
             }
         }
 
-        Err(WalletError::InsufficientFunds { need: target.to_sat(), have: acc.to_sat() })
+        // Fell short. Report the true minimum — the outputs (destination + any
+        // service fee) *plus* the network fee to spend everything eligible — not
+        // just the output total, so "need N sat" is the number to top up to.
+        let n = selected.len().max(1) as u64;
+        let base_vb = TX_OVERHEAD_VB
+            .saturating_add(n.saturating_mul(P2WPKH_INPUT_VB))
+            .saturating_add(outputs_vb);
+        let est_fee = Amount::from_sat(base_vb.saturating_mul(feerate_sat_vb));
+        let need = checked_sum([target, est_fee]).unwrap_or(Amount::MAX_MONEY);
+        Err(WalletError::InsufficientFunds { need: need.to_sat(), have: acc.to_sat() })
     }
 
     /// Send every input confirmed at least `min_confirmations` deep to a single
@@ -460,7 +469,31 @@ mod tests {
     fn rejects_insufficient_funds() {
         let mut v = view();
         let utxos = [utxo(50_000, 3, 1)];
-        assert!(v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1, None).is_err());
+        let err = v.plan_payment(&utxos, vec![htlc_out(200_000)], 5, 1, None).unwrap_err();
+        // `need` covers the outputs *and* the network fee, not just the output total.
+        match err {
+            WalletError::InsufficientFunds { need, have } => {
+                assert!(need > 200_000, "need {need} should include the fee");
+                assert_eq!(have, 50_000);
+            }
+            other => panic!("expected InsufficientFunds, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn insufficient_funds_need_includes_the_service_fee() {
+        let mut v = view();
+        let utxos = [utxo(1_200, 3, 1)];
+        let sf = ServiceFee { bps: 100, floor_sat: 546, cap_sat: 0, fee_spk: fee_addr_spk() };
+        // 1000 to send + the 546-sat service-fee floor = 1546 in outputs alone,
+        // so `need` must be at least that (plus the network fee).
+        let err = v
+            .plan_payment(&utxos, vec![htlc_out(1_000)], 2, 1, Some(&sf))
+            .unwrap_err();
+        match err {
+            WalletError::InsufficientFunds { need, .. } => assert!(need >= 1_546, "need {need}"),
+            other => panic!("expected InsufficientFunds, got {other:?}"),
+        }
     }
 
     #[test]
