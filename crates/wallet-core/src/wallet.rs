@@ -253,7 +253,7 @@ impl WalletView {
 
         let mut eligible: Vec<&Utxo> =
             utxos.iter().filter(|u| u.confirmations >= min_confirmations).collect();
-        eligible.sort_by(|a, b| b.value.cmp(&a.value));
+        eligible.sort_by_key(|u| std::cmp::Reverse(u.value)); // largest-first
 
         let change_spk = self.address_at(1, self.next_change)?.script_pubkey();
         let change_vb = output_vb(&change_spk);
