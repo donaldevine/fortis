@@ -33,6 +33,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# npx / git non-zero exits are checked explicitly below via $LASTEXITCODE - don't
+# let PowerShell 7 turn a benign one (e.g. "project already exists") into a fatal.
+$PSNativeCommandUseErrorActionPreference = $false
 $repo = Split-Path -Parent $PSScriptRoot
 $dir  = Join-Path $repo 'site'
 
@@ -82,9 +85,13 @@ if ($msg) { $deploy += @('--commit-message', $msg) }
 # predictable, git-ignored place regardless of where this script was invoked from.
 Push-Location $repo
 try {
-    # Create the project on first run. Harmless ("already exists") otherwise; a
-    # real failure here (bad auth) is reported clearly by the deploy step below.
-    & npx @wr pages project create $Project --production-branch main *> $null
+    # Create the Pages project only if it doesn't exist yet. (Calling
+    # `pages project create` on an existing project errors out.)
+    $projects = (& npx @wr pages project list 2>$null | Out-String)
+    if ($LASTEXITCODE -eq 0 -and $projects -notmatch [regex]::Escape($Project)) {
+        Write-Host "  creating Pages project '$Project' ..."
+        & npx @wr pages project create $Project --production-branch main | Out-Null
+    }
 
     & npx @wr @deploy
     $rc = $LASTEXITCODE
