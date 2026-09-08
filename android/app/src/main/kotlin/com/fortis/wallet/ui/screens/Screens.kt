@@ -35,9 +35,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -156,17 +160,31 @@ fun GenScreen(vm: WalletViewModel) {
             words.toString(), { words = it.toInt() },
         )
         Text(stringResource(R.string.gen_words_hint), color = Fx.textFaint, fontSize = 12.sp)
+        val scribble = remember { Path() }
+        var strokeRev by remember { mutableIntStateOf(0) }
         Box(
             Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(Fx.rLg)).background(Fx.glass1)
                 .pointerInput(Unit) {
-                    detectDragGestures { change, _ ->
+                    detectDragGestures(
+                        onDragStart = { scribble.moveTo(it.x, it.y); strokeRev++ },
+                    ) { change, _ ->
+                        scribble.lineTo(change.position.x, change.position.y)
+                        strokeRev++
                         collector.addTouch(change.position.x, change.position.y, System.nanoTime())
                         bits = collector.bits
                     }
+                }
+                .drawWithContent {
+                    drawContent()
+                    strokeRev // subscribe: Path mutations aren't observable on their own
+                    drawPath(
+                        scribble, Fx.accent,
+                        style = Stroke(width = 3.5.dp.toPx(), cap = StrokeCap.Round),
+                    )
                 },
             contentAlignment = Alignment.Center,
         ) {
-            Text(stringResource(R.string.gen_pad_hint), color = Fx.textFaint, fontSize = 13.sp)
+            if (strokeRev == 0) Text(stringResource(R.string.gen_pad_hint), color = Fx.textFaint, fontSize = 13.sp)
         }
         Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(Fx.pill)).background(Fx.glass1)) {
             Box(
