@@ -4,14 +4,15 @@
   ---------------------------------------------------------------------------
   ONE-TIME SETUP
   ---------------------------------------------------------------------------
-  1. Authenticate wrangler once, either:
-        npx wrangler login                       # browser OAuth, remembered
-     or set a scoped API token in your environment (survives reboots if you
-     use `setx`):
-        $env:CLOUDFLARE_API_TOKEN = "<token>"    # perms: "Cloudflare Pages: Edit"
+  1. Create an API token: Cloudflare dashboard -> My Profile -> API Tokens ->
+     Create Token -> Custom token, permission  Account | Cloudflare Pages | Edit.
+     Then:
+        setx CLOUDFLARE_API_TOKEN "<token>"
+     (open a new shell afterwards - or don't; this script also reads it straight
+      from the User/Machine environment so a stale shell still works.)
 
-  2. First run of this script creates the Pages project (default name
-     "fortis-rest"). Afterwards, in the Cloudflare dashboard:
+  2. First run creates the Pages project (default name "fortis-rest").
+     Afterwards, in the dashboard:
         Workers & Pages -> fortis-rest -> Custom domains
         -> add  fortis.rest  and  www.fortis.rest
      (Leave api.fortis.rest alone - that's the cloudflared tunnel.)
@@ -42,6 +43,27 @@ $dir  = Join-Path $repo 'site'
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
     throw 'Node.js is required - https://nodejs.org'
 }
+
+# --- auth: require CLOUDFLARE_API_TOKEN -----------------------------------------
+# Prefer the current process env; fall back to the persisted User / Machine env
+# so a shell opened before `setx` still works. Fail loud rather than silently
+# dropping to a wrangler OAuth login.
+if (-not $env:CLOUDFLARE_API_TOKEN) {
+    foreach ($scope in 'User', 'Machine') {
+        $t = [Environment]::GetEnvironmentVariable('CLOUDFLARE_API_TOKEN', $scope)
+        if ($t) { $env:CLOUDFLARE_API_TOKEN = $t; break }
+    }
+}
+if (-not $env:CLOUDFLARE_API_TOKEN) {
+    throw @'
+CLOUDFLARE_API_TOKEN is not set.
+  Cloudflare dashboard -> My Profile -> API Tokens -> Create Token
+  -> Custom token, permission: Account | Cloudflare Pages | Edit
+  then:  setx CLOUDFLARE_API_TOKEN "<token>"
+'@
+}
+$env:CLOUDFLARE_API_KEY   = $null   # make sure a stale global-key auth can't win
+$env:CLOUDFLARE_EMAIL     = $null
 if (-not (Test-Path (Join-Path $dir 'index.html'))) {
     throw "Can't find $dir\index.html - run this from a checkout of the fortis repo."
 }
@@ -66,6 +88,7 @@ $dirty = if (& git -C $repo status --porcelain 2>$null) { 'true' } else { 'false
 Write-Host ''
 Write-Host "  project : $Project"
 Write-Host "  folder  : $dir"
+Write-Host ("  auth    : CLOUDFLARE_API_TOKEN (...{0})" -f $env:CLOUDFLARE_API_TOKEN.Substring([Math]::Max(0, $env:CLOUDFLARE_API_TOKEN.Length - 4)))
 Write-Host ("  target  : {0}" -f $(if ($isProd) { 'production (fortis.rest)' } else { "preview  (branch '$Branch')" }))
 Write-Host ("  commit  : {0} {1}{2}" -f $sha, $msg, $(if ($dirty -eq 'true') { '   [+ uncommitted changes]' }))
 Write-Host ''
@@ -101,16 +124,20 @@ finally { Pop-Location }
 if ($rc -ne 0) {
     Write-Host ''
     Write-Warning "Deploy failed (exit $rc)."
-    Write-Host '  - auth?     run once:  npx wrangler login'
-    Write-Host "              or set `$env:CLOUDFLARE_API_TOKEN (perm: 'Cloudflare Pages: Edit')"
-    Write-Host '  - project?  list yours: npx wrangler pages project list'
+    Write-Host '  - auth?     the token needs  Account | Cloudflare Pages | Edit'
+    Write-Host '              check it:  npx wrangler whoami'
+    Write-Host '  - project?  list yours:  npx wrangler pages project list'
     Write-Host '              then re-run with  -Project <name>'
     exit $rc
 }
 
 Write-Host ''
+Write-Host '  Deployed.' -ForegroundColor Green
 if ($isProd) {
-    Write-Host '  Done. https://fortis.rest/ updates within ~30s.' -ForegroundColor Green
+    Write-Host '  Live on the fortis-rest.pages.dev URL above immediately.'
+    Write-Host '  https://fortis.rest/ follows once its DNS points at the fortis-rest'
+    Write-Host '  Pages project (dashboard -> Workers & Pages -> fortis-rest ->'
+    Write-Host '  Custom domains).'
 } else {
-    Write-Host '  Preview deployed - see the *.pages.dev URL printed above.' -ForegroundColor Green
+    Write-Host '  Preview build - see the *.pages.dev URL above.'
 }
