@@ -74,6 +74,24 @@ cargo {
     packageDirectory = layout.projectDirectory.dir("../../crates/wallet-ffi")
 }
 
+// Gobley wires a workspace-wide `cargo clean` into `gradlew clean`. This machine
+// also runs the fortis-edge / fortis-index services straight out of
+// `target/release/`, so that clean dies trying to delete the locked `.exe`s.
+// Swap it for a clean scoped to this module's crate — the rest of `target/`
+// (and anything running from it) is left alone.
+tasks.matching { it.name == "cargoClean" }.configureEach { enabled = false }
+val cargoCleanFfi by tasks.registering(Exec::class) {
+    group = "cargo"
+    description = "cargo clean, scoped to the wallet-ffi crate"
+    workingDir = layout.projectDirectory.dir("../../crates/wallet-ffi").asFile
+    val cargoHome = System.getenv("CARGO_HOME") ?: "${System.getProperty("user.home")}/.cargo"
+    val sep = System.getProperty("path.separator")
+    environment("PATH", "$cargoHome/bin$sep${System.getenv("PATH") ?: ""}")
+    commandLine("cargo", "clean", "--package", "wallet-ffi")
+    isIgnoreExitValue = true // never let `gradlew clean` fail on this
+}
+tasks.named("clean") { dependsOn(cargoCleanFfi) }
+
 uniffi {
     generateFromLibrary {
         packageName = "uniffi.wallet_ffi"
