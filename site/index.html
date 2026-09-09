@@ -197,7 +197,7 @@
       </div>
       <div class="feature">
         <h3>Cross-chain replay protection</h3>
-        <p>On a BTC send you can attach an oversized OP_RETURN so that exact signed transaction can't be replayed on the XBT chain. Off by default; it adds a little fee.</p>
+        <p>Both directions are covered. Every XBT send is signed with <code>SIGHASH_UNIFIED</code> (Knots PR&nbsp;#357), which binds the signature to the XBT chain — automatic, nothing to enable. Going the other way, a BTC send can optionally carry an oversized OP_RETURN that makes that exact transaction invalid on XBT (off by default; adds a little fee).</p>
       </div>
       <div class="feature">
         <h3>Entropy from your hands</h3>
