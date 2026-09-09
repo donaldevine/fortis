@@ -39,7 +39,8 @@ hand Play *this* key as the app signing key so website users can cross-update.
 
 ```powershell
 (Get-FileHash ..\fortis-wallet.apk -Algorithm SHA256).Hash.ToLower()
-& "$env:ANDROID_HOME\build-tools\36.0.0\apksigner.bat" verify --print-certs ..\fortis-wallet.apk
+$apksigner = (Get-ChildItem "$env:LOCALAPPDATA\Android\Sdk\build-tools\*\apksigner.bat" | Sort-Object Name)[-1]
+& $apksigner verify --print-certs ..\fortis-wallet.apk    # needs $env:JAVA_HOME set
 ```
 
 Update `site/version.json` (`versionCode`, `versionName`, `sha256`) and, if the
@@ -55,8 +56,9 @@ gh release create v0.1.1 ..\fortis-wallet.apk `
   --notes-file (New-TemporaryFile | % { Set-Content $_ (Get-Content CHANGELOG.md -Raw); $_ })
 ```
 
-…or on github.com: **Releases → Draft a new release**, choose tag `v0.1.1`,
-paste the changelog, attach `fortis-wallet.apk`, **Publish**.
+…(needs `gh` — `winget install GitHub.cli`) or on github.com: **Releases → Draft
+a new release**, choose tag `v0.1.1`, paste the changelog, attach
+`fortis-wallet.apk`, **Publish**.
 
 - Tag format `v<versionName>` — Obtainium strips the `v` and compares to the
   installed `versionName`.
