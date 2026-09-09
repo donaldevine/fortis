@@ -33,8 +33,9 @@ keeps the explicit Kotlin plugin; if a plugin trips on the new DSL, add
    JDK 17+; the bundled JBR 25 is too new for some plugins.
 2. **Install the NDK** — Settings → Languages & Frameworks → Android SDK →
    **SDK Tools** → check **NDK (Side by side)** + **CMake** → Apply.
-3. **Point Gradle at `cargo`** — `android/gradle.properties`:
-   `fortis.cargo=C:/Users/you/.cargo/bin/cargo.exe`
+3. **`cargo` on PATH** — Gobley calls `cargo` directly; make sure `~/.cargo/bin`
+   is on the PATH the Gradle daemon sees (a normal `rustup` install does this;
+   otherwise set `CARGO_HOME`).
 4. `rustup target add aarch64-linux-android x86_64-linux-android` (done if you
    built from this repo).
 

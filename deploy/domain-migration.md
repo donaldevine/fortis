@@ -35,8 +35,9 @@ updated to serve both `api.fortistechlabs.com` and `api.fortis.rest`.
 ## 3. Point the API
 
 8. In the **new zone → DNS → Records**, add:
-   - Type `CNAME`, Name `api`, Target
-     `<TUNNEL_ID>.cfargotunnel.com`, **Proxied** (orange).
+   - Type `CNAME`, Name `api`, Target `<TUNNEL_ID>.cfargotunnel.com`, **Proxied**
+     (orange). Get `<TUNNEL_ID>` from `cloudflared tunnel list` (or the tunnel's
+     line in `C:\cloudflared\config.yml`).
 
    *(CLI alternative, from the host:
    `& "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel route dns fortis api.fortistechlabs.com`
@@ -53,11 +54,11 @@ updated to serve both `api.fortistechlabs.com` and `api.fortis.rest`.
 
 11. **New zone → Email → Email Routing → Get started.** It adds the MX + SPF
     records itself.
-12. *Destination addresses* → add `you@example.com` → click the link in the
+12. *Destination addresses* → add your personal inbox → click the link in the
     verification email Cloudflare sends.
 13. *Routing rules* → add:
-    - `info@fortistechlabs.com` → `you@example.com`
-    - `support@fortistechlabs.com` → `you@example.com`
+    - `info@fortistechlabs.com` → your inbox
+    - `support@fortistechlabs.com` → your inbox
 14. Check: email `info@fortistechlabs.com`, confirm it lands in Gmail. (Sending
     *as* that address from Gmail is optional and separate — "Send mail as" +
     an SMTP relay.)
