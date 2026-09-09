@@ -49,12 +49,16 @@ signing cert ever changes, the fingerprint in `site/index.html`.
 ### 4. Tag and publish
 
 ```powershell
-git tag v0.1.1
-git push origin v0.1.1
-gh release create v0.1.1 ..\fortis-wallet.apk `
+cd C:\Repos\fortis          # not android\ — the APK and CHANGELOG.md are at the repo root
+gh release create v0.1.1 .\fortis-wallet.apk `
   --title "Fortis Wallet 0.1.1" `
-  --notes-file (New-TemporaryFile | % { Set-Content $_ (Get-Content CHANGELOG.md -Raw); $_ })
+  --notes-file CHANGELOG.md
 ```
+
+`gh release create` makes the `v0.1.1` tag at the current commit (make sure
+`main` is pushed first), uploads the APK, and publishes in one step — no
+separate `git tag` / `git push` needed. The repo must be **public** or the
+`releases/latest/download/` link needs auth.
 
 …(needs `gh` — `winget install GitHub.cli`) or on github.com: **Releases → Draft
 a new release**, choose tag `v0.1.1`, paste the changelog, attach
