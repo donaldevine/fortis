@@ -78,7 +78,11 @@ Pushes the updated `version.json` and any listing/screenshot changes.
 ## Obtainium notes
 
 - Source URL: `https://github.com/donaldevine/fortis`
-- The one-tap link on the site is `obtainium://add/<url-encoded JSON>` with
-  `id`, `url`, `author`, `name`.
+- The one-tap link on the site is an HTTPS redirect wrapper around the
+  `obtainium://add/<url-encoded source URL>` deep link (the payload is a plain
+  URL-encoded source URL — **not** JSON; passing JSON throws "Invalid URL"):
+  `https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fadd%2Fhttps%253A%252F%252Fgithub.com%252Fdonaldevine%252Ffortis`
+  The redirect wrapper degrades gracefully on desktop; the bare `obtainium://`
+  scheme only resolves on Android with Obtainium installed.
 - Obtainium needs the repo **public** and each release to carry exactly one
   `.apk` asset (or an `apkFilterRegEx`).
