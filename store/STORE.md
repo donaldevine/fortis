@@ -10,9 +10,9 @@ Draft copy and assets for the Play Console listing. Fill the `TODO` items.
 | Developer/publisher | **Fortis Tech Labs** |
 | Package | `rest.fortis.wallet` |
 | Category | Finance |
-| Contact email | info@fortis.rest |
-| Website | https://fortis.rest |
-| Privacy policy | https://fortis.rest/privacy |
+| Contact email | info@fortistechlabs.com |
+| Website | https://fortistechlabs.com |
+| Privacy policy | https://fortistechlabs.com/privacy |
 
 ## Short description (≤ 80 chars)
 
@@ -53,7 +53,7 @@ PRIVACY
 fortis collects no analytics and contains no advertising or third-party
 trackers. To show balances and broadcast transactions the app sends your public
 wallet addresses to its backend; there is no sign-up, email, or account. Full
-detail: https://fortis.rest/privacy
+detail: https://fortistechlabs.com/privacy
 
 FEES
 The Bitcoin network fee is set by you (fast / normal / slow, or a custom
@@ -70,7 +70,7 @@ fortis is early software. Back up your recovery phrase offline and start small.
 | **Data types collected** | *Financial info* → "Other financial info": public wallet addresses and the on-chain transactions for them, submitted (signed) transactions. *App info and performance* → "Crash logs": app/OS/device version + stack trace. *App activity* → none. *Location, Personal info, Contacts, Messages, Photos, Audio, Files, Calendar, Device IDs* → none. |
 | **Data shared with third parties** | Wallet addresses and IP address are processed by Cloudflare (infrastructure) and, only during a backend outage, by mempool.space / mempool.guide (fallback block-data sources). Crash logs are sent to a fortis-operated endpoint. |
 | Is data encrypted in transit? | Yes (HTTPS) |
-| Can users request data deletion? | Yes — support@fortis.rest; on-device data is removed on uninstall / "Forget this wallet" |
+| Can users request data deletion? | Yes — support@fortistechlabs.com; on-device data is removed on uninstall / "Forget this wallet" |
 | Is any collected data required? | Wallet addresses are required to show balances; the crash log and the per-install token are not linked to the user's identity |
 | Data collection purposes | App functionality; (crash logs) diagnostics |
 
@@ -108,7 +108,7 @@ The operating entity is **Fortis Tech Labs** (address as in the privacy policy).
 Screenshots are from the **release** build (`app-release.apk`, R8-minified,
 upload-key-signed), `Pixel_8_Pro_AVD`, 1344×2688 with the status bar + gesture
 pill cropped off. Password-locked wallet "Savings" on XBT against the live
-`api.fortis.rest` ("connected"). Re-grabbed 2026-09-09 for the current UI (no
+`api.fortistechlabs.com` ("connected"). Re-grabbed 2026-09-09 for the current UI (no
 service fee — the send screen has no fee disclosure). Consider adding
 framed/captioned marketing versions later.
 

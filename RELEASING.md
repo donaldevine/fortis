@@ -4,7 +4,7 @@ Google Play needs an **organization** account for crypto wallets (policy, Aug 20
 and this is a personal account, so distribution is:
 
 - **GitHub Releases** — the source of truth. APK attached to a tagged release.
-- **fortis.rest** — "Download APK" button → the release's `fortis-wallet.apk`,
+- **fortistechlabs.com** — "Download APK" button → the release's `fortis-wallet.apk`,
   plus an "Add to Obtainium" deep link.
 - **[Obtainium](https://obtainium.imranr.dev/)** — users paste
   `github.com/donaldevine/fortis`; it polls the releases and auto-updates.

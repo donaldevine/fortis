@@ -1,4 +1,4 @@
-# Publishing the fortis.rest site
+# Publishing the fortistechlabs.com site
 
 The **Fortis Tech Labs** company site + the **Fortis Wallet** privacy policy that
 Google Play requires. Lives in [`site/`](../site). **No build step** — plain HTML,
@@ -6,14 +6,14 @@ one SVG, a few small JPEGs.
 
 ```
 site/
-  index.html      →  https://fortis.rest/          (Fortis Tech Labs)
-  privacy.html    →  https://fortis.rest/privacy   (Pages serves /privacy → /privacy.html)
-  icon.svg        →  https://fortis.rest/icon.svg  (copy of web/icon.svg — keep in sync)
+  index.html      →  https://fortistechlabs.com/          (Fortis Tech Labs)
+  privacy.html    →  https://fortistechlabs.com/privacy   (Pages serves /privacy → /privacy.html)
+  icon.svg        →  https://fortistechlabs.com/icon.svg  (copy of web/icon.svg — keep in sync)
   img/*.jpg       →  downscaled app screenshots
 ```
 
 Deployed to **Cloudflare Pages** (project `fortis-rest`) — separate origin from
-the `api.fortis.rest` tunnel, free, global, auto-TLS.
+the `api.fortistechlabs.com` tunnel, free, global, auto-TLS.
 
 ## Deploy
 
@@ -43,12 +43,12 @@ what the script looks for first.
 ## One-time: custom domains
 
 After the first deploy, in the dashboard → **Workers & Pages → fortis-rest →
-Custom domains** → add `fortis.rest` and `www.fortis.rest`. If a DNS record for
+Custom domains** → add `fortistechlabs.com` and `www.fortistechlabs.com`. If a DNS record for
 either already exists (e.g. from an earlier Pages project), the dashboard prompts
 to repoint it — accept that, or in **DNS → Records** set each to a proxied
 `CNAME → fortis-rest.pages.dev`.
 
-**Leave `api.fortis.rest` alone** — that's the `cloudflared` tunnel, not Pages.
+**Leave `api.fortistechlabs.com` alone** — that's the `cloudflared` tunnel, not Pages.
 
 ## Keeping the icon in sync
 

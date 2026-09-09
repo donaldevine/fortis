@@ -31,10 +31,10 @@ Register at `https://play.google.com/console/signup`:
   your legal name. Set it under **Account details → Developer name**.
 - The **verified contact details** (legal name, address, email/phone) are your
   personal ones and are used by Google, not shown publicly, except an email
-  address is shown on the listing (use `info@fortis.rest`).
+  address is shown on the listing (use `info@fortistechlabs.com`).
 
 Because you have no registered entity, keep `site/privacy.html`'s operator line
-as the trading name **"Fortis Tech Labs"** with `support@fortis.rest` as the
+as the trading name **"Fortis Tech Labs"** with `support@fortistechlabs.com` as the
 contact — that's sufficient for a non-custodial wallet. Don't invent a
 "registered address."
 
@@ -192,7 +192,7 @@ From [STORE.md](STORE.md) "Data safety" section and `site/privacy.html`. Key ans
   - **App info and performance → Crash logs** — Collected, not shared, for app
     functionality / diagnostics. (The self-hosted `/crash` reporter.)
 - **Is all data encrypted in transit?** Yes (HTTPS).
-- **Can users request data deletion?** Yes — link `support@fortis.rest` and the
+- **Can users request data deletion?** Yes — link `support@fortistechlabs.com` and the
   privacy policy.
 - Independent security review: No (unless you commission one).
 
@@ -215,7 +215,7 @@ section. Declare:
 No to all.
 
 ### 5h. Privacy policy
-URL field: `https://fortis.rest/privacy` — **this page must be live and reachable
+URL field: `https://fortistechlabs.com/privacy` — **this page must be live and reachable
 before you submit for review.** If the Cloudflare Pages deploy isn't done, host
 `site/privacy.html` anywhere public temporarily (GitHub Pages, a Pages project,
 even a gist-backed page) and swap the URL later.
@@ -233,7 +233,7 @@ even a gist-backed page) and swap the URL later.
   1080px on the short side). Re-grab from the **release** build if you want the
   exact status bar.
 - App category: **Finance**. Tags: wallet, bitcoin, crypto.
-- Contact: `info@fortis.rest`, `https://fortis.rest`.
+- Contact: `info@fortistechlabs.com`, `https://fortistechlabs.com`.
 
 ---
 
@@ -338,5 +338,5 @@ test track → promote), send for review.
 | Build | `cd android && .\gradlew.bat clean :app:bundleRelease` |
 | Output | `android/app/build/outputs/bundle/release/app-release.aab` |
 | Bump before each upload | `versionCode` in `android/app/build.gradle.kts` |
-| Privacy policy (must be live) | `https://fortis.rest/privacy` |
+| Privacy policy (must be live) | `https://fortistechlabs.com/privacy` |
 | Closed test | ≥ 12 testers, ≥ 14 continuous days (personal accounts) |

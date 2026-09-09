@@ -20,7 +20,8 @@ val hasReleaseKeystore = keystoreProps.getProperty("storeFile") != null
 
 android {
     // namespace stays com.fortis.wallet (the source package + generated R/BuildConfig);
-    // applicationId is the permanent Play/device identity, reverse-DNS of fortis.rest.
+    // applicationId is the permanent Play/device identity — reverse-DNS of the
+    // original fortis.rest domain; it never changes, whatever the site domain is.
     namespace = "com.fortis.wallet"
     compileSdk = 37
 
@@ -28,8 +29,8 @@ android {
         applicationId = "rest.fortis.wallet"
         minSdk = 26
         targetSdk = 37
-        versionCode = 2
-        versionName = "0.1.1"
+        versionCode = 3
+        versionName = "0.1.2"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 

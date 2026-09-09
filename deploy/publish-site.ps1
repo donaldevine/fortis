@@ -1,5 +1,5 @@
 <#
-  Publish the fortis.rest static site  (repo:  site\ )  to Cloudflare Pages.
+  Publish the fortistechlabs.com static site  (repo:  site\ )  to Cloudflare Pages.
 
   ---------------------------------------------------------------------------
   ONE-TIME SETUP
@@ -14,8 +14,8 @@
   2. First run creates the Pages project (default name "fortis-rest").
      Afterwards, in the dashboard:
         Workers & Pages -> fortis-rest -> Custom domains
-        -> add  fortis.rest  and  www.fortis.rest
-     (Leave api.fortis.rest alone - that's the cloudflared tunnel.)
+        -> add  fortistechlabs.com  and  www.fortistechlabs.com
+     (Leave api.fortistechlabs.com alone - that's the cloudflared tunnel.)
 
      Already made the project under a different name? Pass  -Project <name>.
 
@@ -89,7 +89,7 @@ Write-Host ''
 Write-Host "  project : $Project"
 Write-Host "  folder  : $dir"
 Write-Host ("  auth    : CLOUDFLARE_API_TOKEN (...{0})" -f $env:CLOUDFLARE_API_TOKEN.Substring([Math]::Max(0, $env:CLOUDFLARE_API_TOKEN.Length - 4)))
-Write-Host ("  target  : {0}" -f $(if ($isProd) { 'production (fortis.rest)' } else { "preview  (branch '$Branch')" }))
+Write-Host ("  target  : {0}" -f $(if ($isProd) { 'production (fortistechlabs.com)' } else { "preview  (branch '$Branch')" }))
 Write-Host ("  commit  : {0} {1}{2}" -f $sha, $msg, $(if ($dirty -eq 'true') { '   [+ uncommitted changes]' }))
 Write-Host ''
 
@@ -134,7 +134,7 @@ if ($rc -ne 0) {
 Write-Host ''
 Write-Host '  Deployed.' -ForegroundColor Green
 if ($isProd) {
-    Write-Host '  Live at https://fortis.rest/  and  https://www.fortis.rest/'
+    Write-Host '  Live at https://fortistechlabs.com/  and  https://www.fortistechlabs.com/'
     Write-Host '  (edge cache may hold the old page for a minute; the immutable'
     Write-Host '   *.fortis-rest.pages.dev URL above is instant).'
 } else {

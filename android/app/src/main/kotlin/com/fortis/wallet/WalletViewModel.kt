@@ -33,7 +33,7 @@ const val MAX_WALLETS = 10
 const val MAX_WALLET_NAME = 30
 
 /** The one backend the mobile app talks to. Not user-configurable, not shown. */
-const val HOSTED_EDGE = "https://api.fortis.rest"
+const val HOSTED_EDGE = "https://api.fortistechlabs.com"
 
 /** Public Esplora fallbacks, used when [HOSTED_EDGE] is unreachable. */
 const val PUBLIC_BTC_ESPLORA = "https://mempool.space/api"

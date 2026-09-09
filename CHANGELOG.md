@@ -2,6 +2,13 @@
 
 Fortis Wallet (Android). Versions are `versionName (versionCode)`.
 
+## 0.1.2 (3) — 2026-09-09
+
+- Backend moved to `api.fortistechlabs.com` (was `api.fortis.rest`). The old
+  host keeps working through the transition. If your device can't reach the
+  backend it still falls back to public block explorers.
+- Website is now [fortistechlabs.com](https://fortistechlabs.com/).
+
 ## 0.1.1 (2) — 2026-09-09
 
 First public release. Direct download + [Obtainium](https://obtainium.imranr.dev/).

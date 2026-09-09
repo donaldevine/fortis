@@ -22,7 +22,7 @@ function explorerTxUrl(txid) {
   return base ? `${base}/tx/${txid}` : null;
 }
 // The hosted fortis-edge. Override for a local instance (http://127.0.0.1:8098).
-const DEFAULT_EDGE = 'https://api.fortis.rest';
+const DEFAULT_EDGE = 'https://api.fortistechlabs.com';
 
 let state = null; // persisted config or null
 let backend = null; // Gateway | EsploraBackend | null

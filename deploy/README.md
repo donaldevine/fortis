@@ -48,7 +48,7 @@ cargo build --release -p fortis-index -p fortis-edge
   --require-token --trust-forwarded-for \
   --crash-log /var/log/fortis/crashes.ndjson
   # --service-fee-address <addr>   optional: advertise + enforce a % fee to <addr>.
-  #   The public fortis.rest edge runs without it (no fee).
+  #   The public fortistechlabs.com edge runs without it (no fee).
 ```
 
 On Linux, `deploy/systemd/*.service` run these under `systemd` with sandboxing —
