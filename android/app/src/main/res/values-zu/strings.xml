@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Cashisa</string>
 
     <string name="onboard_add_title">Engeza isikhwama</string>
-    <string name="onboard_tagline">isikhwama esingagcinwa nomunye se-Bitcoin nefokhi yayo ye-BLAKE2b</string>
+    <string name="onboard_tagline">isikhwama esingagcinwa se-Bitcoin XBT ne-Bitcoin BTC</string>
     <string name="onboard_create">Dala isikhwama esisha</string>
     <string name="onboard_restore">Buyisela usuka emushweni wokubuyisela</string>
 

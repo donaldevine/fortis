@@ -31,7 +31,7 @@
     <string name="cd_dismiss">खारेज गर्नुहोस्</string>
 
     <string name="onboard_add_title">वालेट थप्नुहोस्</string>
-    <string name="onboard_tagline">Bitcoin र यसको BLAKE2b फोर्कका लागि एउटा नन-कस्टोडियल वालेट</string>
+    <string name="onboard_tagline">Bitcoin XBT र Bitcoin BTC का लागि एउटा नन-कस्टोडियल वालेट</string>
     <string name="onboard_create">नयाँ वालेट सिर्जना गर्नुहोस्</string>
     <string name="onboard_restore">रिकभरी वाक्यांशबाट पुनर्स्थापना गर्नुहोस्</string>
 

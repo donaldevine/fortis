@@ -232,6 +232,15 @@ impl WalletView {
         .map_err(js)
     }
 
+    /// Check that `address` parses and is valid on this view's network, returning
+    /// its canonical string form. Cheap (no derivation) — validate a send
+    /// recipient with this before any network I/O so a bad address reports a
+    /// clear error instead of being masked by a later "no coins" check.
+    #[wasm_bindgen(js_name = checkAddress)]
+    pub fn check_address(&self, address: &str) -> Result<String, JsError> {
+        Ok(parse_address(address, params(&self.chain)?.network)?.to_string())
+    }
+
     /// `{ address, script_pubkey_hex }` for the next unused external address.
     #[wasm_bindgen(js_name = nextReceiveAddress)]
     pub fn next_receive_address(&mut self) -> Result<JsValue, JsError> {
@@ -352,16 +361,18 @@ impl WalletView {
     }
 }
 
-fn address_spk(addr: &str, net: wallet_core::bitcoin::Network) -> Result<ScriptBuf, JsError> {
+fn parse_address(addr: &str, net: wallet_core::bitcoin::Network) -> Result<Address, JsError> {
     // Trim first: a stray newline/space makes rust-bitcoin report a misleading
     // "base58 error" for an otherwise-valid bech32 address.
     let addr = addr.trim();
-    Ok(addr
-        .parse::<Address<NetworkUnchecked>>()
+    addr.parse::<Address<NetworkUnchecked>>()
         .map_err(|_| JsError::new(&format!("\"{addr}\" is not a valid address")))?
         .require_network(net)
-        .map_err(|_| JsError::new(&format!("address {addr} is not valid on this network")))?
-        .script_pubkey())
+        .map_err(|_| JsError::new(&format!("address {addr} is not valid on this network")))
+}
+
+fn address_spk(addr: &str, net: wallet_core::bitcoin::Network) -> Result<ScriptBuf, JsError> {
+    Ok(parse_address(addr, net)?.script_pubkey())
 }
 
 /// `serviceFee` is `undefined`/`null` (self-hosted backend, no fee) or

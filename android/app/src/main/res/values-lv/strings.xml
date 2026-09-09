@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Aizvērt</string>
 
     <string name="onboard_add_title">Pievienot maku</string>
-    <string name="onboard_tagline">bezturēšanas maks priekš Bitcoin un tā BLAKE2b atzarojuma</string>
+    <string name="onboard_tagline">bezturēšanas maks priekš Bitcoin XBT un Bitcoin BTC</string>
     <string name="onboard_create">Izveidot jaunu maku</string>
     <string name="onboard_restore">Atjaunot no atkopšanas frāzes</string>
 

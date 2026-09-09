@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Жабу</string>
 
     <string name="onboard_add_title">Әмиян қосу</string>
-    <string name="onboard_tagline">Bitcoin және оның BLAKE2b форкіне арналған кастодиалды емес әмиян</string>
+    <string name="onboard_tagline">Bitcoin XBT және Bitcoin BTC-ге арналған кастодиалды емес әмиян</string>
     <string name="onboard_create">Жаңа әмиян жасау</string>
     <string name="onboard_restore">Қалпына келтіру тіркесінен қалпына келтіру</string>
 

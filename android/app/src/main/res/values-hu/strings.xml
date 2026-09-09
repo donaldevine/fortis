@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Elvetés</string>
 
     <string name="onboard_add_title">Tárca hozzáadása</string>
-    <string name="onboard_tagline">letétmentes tárca a Bitcoinhoz és annak BLAKE2b forkjához</string>
+    <string name="onboard_tagline">letétmentes tárca a Bitcoin XBT-hez és a Bitcoin BTC-hez</string>
     <string name="onboard_create">Új tárca létrehozása</string>
     <string name="onboard_restore">Visszaállítás helyreállítási kifejezésből</string>
 

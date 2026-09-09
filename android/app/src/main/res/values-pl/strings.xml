@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Zamknij</string>
 
     <string name="onboard_add_title">Dodaj portfel</string>
-    <string name="onboard_tagline">niepowierniczy portfel dla Bitcoina i jego forka BLAKE2b</string>
+    <string name="onboard_tagline">niepowierniczy portfel dla Bitcoin XBT i Bitcoin BTC</string>
     <string name="onboard_create">Utwórz nowy portfel</string>
     <string name="onboard_restore">Przywróć z frazy odzyskiwania</string>
 

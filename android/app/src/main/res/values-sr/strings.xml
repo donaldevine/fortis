@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Одбаци</string>
 
     <string name="onboard_add_title">Додај новчаник</string>
-    <string name="onboard_tagline">нескрбнички новчаник за Bitcoin и његов форк BLAKE2b</string>
+    <string name="onboard_tagline">нескрбнички новчаник за Bitcoin XBT и Bitcoin BTC</string>
     <string name="onboard_create">Направи нови новчаник</string>
     <string name="onboard_restore">Опорави из фразе за опоравак</string>
 

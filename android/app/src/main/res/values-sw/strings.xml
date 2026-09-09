@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Ondoa</string>
 
     <string name="onboard_add_title">Ongeza pochi</string>
-    <string name="onboard_tagline">pochi isiyo ya uhifadhi kwa Bitcoin na tawi lake la BLAKE2b</string>
+    <string name="onboard_tagline">pochi isiyo ya uhifadhi kwa Bitcoin XBT na Bitcoin BTC</string>
     <string name="onboard_create">Unda pochi mpya</string>
     <string name="onboard_restore">Rejesha kutoka kwa kifungu cha kurejesha</string>
 

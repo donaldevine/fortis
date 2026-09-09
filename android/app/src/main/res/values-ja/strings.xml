@@ -31,7 +31,7 @@
     <string name="cd_dismiss">閉じる</string>
 
     <string name="onboard_add_title">ウォレットを追加</string>
-    <string name="onboard_tagline">Bitcoin とその BLAKE2b フォークのための非カストディアルウォレット</string>
+    <string name="onboard_tagline">Bitcoin XBT と Bitcoin BTC のための非カストディアルウォレット</string>
     <string name="onboard_create">新しいウォレットを作成</string>
     <string name="onboard_restore">リカバリーフレーズから復元</string>
 

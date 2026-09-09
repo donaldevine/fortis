@@ -31,7 +31,7 @@
     <string name="cd_dismiss">برخاست کریں</string>
 
     <string name="onboard_add_title">والیٹ شامل کریں</string>
-    <string name="onboard_tagline">Bitcoin اور اس کے BLAKE2b فورک کے لیے ایک غیر تحویلی والیٹ</string>
+    <string name="onboard_tagline">Bitcoin XBT اور Bitcoin BTC کے لیے ایک غیر تحویلی والیٹ</string>
     <string name="onboard_create">نیا والیٹ بنائیں</string>
     <string name="onboard_restore">بازیابی کے جملے سے بحال کریں</string>
 

@@ -12,6 +12,9 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -70,6 +73,23 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private fun fmt(sat: Long) = fmtCoin(sat)
+
+/** Ease the displayed satoshi value toward [sat] whenever it changes — 0 → balance
+ *  on first load, then old → new on each refresh. ~650 ms, decelerating. */
+@Composable
+private fun countUpSat(sat: Long): Long {
+    val progress = remember { Animatable(0f) }
+    var base by remember { mutableStateOf(0L) }
+    var goal by remember { mutableStateOf(sat) }
+    fun shown() = base + ((goal - base) * progress.value.toDouble()).toLong()
+    LaunchedEffect(sat) {
+        base = shown()
+        goal = sat
+        progress.snapTo(0f)
+        progress.animateTo(1f, tween(650, easing = FastOutSlowInEasing))
+    }
+    return shown()
+}
 
 /** Parse what the user typed in the Amount field into satoshis.
  *  [sat] true → a plain integer number of sats; false → a decimal coin amount
@@ -475,8 +495,7 @@ private fun HomeTab(vm: WalletViewModel) = Column(
                 Column(Modifier.weight(1f)) {
                     Text(w.display, color = Fx.text, fontWeight = FontWeight.Medium)
                     Text(
-                        bal?.let { "${fmt(it)} $wUnit" }
-                            ?: if (current) stringResource(R.string.home_open) else stringResource(R.string.home_tap_to_open),
+                        bal?.let { "${fmt(it)} $wUnit" } ?: stringResource(R.string.home_tap_to_open),
                         color = if (bal != null) Fx.textDim else Fx.textFaint,
                         fontFamily = if (bal != null) FontFamily.Monospace else null,
                         fontSize = 12.sp,
@@ -588,6 +607,10 @@ private fun SettingsTab(vm: WalletViewModel) {
                 else stringResource(R.string.lock_mode_password),
             )
             Text(stringResource(R.string.settings_one_unlock), color = Fx.textFaint, fontSize = 12.sp)
+            val keySec = remember(vm.lockMode) { vm.keySecurity() }
+            if (keySec == com.fortis.wallet.data.SeedKeystore.KeySecurity.SOFTWARE) {
+                Text(stringResource(R.string.settings_key_software), color = Fx.warn, fontSize = 12.sp)
+            }
         }
 
         LanguageCard()
@@ -689,7 +712,7 @@ private fun WalletTab(vm: WalletViewModel) {
                 Column {
                     Text(c.display, color = Fx.textDim, fontSize = 12.sp)
                     Row(verticalAlignment = Alignment.Bottom) {
-                        Text(if (b != null) fmt(b.confirmedSat) else "—",
+                        Text(if (b != null) fmt(countUpSat(b.confirmedSat)) else "—",
                             fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold, fontSize = 32.sp,
                             color = Fx.text)
                         Spacer(Modifier.width(6.dp))

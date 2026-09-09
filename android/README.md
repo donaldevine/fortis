@@ -66,7 +66,7 @@ then drop the `dev.gobley.*` plugins + `cargo {}` / `uniffi {}` blocks and add
 
 | | |
 |---|---|
-| `MainActivity.kt` / `App.kt` | entry + phase switch (Onboard → Locked → BackendPicker → Home) |
+| `MainActivity.kt` / `App.kt` | entry + phase switch (Onboard / Gen / Create / Restore → AppLock → Shell) |
 | `WalletViewModel.kt` | orchestration — mirror of `web/src/app.js` |
 | `wallet/WalletSession.kt` | wraps the `wallet-ffi` `Wallet` + `WalletView`; seal/unseal |
 | `data/Store.kt` | DataStore — the encrypted seed + config |
@@ -74,9 +74,24 @@ then drop the `dev.gobley.*` plugins + `cargo {}` / `uniffi {}` blocks and add
 | `ui/theme/Theme.kt` · `ui/Glass.kt` | the glassy design tokens + components |
 | `ui/screens/Screens.kt` | all screens |
 
+## Done since first cut
+
+Biometric / device-credential app lock (`ui/Biometric.kt` + `data/SeedKeystore.kt`
+— one unlock opens every wallet; the app secret is wrapped by a Keystore key
+gated on `BIOMETRIC_STRONG | DEVICE_CREDENTIAL`, generated in the **StrongBox**
+secure element where present, TEE otherwise; Settings warns if it fell back to
+software). QR on receive (`ui/Qr.kt`, long-press to copy as an image). Balance
+count-up animation on the Wallet hero (`countUpSat`). Gap-limit auto-advance —
+`Backend.firstUnusedReceive` walks the scan past receive addresses already seen
+on-chain so "Receive" shows a fresh one. Multi-wallet (up to 10, per-chain),
+in-app locale picker (75 languages), approximate USD value, opt-in XBT replay
+protection on BTC sends, "take the fee from the amount".
+
 ## Not done yet
 
-Biometric unlock (dep is included, not wired), StrongBox-backed key wrapping,
-balance count-up animation, QR on receive, address gap-limit auto-advance, the
-atomic-swap flow. The security-critical parts (derivation, coin selection,
-`SIGHASH_UNIFIED` signing) are all in `wallet-ffi` and shared with the web wallet.
+The **atomic-swap flow** — `wallet-core`/`wallet-wasm` have the HTLC contract and
+client state machine, but `wallet-ffi` bridges only `swap_pubkey` / `sign_swap`
+to mobile, there is no `swap-orchestrator` service in this repo for offer
+matching + the watchtower, and the web wallet has no swap UI to mirror. The
+security-critical parts (derivation, coin selection, `SIGHASH_UNIFIED` signing)
+are all in `wallet-ffi` and shared with the web wallet.

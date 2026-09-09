@@ -31,7 +31,7 @@
     <string name="cd_dismiss">ປິດ</string>
 
     <string name="onboard_add_title">ເພີ່ມກະເປົາ</string>
-    <string name="onboard_tagline">ກະເປົາແບບບໍ່ຮັກສາໃຫ້ສຳລັບ Bitcoin ແລະ fork BLAKE2b ຂອງມັນ</string>
+    <string name="onboard_tagline">ກະເປົາແບບບໍ່ຮັກສາໃຫ້ສຳລັບ Bitcoin XBT ແລະ Bitcoin BTC</string>
     <string name="onboard_create">ສ້າງກະເປົາໃໝ່</string>
     <string name="onboard_restore">ກູ້ຄືນຈາກວະລີກູ້ຄືນ</string>
 

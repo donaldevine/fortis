@@ -31,7 +31,7 @@
     <string name="cd_dismiss">খারিজ করুন</string>
 
     <string name="onboard_add_title">ওয়ালেট যোগ করুন</string>
-    <string name="onboard_tagline">Bitcoin ও তার BLAKE2b ফর্কের জন্য একটি নন-কাস্টোডিয়াল ওয়ালেট</string>
+    <string name="onboard_tagline">Bitcoin XBT ও Bitcoin BTC-এর জন্য একটি নন-কাস্টোডিয়াল ওয়ালেট</string>
     <string name="onboard_create">নতুন ওয়ালেট তৈরি করুন</string>
     <string name="onboard_restore">পুনরুদ্ধার বাক্যাংশ থেকে পুনরুদ্ধার করুন</string>
 

@@ -3,6 +3,7 @@ package com.fortis.wallet.data
 import android.content.Context
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.biometric.BiometricManager
@@ -13,6 +14,7 @@ import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
+import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 
 /**
@@ -42,10 +44,29 @@ object SeedKeystore {
 
     fun hasKey(): Boolean = runCatching { keyStore().containsAlias(ALIAS) }.getOrDefault(false)
 
-    /** Create (or replace) the app key. */
-    fun createKey() {
-        val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KS)
-        val spec = KeyGenParameterSpec.Builder(
+    /** Where the app key actually lives — for the Settings security line.
+     *  `null` when there is no key (password mode) or it can't be inspected. */
+    enum class KeySecurity { STRONGBOX, HARDWARE, SOFTWARE }
+
+    fun keySecurity(): KeySecurity? = runCatching {
+        val key = secretKey()
+        val info = SecretKeyFactory.getInstance(key.algorithm, KS)
+            .getKeySpec(key, KeyInfo::class.java) as KeyInfo
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+                when (info.securityLevel) {
+                    KeyProperties.SECURITY_LEVEL_STRONGBOX -> KeySecurity.STRONGBOX
+                    KeyProperties.SECURITY_LEVEL_SOFTWARE,
+                    KeyProperties.SECURITY_LEVEL_UNKNOWN_SECURE -> KeySecurity.SOFTWARE
+                    else -> KeySecurity.HARDWARE
+                }
+            @Suppress("DEPRECATION") info.isInsideSecureHardware -> KeySecurity.HARDWARE
+            else -> KeySecurity.SOFTWARE
+        }
+    }.getOrNull()
+
+    private fun keySpec(strongBox: Boolean): KeyGenParameterSpec {
+        val b = KeyGenParameterSpec.Builder(
             ALIAS,
             KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
         )
@@ -54,15 +75,39 @@ object SeedKeystore {
             .setKeySize(256)
             .setUserAuthenticationRequired(true)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            spec.setUserAuthenticationParameters(
+            b.setUserAuthenticationParameters(
                 0,
                 KeyProperties.AUTH_BIOMETRIC_STRONG or KeyProperties.AUTH_DEVICE_CREDENTIAL,
             )
         } else {
             @Suppress("DEPRECATION")
-            spec.setUserAuthenticationValidityDurationSeconds(-1)
+            b.setUserAuthenticationValidityDurationSeconds(-1)
         }
-        gen.init(spec.build())
+        if (strongBox && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) b.setIsStrongBoxBacked(true)
+        return b.build()
+    }
+
+    /** Create (or replace) the app key. Prefer a discrete StrongBox secure
+     *  element (API 28+, hardware permitting); fall back to the TEE where there
+     *  is no StrongBox — its absence surfaces only when the key is generated. */
+    fun createKey() {
+        val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KS)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            try {
+                gen.init(keySpec(strongBox = true))
+                gen.generateKey()
+                return
+            } catch (e: Exception) {
+                // StrongBoxUnavailableException (or a strongbox-provisioning failure
+                // wrapped in one) — retry in the TEE. Matched by name to keep the
+                // class off the API < 28 verification path.
+                val noStrongBox = generateSequence<Throwable>(e) { it.cause }
+                    .any { it.javaClass.simpleName == "StrongBoxUnavailableException" }
+                if (!noStrongBox) throw e
+                runCatching { deleteKey() } // clear any half-made entry
+            }
+        }
+        gen.init(keySpec(strongBox = false))
         gen.generateKey()
     }
 

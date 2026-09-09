@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Atsisakyti</string>
 
     <string name="onboard_add_title">Pridėti piniginę</string>
-    <string name="onboard_tagline">nesauganti piniginė Bitcoin ir jo BLAKE2b atšakai</string>
+    <string name="onboard_tagline">nesauganti piniginė Bitcoin XBT ir Bitcoin BTC</string>
     <string name="onboard_create">Sukurti naują piniginę</string>
     <string name="onboard_restore">Atkurti iš atkūrimo frazės</string>
 

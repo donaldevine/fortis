@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Хаах</string>
 
     <string name="onboard_add_title">Хэтэвч нэмэх</string>
-    <string name="onboard_tagline">Bitcoin болон түүний BLAKE2b салаанд зориулсан хадгаламжгүй хэтэвч</string>
+    <string name="onboard_tagline">Bitcoin XBT болон Bitcoin BTC-д зориулсан хадгаламжгүй хэтэвч</string>
     <string name="onboard_create">Шинэ хэтэвч үүсгэх</string>
     <string name="onboard_restore">Сэргээх хэллэгээс сэргээх</string>
 

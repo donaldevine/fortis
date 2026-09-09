@@ -17,14 +17,13 @@ Draft copy and assets for the Play Console listing. Fill the `TODO` items.
 ## Short description (≤ 80 chars)
 
 ```
-Non-custodial wallet for Bitcoin BLAKE2b and Bitcoin Legacy.
+Non-custodial wallet for Bitcoin XBT and Bitcoin BTC.
 ```
 
 ## Full description (≤ 4000 chars)
 
 ```
-fortis is a non-custodial wallet for Bitcoin BLAKE2b (XBT) and Bitcoin Legacy
-(BTC).
+fortis is a non-custodial wallet for Bitcoin XBT and Bitcoin BTC.
 
 Your keys are yours. The recovery phrase is generated on your device and
 encrypted under a password you choose. It is never uploaded, and neither fortis
@@ -57,9 +56,8 @@ wallet addresses to its backend; there is no sign-up, email, or account. Full
 detail: https://fortis.rest/privacy
 
 FEES
-The Bitcoin network fee is set by you. Payments also include a small service fee
-to a fortis-operated address that funds hosting; the exact amount is shown before
-you sign.
+The Bitcoin network fee is set by you (fast / normal / slow, or a custom
+sat/vB rate). fortis takes no fee of its own.
 
 fortis is early software. Back up your recovery phrase offline and start small.
 ```
@@ -107,11 +105,12 @@ The operating entity is **Fortis Tech Labs** (address as in the privacy policy).
 | Feature graphic | `feature-graphic.png` | 1024×500 PNG |
 | Phone screenshots | `screenshots/0{1..4}-*.png` | 1344×2688 (2:1) |
 
-Screenshots are from a debug build (identical to release for these screens),
-`Pixel_8_Pro_AVD`, status bar + gesture pill cropped off. Wallet "Savings" on
-XBT against the live `api.fortis.rest` ("connected"). Re-grab from a release
-build if you want the exact status bar. Consider adding framed/captioned
-marketing versions later.
+Screenshots are from the **release** build (`app-release.apk`, R8-minified,
+upload-key-signed), `Pixel_8_Pro_AVD`, 1344×2688 with the status bar + gesture
+pill cropped off. Password-locked wallet "Savings" on XBT against the live
+`api.fortis.rest` ("connected"). Re-grabbed 2026-09-09 for the current UI (no
+service fee — the send screen has no fee disclosure). Consider adding
+framed/captioned marketing versions later.
 
 ## TODO before submitting
 

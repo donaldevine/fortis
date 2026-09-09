@@ -116,7 +116,7 @@ function renderOnboard() {
   if (ui.screen === 'restore') return renderRestore();
   mount(el('div', { class: 'screen' },
     el('div', { class: 'spacer' }),
-    brand('a non-custodial wallet for Bitcoin BLAKE2b and Bitcoin Legacy'),
+    brand('a non-custodial wallet for Bitcoin XBT and Bitcoin BTC'),
     el('div', { class: 'spacer' }),
     el('button', { class: 'primary wide', onclick: () => go('gen') }, 'Create a new wallet'),
     el('button', { class: 'ghost wide', onclick: () => go('restore') }, 'Restore from a recovery phrase'),
@@ -207,8 +207,8 @@ async function onGenerate() {
 
 function chainPicker(current = 'xbt') {
   return el('select', { id: 'chain' },
-    el('option', { value: 'xbt', selected: current === 'xbt' }, 'BLAKE2b fork (XBT)'),
-    el('option', { value: 'btc', selected: current === 'btc' }, 'Bitcoin (BTC)'));
+    el('option', { value: 'xbt', selected: current === 'xbt' }, 'Bitcoin XBT'),
+    el('option', { value: 'btc', selected: current === 'btc' }, 'Bitcoin BTC'));
 }
 function networkPicker(current = 'mainnet') {
   return el('select', { id: 'network' },
@@ -562,6 +562,7 @@ async function onReview() {
   err.textContent = 'building…';
   try {
     if (!d.to) throw new Error('enter a destination address');
+    session.checkAddress(d.to); // clear "… is not a valid address" before any network I/O
     const minConf = 1;
     const [feerateResp, utxos] = await Promise.all([
       d.customFee ? Promise.resolve({ sat_vb: Number(d.customFee) }) : backend.feerate(d.target),

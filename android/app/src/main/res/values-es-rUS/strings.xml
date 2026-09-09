@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Descartar</string>
 
     <string name="onboard_add_title">Agregar una billetera</string>
-    <string name="onboard_tagline">una billetera sin custodia para Bitcoin y su bifurcación BLAKE2b</string>
+    <string name="onboard_tagline">una billetera sin custodia para Bitcoin XBT y Bitcoin BTC</string>
     <string name="onboard_create">Crear una billetera nueva</string>
     <string name="onboard_restore">Restaurar desde una frase de recuperación</string>
 

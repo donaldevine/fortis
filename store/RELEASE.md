@@ -1,5 +1,11 @@
 # Releasing Fortis Wallet to Google Play
 
+> **Blocked (2026-09-09):** Google Play now requires an **organization**
+> developer account for cryptocurrency wallets. This is a personal account, so
+> the app can't ship on Play until a legal entity + D-U-N-S + org account exist.
+> Direct distribution in the meantime: see [`RELEASING.md`](../RELEASING.md)
+> (GitHub Releases + Obtainium). Everything below is kept for the org-account move.
+
 End-to-end: build a signed release, set up the Play Console listing, run the
 mandatory closed test, and promote to production.
 
@@ -132,7 +138,7 @@ java -jar bundletool.jar install-apks --apks=release.apks
 Run through, on **mainnet, tiny amounts**:
 1. Create a wallet → fingerprint/PIN lock → write down the phrase.
 2. Receive: fund it with ~2–5k sats from another wallet.
-3. Send a small amount out; confirm the "Service fee" row shows; broadcast;
+3. Send a small amount out; review the fee breakdown; broadcast;
    tap the tx → opens mempool.space / mempool.guide.
 4. Force-stop, reopen → unlock → balance still there.
 5. Settings → wallet → Recovery phrase → confirm screenshot is blocked.
@@ -284,7 +290,7 @@ reset progress, so tell people to leave it installed.
 **Post template:**
 
 > **Beta testers wanted — Fortis Wallet (Android)**
-> Non-custodial Bitcoin BLAKE2b + Bitcoin Legacy wallet. Need 12 people to
+> Non-custodial Bitcoin XBT + Bitcoin BTC wallet. Need 12 people to
 > stay opted in for 14 days for the Play Store requirement — you don't have to
 > use it, just keep it installed.
 >

@@ -31,7 +31,7 @@
     <string name="cd_dismiss">നിരാകരിക്കുക</string>
 
     <string name="onboard_add_title">വാലറ്റ് ചേർക്കുക</string>
-    <string name="onboard_tagline">Bitcoin-നും അതിന്റെ BLAKE2b ഫോർക്കിനും വേണ്ടിയുള്ള നോൺ-കസ്റ്റോഡിയൽ വാലറ്റ്</string>
+    <string name="onboard_tagline">Bitcoin XBT-നും Bitcoin BTC-നും വേണ്ടിയുള്ള നോൺ-കസ്റ്റോഡിയൽ വാലറ്റ്</string>
     <string name="onboard_create">പുതിയ വാലറ്റ് സൃഷ്ടിക്കുക</string>
     <string name="onboard_restore">വീണ്ടെടുക്കൽ വാക്യത്തിൽ നിന്ന് പുനഃസ്ഥാപിക്കുക</string>
 

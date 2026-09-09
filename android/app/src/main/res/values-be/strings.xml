@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Адхіліць</string>
 
     <string name="onboard_add_title">Дадаць кашалёк</string>
-    <string name="onboard_tagline">некастадыяльны кашалёк для Bitcoin і яго форку на BLAKE2b</string>
+    <string name="onboard_tagline">некастадыяльны кашалёк для Bitcoin XBT і Bitcoin BTC</string>
     <string name="onboard_create">Стварыць новы кашалёк</string>
     <string name="onboard_restore">Аднавіць з фразы аднаўлення</string>
 

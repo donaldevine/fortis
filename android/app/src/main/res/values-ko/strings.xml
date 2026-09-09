@@ -31,7 +31,7 @@
     <string name="cd_dismiss">닫기</string>
 
     <string name="onboard_add_title">지갑 추가</string>
-    <string name="onboard_tagline">Bitcoin과 그 BLAKE2b 포크를 위한 비수탁형 지갑</string>
+    <string name="onboard_tagline">Bitcoin XBT과 Bitcoin BTC를 위한 비수탁형 지갑</string>
     <string name="onboard_create">새 지갑 만들기</string>
     <string name="onboard_restore">복구 문구로 복원</string>
 

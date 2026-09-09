@@ -16,7 +16,10 @@ use wallet_core::bitcoin::{consensus, Address, Amount, OutPoint, ScriptBuf, Tran
 use wallet_core::crypto::{self, KdfParams};
 use wallet_core::{ChainParams, MasterKey};
 
+// `flat_error`: the binding carries just the `Display` string, so Kotlin/Swift
+// `exception.message` is the message itself — not uniffi's `v1=…` field dump.
 #[derive(Debug, thiserror::Error, uniffi::Error)]
+#[uniffi(flat_error)]
 pub enum FfiError {
     #[error("{0}")]
     Wallet(String),
@@ -343,6 +346,14 @@ impl WalletView {
         })
     }
 
+    /// Check that `address` parses and is valid on this view's network, returning
+    /// its canonical string form. Cheap (no derivation) — call it to validate a
+    /// send recipient before doing any network I/O, so a bad address reports a
+    /// clear error instead of being masked by a later "no coins" check.
+    pub fn check_address(&self, address: String) -> Result<String> {
+        Ok(parse_address(&address, self.net)?.to_string())
+    }
+
     /// `op_return` (optional): bytes for a 0-value `OP_RETURN` appended to the tx.
     /// On the Bitcoin chain, ~100 random bytes make the tx consensus-invalid on
     /// the BLAKE2b fork (over its 82-byte datacarrier cap) — replay protection.
@@ -421,15 +432,18 @@ fn to_core_utxos(utxos: &[WalletUtxo]) -> Result<Vec<wallet_core::Utxo>> {
     utxos.iter().map(|u| u.to_core()).collect()
 }
 
-fn address_spk(addr: &str, net: wallet_core::bitcoin::Network) -> Result<ScriptBuf> {
+fn parse_address(addr: &str, net: wallet_core::bitcoin::Network) -> Result<Address> {
     // Paste often carries a trailing newline/space; rust-bitcoin then reports a
     // baffling "base58 error" for what is really a valid bech32 address.
     let addr = addr.trim();
-    Ok(Address::<NetworkUnchecked>::from_str(addr)
+    Address::<NetworkUnchecked>::from_str(addr)
         .map_err(|_| err(format!("\"{addr}\" is not a valid address")))?
         .require_network(net)
-        .map_err(|_| err(format!("address {addr} is not valid on this network")))?
-        .script_pubkey())
+        .map_err(|_| err(format!("address {addr} is not valid on this network")))
+}
+
+fn address_spk(addr: &str, net: wallet_core::bitcoin::Network) -> Result<ScriptBuf> {
+    Ok(parse_address(addr, net)?.script_pubkey())
 }
 
 fn to_core_service_fee(

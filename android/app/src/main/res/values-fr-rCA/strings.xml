@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Ignorer</string>
 
     <string name="onboard_add_title">Ajouter un portefeuille</string>
-    <string name="onboard_tagline">un portefeuille non dépositaire pour Bitcoin et sa bifurcation BLAKE2b</string>
+    <string name="onboard_tagline">un portefeuille non dépositaire pour Bitcoin XBT et Bitcoin BTC</string>
     <string name="onboard_create">Créer un nouveau portefeuille</string>
     <string name="onboard_restore">Restaurer à partir d\'une phrase de récupération</string>
 

@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Închide</string>
 
     <string name="onboard_add_title">Adaugă un portofel</string>
-    <string name="onboard_tagline">un portofel non-custodial pentru Bitcoin și forkul său BLAKE2b</string>
+    <string name="onboard_tagline">un portofel non-custodial pentru Bitcoin XBT și Bitcoin BTC</string>
     <string name="onboard_create">Creează un portofel nou</string>
     <string name="onboard_restore">Restaurează dintr-o frază de recuperare</string>
 

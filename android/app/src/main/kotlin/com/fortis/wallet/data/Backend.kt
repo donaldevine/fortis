@@ -53,4 +53,10 @@ interface Backend {
      *  backend can (a no-op otherwise). Called once at the top of a refresh so
      *  the per-address loop that follows is served from cache. */
     suspend fun prewarm() {}
+
+    /** The first receive-branch index that has never appeared on-chain, at or
+     *  after [floor] — so the wallet can auto-advance past addresses it has
+     *  already handed out. Backends that don't track address use return [floor]
+     *  (the node-backed one advances its own descriptor). */
+    suspend fun firstUnusedReceive(floor: Int): Int = floor
 }

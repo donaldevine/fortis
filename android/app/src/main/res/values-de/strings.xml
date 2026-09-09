@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Schließen</string>
 
     <string name="onboard_add_title">Wallet hinzufügen</string>
-    <string name="onboard_tagline">eine nicht-verwahrende Wallet für Bitcoin und seinen BLAKE2b-Fork</string>
+    <string name="onboard_tagline">eine nicht-verwahrende Wallet für Bitcoin XBT und Bitcoin BTC</string>
     <string name="onboard_create">Neue Wallet erstellen</string>
     <string name="onboard_restore">Aus einer Wiederherstellungsphrase wiederherstellen</string>
 

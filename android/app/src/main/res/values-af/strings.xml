@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Maak toe</string>
 
     <string name="onboard_add_title">Voeg \'n beursie by</string>
-    <string name="onboard_tagline">\'n nie-bewaarnemende beursie vir Bitcoin en sy BLAKE2b-vurk</string>
+    <string name="onboard_tagline">\'n nie-bewaarnemende beursie vir Bitcoin XBT en Bitcoin BTC</string>
     <string name="onboard_create">Skep \'n nuwe beursie</string>
     <string name="onboard_restore">Herstel vanaf \'n herstelfrase</string>
 

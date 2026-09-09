@@ -90,6 +90,18 @@ class EsploraBackend(
     private var cachedUtxos: List<WalletUtxo>? = null
     private var cachedAt = 0L
 
+    /** Highest receive-branch index seen with any on-chain activity (a UTXO or a
+     *  tx). Grows as [scan] / [history] walk the watch set; drives
+     *  [firstUnusedReceive]. -1 until the first scan. */
+    @Volatile
+    private var usedReceiveMax = -1
+
+    private fun noteUsed(a: WatchAddr, active: Boolean) {
+        if (active && a.branch == 0u && a.index.toInt() > usedReceiveMax) usedReceiveMax = a.index.toInt()
+    }
+
+    override suspend fun firstUnusedReceive(floor: Int): Int = maxOf(floor, usedReceiveMax + 1)
+
     private suspend fun scan(force: Boolean = false): List<WalletUtxo> {
         val now = System.currentTimeMillis()
         if (!force && cachedUtxos != null && now - cachedAt < 10_000) return cachedUtxos!!
@@ -97,6 +109,7 @@ class EsploraBackend(
         val out = ArrayList<WalletUtxo>()
         for (a in watchSet()) {
             val arr = JSONArray(get("/address/${a.address}/utxo"))
+            noteUsed(a, arr.length() > 0)
             for (i in 0 until arr.length()) {
                 val u = arr.getJSONObject(i)
                 val st = u.optJSONObject("status")
@@ -206,6 +219,7 @@ class EsploraBackend(
         val seen = LinkedHashMap<String, HistoryEntry>()
         for (a in watchSet()) {
             val arr = JSONArray(get("/address/${a.address}/txs"))
+            noteUsed(a, arr.length() > 0)
             for (i in 0 until arr.length()) {
                 val tx = arr.getJSONObject(i)
                 val id = tx.getString("txid")

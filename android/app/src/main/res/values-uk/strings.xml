@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Закрити</string>
 
     <string name="onboard_add_title">Додати гаманець</string>
-    <string name="onboard_tagline">некастодіальний гаманець для Bitcoin та його форку на BLAKE2b</string>
+    <string name="onboard_tagline">некастодіальний гаманець для Bitcoin XBT та Bitcoin BTC</string>
     <string name="onboard_create">Створити новий гаманець</string>
     <string name="onboard_restore">Відновити з фрази відновлення</string>
 

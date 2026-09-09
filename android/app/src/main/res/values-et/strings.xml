@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Sulge</string>
 
     <string name="onboard_add_title">Lisa rahakott</string>
-    <string name="onboard_tagline">mittehoiustav rahakott Bitcoini ja selle BLAKE2b-haru jaoks</string>
+    <string name="onboard_tagline">mittehoiustav rahakott Bitcoin XBT ja Bitcoin BTC jaoks</string>
     <string name="onboard_create">Loo uus rahakott</string>
     <string name="onboard_restore">Taasta taastefraasist</string>
 

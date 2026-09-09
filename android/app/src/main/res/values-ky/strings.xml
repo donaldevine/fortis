@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Жабуу</string>
 
     <string name="onboard_add_title">Капчык кошуу</string>
-    <string name="onboard_tagline">Bitcoin жана анын BLAKE2b форку үчүн кастодиалдык эмес капчык</string>
+    <string name="onboard_tagline">Bitcoin XBT жана Bitcoin BTC үчүн кастодиалдык эмес капчык</string>
     <string name="onboard_create">Жаңы капчык түзүү</string>
     <string name="onboard_restore">Калыбына келтирүү фразасынан калыбына келтирүү</string>
 

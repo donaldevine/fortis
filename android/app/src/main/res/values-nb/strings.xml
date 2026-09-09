@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Lukk</string>
 
     <string name="onboard_add_title">Legg til en lommebok</string>
-    <string name="onboard_tagline">en ikke-forvaltet lommebok for Bitcoin og dens BLAKE2b-fork</string>
+    <string name="onboard_tagline">en ikke-forvaltet lommebok for Bitcoin XBT og Bitcoin BTC</string>
     <string name="onboard_create">Opprett en ny lommebok</string>
     <string name="onboard_restore">Gjenopprett fra en gjenopprettingsfrase</string>
 

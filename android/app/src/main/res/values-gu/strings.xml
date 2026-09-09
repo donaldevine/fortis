@@ -31,7 +31,7 @@
     <string name="cd_dismiss">બરતરફ કરો</string>
 
     <string name="onboard_add_title">વૉલેટ ઉમેરો</string>
-    <string name="onboard_tagline">Bitcoin અને તેના BLAKE2b ફોર્ક માટે નૉન-કસ્ટોડિયલ વૉલેટ</string>
+    <string name="onboard_tagline">Bitcoin XBT અને Bitcoin BTC માટે નૉન-કસ્ટોડિયલ વૉલેટ</string>
     <string name="onboard_create">નવું વૉલેટ બનાવો</string>
     <string name="onboard_restore">પુનઃપ્રાપ્તિ શબ્દસમૂહથી પુનઃસ્થાપિત કરો</string>
 

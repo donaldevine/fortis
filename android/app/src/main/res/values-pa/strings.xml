@@ -31,7 +31,7 @@
     <string name="cd_dismiss">ਖਾਰਜ ਕਰੋ</string>
 
     <string name="onboard_add_title">ਵਾਲਿਟ ਸ਼ਾਮਲ ਕਰੋ</string>
-    <string name="onboard_tagline">Bitcoin ਅਤੇ ਇਸ ਦੇ BLAKE2b ਫੋਰਕ ਲਈ ਇੱਕ ਗੈਰ-ਕਸਟੋਡੀਅਲ ਵਾਲਿਟ</string>
+    <string name="onboard_tagline">Bitcoin XBT ਅਤੇ Bitcoin BTC ਲਈ ਇੱਕ ਗੈਰ-ਕਸਟੋਡੀਅਲ ਵਾਲਿਟ</string>
     <string name="onboard_create">ਨਵਾਂ ਵਾਲਿਟ ਬਣਾਓ</string>
     <string name="onboard_restore">ਰਿਕਵਰੀ ਵਾਕੰਸ਼ ਤੋਂ ਰੀਸਟੋਰ ਕਰੋ</string>
 

@@ -31,7 +31,7 @@
     <string name="cd_dismiss">បដិសេធ</string>
 
     <string name="onboard_add_title">បន្ថែមកាបូប</string>
-    <string name="onboard_tagline">កាបូបមិនរក្សាទុកសម្រាប់ Bitcoin និង fork BLAKE2b របស់វា</string>
+    <string name="onboard_tagline">កាបូបមិនរក្សាទុកសម្រាប់ Bitcoin XBT និង Bitcoin BTC</string>
     <string name="onboard_create">បង្កើតកាបូបថ្មី</string>
     <string name="onboard_restore">សង្គ្រោះពីឃ្លាសង្គ្រោះ</string>
 

@@ -31,7 +31,7 @@
     <string name="cd_dismiss">አሰናብት</string>
 
     <string name="onboard_add_title">ዋሌት አክል</string>
-    <string name="onboard_tagline">ለ Bitcoin እና ለ BLAKE2b ፎርኩ የማይያዝ ዋሌት</string>
+    <string name="onboard_tagline">ለ Bitcoin XBT እና ለ Bitcoin BTC የማይያዝ ዋሌት</string>
     <string name="onboard_create">አዲስ ዋሌት ፍጠር</string>
     <string name="onboard_restore">ከመልሶ ማግኛ ሐረግ መልሰህ ወደነበረበት አድርስ</string>
 

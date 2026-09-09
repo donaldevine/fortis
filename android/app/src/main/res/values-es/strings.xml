@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Descartar</string>
 
     <string name="onboard_add_title">Añadir un monedero</string>
-    <string name="onboard_tagline">un monedero no custodial para Bitcoin y su bifurcación BLAKE2b</string>
+    <string name="onboard_tagline">un monedero no custodial para Bitcoin XBT y Bitcoin BTC</string>
     <string name="onboard_create">Crear un monedero nuevo</string>
     <string name="onboard_restore">Restaurar desde una frase de recuperación</string>
 

@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Odbaci</string>
 
     <string name="onboard_add_title">Dodaj novčanik</string>
-    <string name="onboard_tagline">neskrbnički novčanik za Bitcoin i njegov fork BLAKE2b</string>
+    <string name="onboard_tagline">neskrbnički novčanik za Bitcoin XBT i Bitcoin BTC</string>
     <string name="onboard_create">Stvori novi novčanik</string>
     <string name="onboard_restore">Oporavi iz fraze za oporavak</string>
 

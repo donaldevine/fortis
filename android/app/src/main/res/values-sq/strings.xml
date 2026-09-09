@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Mbyll</string>
 
     <string name="onboard_add_title">Shto një portofol</string>
-    <string name="onboard_tagline">një portofol jokustodial për Bitcoin dhe forkun e tij BLAKE2b</string>
+    <string name="onboard_tagline">një portofol jokustodial për Bitcoin XBT dhe Bitcoin BTC</string>
     <string name="onboard_create">Krijo një portofol të ri</string>
     <string name="onboard_restore">Rikupero nga një frazë rikuperimi</string>
 

@@ -31,7 +31,7 @@
     <string name="cd_dismiss">סגירה</string>
 
     <string name="onboard_add_title">הוספת ארנק</string>
-    <string name="onboard_tagline">ארנק ללא משמורת ל-Bitcoin ולפיצול ה-BLAKE2b שלו</string>
+    <string name="onboard_tagline">ארנק ללא משמורת ל-Bitcoin XBT ול-Bitcoin BTC</string>
     <string name="onboard_create">יצירת ארנק חדש</string>
     <string name="onboard_restore">שחזור מביטוי שחזור</string>
 

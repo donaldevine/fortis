@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Sluiten</string>
 
     <string name="onboard_add_title">Een wallet toevoegen</string>
-    <string name="onboard_tagline">een non-custodiale wallet voor Bitcoin en zijn BLAKE2b-fork</string>
+    <string name="onboard_tagline">een non-custodiale wallet voor Bitcoin XBT en Bitcoin BTC</string>
     <string name="onboard_create">Een nieuwe wallet aanmaken</string>
     <string name="onboard_restore">Herstellen vanaf een herstelzin</string>
 

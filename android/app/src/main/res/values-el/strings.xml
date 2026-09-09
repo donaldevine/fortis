@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Παράβλεψη</string>
 
     <string name="onboard_add_title">Προσθήκη πορτοφολιού</string>
-    <string name="onboard_tagline">ένα μη θεματοφυλακτικό πορτοφόλι για το Bitcoin και το fork του σε BLAKE2b</string>
+    <string name="onboard_tagline">ένα μη θεματοφυλακτικό πορτοφόλι για το Bitcoin XBT και το Bitcoin BTC</string>
     <string name="onboard_create">Δημιουργία νέου πορτοφολιού</string>
     <string name="onboard_restore">Επαναφορά από φράση ανάκτησης</string>
 

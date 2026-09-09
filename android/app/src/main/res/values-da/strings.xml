@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Afvis</string>
 
     <string name="onboard_add_title">Tilføj en tegnebog</string>
-    <string name="onboard_tagline">en ikke-forvaltende tegnebog til Bitcoin og dens BLAKE2b-fork</string>
+    <string name="onboard_tagline">en ikke-forvaltende tegnebog til Bitcoin XBT og Bitcoin BTC</string>
     <string name="onboard_create">Opret en ny tegnebog</string>
     <string name="onboard_restore">Gendan fra en gendannelsessætning</string>
 

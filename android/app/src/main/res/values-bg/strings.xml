@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Отхвърли</string>
 
     <string name="onboard_add_title">Добави портфейл</string>
-    <string name="onboard_tagline">несъхранителен портфейл за Bitcoin и неговия форк на BLAKE2b</string>
+    <string name="onboard_tagline">несъхранителен портфейл за Bitcoin XBT и Bitcoin BTC</string>
     <string name="onboard_create">Създай нов портфейл</string>
     <string name="onboard_restore">Възстанови от фраза за възстановяване</string>
 

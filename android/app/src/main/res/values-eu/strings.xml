@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Baztertu</string>
 
     <string name="onboard_add_title">Gehitu diru-zorro bat</string>
-    <string name="onboard_tagline">zaintzarik gabeko diru-zorroa Bitcoinerako eta haren BLAKE2b forkerako</string>
+    <string name="onboard_tagline">zaintzarik gabeko diru-zorroa Bitcoin XBT eta Bitcoin BTC-rako</string>
     <string name="onboard_create">Sortu diru-zorro berri bat</string>
     <string name="onboard_restore">Berreskuratu berreskuratze-esaldi batetik</string>
 

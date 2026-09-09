@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Opusti</string>
 
     <string name="onboard_add_title">Dodaj denarnico</string>
-    <string name="onboard_tagline">neskrbniška denarnica za Bitcoin in njegovo razvejitev BLAKE2b</string>
+    <string name="onboard_tagline">neskrbniška denarnica za Bitcoin XBT in Bitcoin BTC</string>
     <string name="onboard_create">Ustvari novo denarnico</string>
     <string name="onboard_restore">Obnovi iz obnovitvene fraze</string>
 

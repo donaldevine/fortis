@@ -28,8 +28,18 @@ fun sealSeed(mnemonic: String, passphrase: String, password: String): SealedSeed
     return SealedSeed(sealMnemonicWithPassword(payload, password, salt, nonce), salt.toHex())
 }
 
+/** Thrown by [unsealSeed] when decryption fails — almost always a wrong
+ *  password/secret (the AEAD tag didn't verify). No message: callers decide the
+ *  wording (a wrong app password vs. an unexpected failure with the app secret),
+ *  instead of leaking the raw `v1=crypto: unseal failed …` string. */
+class WrongPassword : Exception()
+
 fun unsealSeed(blobHex: String, saltHex: String, password: String): Pair<String, String> {
-    val payload = unsealMnemonicWithPassword(blobHex, password, saltHex.hexToBytes())
+    val payload = try {
+        unsealMnemonicWithPassword(blobHex, password, saltHex.hexToBytes())
+    } catch (e: Exception) {
+        throw WrongPassword()
+    }
     val nl = payload.indexOf('\n')
     return if (nl < 0) payload to "" else payload.substring(0, nl) to payload.substring(nl + 1)
 }
@@ -50,6 +60,10 @@ class WalletSession(
         view.setNextIndices(nextReceive.toUInt(), nextChange.toUInt())
 
     fun receiveAddress(index: Int) = view.addressAt(0u, index.toUInt())
+
+    /** Validate a send recipient against this wallet's network. Throws a clear
+     *  "… is not a valid address" if it doesn't parse — cheap, no I/O. */
+    fun checkAddress(address: String): String = view.checkAddress(address)
 
     fun sign(planTxHex: String, selected: List<SelectedInput>): String =
         wallet.signFundingTx(chain, 0u, planTxHex, selected.map {

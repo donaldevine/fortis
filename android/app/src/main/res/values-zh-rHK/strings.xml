@@ -31,7 +31,7 @@
     <string name="cd_dismiss">關閉</string>
 
     <string name="onboard_add_title">新增錢包</string>
-    <string name="onboard_tagline">為 Bitcoin 及其 BLAKE2b 分叉打造的非託管錢包</string>
+    <string name="onboard_tagline">為 Bitcoin XBT 和 Bitcoin BTC 打造的非託管錢包</string>
     <string name="onboard_create">建立新錢包</string>
     <string name="onboard_restore">從復原助記詞還原</string>
 

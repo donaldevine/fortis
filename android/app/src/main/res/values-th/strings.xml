@@ -31,7 +31,7 @@
     <string name="cd_dismiss">ปิด</string>
 
     <string name="onboard_add_title">เพิ่มกระเป๋าเงิน</string>
-    <string name="onboard_tagline">กระเป๋าเงินแบบไม่รับฝากสำหรับ Bitcoin และฟอร์ก BLAKE2b</string>
+    <string name="onboard_tagline">กระเป๋าเงินแบบไม่รับฝากสำหรับ Bitcoin XBT และ Bitcoin BTC</string>
     <string name="onboard_create">สร้างกระเป๋าเงินใหม่</string>
     <string name="onboard_restore">กู้คืนจากวลีกู้คืน</string>
 

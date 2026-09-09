@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Bağla</string>
 
     <string name="onboard_add_title">Pulqabı əlavə et</string>
-    <string name="onboard_tagline">Bitcoin və onun BLAKE2b forku üçün qeyri-kastodial pulqabı</string>
+    <string name="onboard_tagline">Bitcoin XBT və Bitcoin BTC üçün qeyri-kastodial pulqabı</string>
     <string name="onboard_create">Yeni pulqabı yarat</string>
     <string name="onboard_restore">Bərpa ifadəsindən bərpa et</string>
 

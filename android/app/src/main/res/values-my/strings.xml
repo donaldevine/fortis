@@ -31,7 +31,7 @@
     <string name="cd_dismiss">ပယ်ရန်</string>
 
     <string name="onboard_add_title">ပိုက်ဆံအိတ် ထည့်ရန်</string>
-    <string name="onboard_tagline">Bitcoin နှင့် ၎င်း၏ BLAKE2b fork အတွက် ထိန်းသိမ်းမထားသော ပိုက်ဆံအိတ်</string>
+    <string name="onboard_tagline">Bitcoin XBT နှင့် Bitcoin BTC အတွက် ထိန်းသိမ်းမထားသော ပိုက်ဆံအိတ်</string>
     <string name="onboard_create">ပိုက်ဆံအိတ်အသစ် ဖန်တီးရန်</string>
     <string name="onboard_restore">ပြန်လည်ရယူရေး စကားစုမှ ပြန်လည်ရယူရန်</string>
 

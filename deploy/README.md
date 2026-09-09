@@ -46,8 +46,9 @@ cargo build --release -p fortis-index -p fortis-edge
   --xbt-price-url https://mempool.kilombino.com/api/v1/prices \
   --btc-upstream-rate 5 --btc-haskoin-url https://api.haskoin.com/btc \
   --require-token --trust-forwarded-for \
-  --crash-log /var/log/fortis/crashes.ndjson \
-  --service-fee-address <your mainnet address>   # advertised + enforced; omit for no fee
+  --crash-log /var/log/fortis/crashes.ndjson
+  # --service-fee-address <addr>   optional: advertise + enforce a % fee to <addr>.
+  #   The public fortis.rest edge runs without it (no fee).
 ```
 
 On Linux, `deploy/systemd/*.service` run these under `systemd` with sandboxing —

@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Закрыть</string>
 
     <string name="onboard_add_title">Добавить кошелёк</string>
-    <string name="onboard_tagline">некастодиальный кошелёк для Bitcoin и его форка на BLAKE2b</string>
+    <string name="onboard_tagline">некастодиальный кошелёк для Bitcoin XBT и Bitcoin BTC</string>
     <string name="onboard_create">Создать новый кошелёк</string>
     <string name="onboard_restore">Восстановить из фразы восстановления</string>
 

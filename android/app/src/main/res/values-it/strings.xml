@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Chiudi</string>
 
     <string name="onboard_add_title">Aggiungi un wallet</string>
-    <string name="onboard_tagline">un wallet non custodiale per Bitcoin e il suo fork BLAKE2b</string>
+    <string name="onboard_tagline">un wallet non custodiale per Bitcoin XBT e Bitcoin BTC</string>
     <string name="onboard_create">Crea un nuovo wallet</string>
     <string name="onboard_restore">Ripristina da una frase di recupero</string>
 

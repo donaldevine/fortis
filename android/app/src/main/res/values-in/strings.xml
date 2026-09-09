@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Tutup</string>
 
     <string name="onboard_add_title">Tambah dompet</string>
-    <string name="onboard_tagline">dompet non-kustodial untuk Bitcoin dan fork BLAKE2b-nya</string>
+    <string name="onboard_tagline">dompet non-kustodial untuk Bitcoin XBT dan Bitcoin BTC</string>
     <string name="onboard_create">Buat dompet baru</string>
     <string name="onboard_restore">Pulihkan dari frasa pemulihan</string>
 

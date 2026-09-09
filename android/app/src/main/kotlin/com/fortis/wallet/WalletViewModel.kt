@@ -72,6 +72,11 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     val locked: Boolean get() = appSecret == null && wallets.isNotEmpty()
     val appWrappedSecret: String? get() = appWrapped
 
+    /** Where the biometric-mode unlock key actually lives (StrongBox / TEE /
+     *  software), or null in password mode. For the Settings security note. */
+    fun keySecurity(): com.fortis.wallet.data.SeedKeystore.KeySecurity? =
+        if (lockMode == com.fortis.wallet.data.LOCK_BIOMETRIC) com.fortis.wallet.data.SeedKeystore.keySecurity() else null
+
     /** The wallet currently in view. */
     val config: WalletConfig? get() = wallets.firstOrNull { it.id == selectedId }
     val session: WalletSession? get() = selectedId?.let { sessions[it] }
@@ -273,7 +278,11 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
     fun appUnlockWithPassword(pw: String) = wrap {
         val c = config ?: wallets.first()
         withContext(Dispatchers.Default) {
-            val (mnemonic, passphrase) = unsealSeed(c.sealed, c.salt, pw) // throws on a wrong password
+            val (mnemonic, passphrase) = try {
+                unsealSeed(c.sealed, c.salt, pw)
+            } catch (e: com.fortis.wallet.wallet.WrongPassword) {
+                throw Exception(str(R.string.error_wrong_password))
+            }
             WalletSession(c.chain, c.network, mnemonic, passphrase).also {
                 it.setIndices(c.nextReceive, c.nextChange)
                 sessions[c.id] = it
@@ -369,7 +378,12 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
             error = str(R.string.error_clone_exists, c.name, c.otherChain.uppercase())
             return@wrap
         }
-        val clone = c.copy(id = UUID.randomUUID().toString(), chain = c.otherChain, backendToken = null)
+        // Fresh chain: start address discovery at 0 rather than inheriting the
+        // source wallet's counters (it's never received on this chain yet).
+        val clone = c.copy(
+            id = UUID.randomUUID().toString(), chain = c.otherChain, backendToken = null,
+            nextReceive = 0, nextChange = 0,
+        )
         store.save(clone)
         wallets = wallets + clone
     }
@@ -460,6 +474,13 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
             config?.chain?.let { ch -> runCatching { b.price() }.getOrNull()?.let { setCoinUsd(ch, it) } }
             history = b.history(50)
             if (feerates.isEmpty()) feerates = listOf(1, 6, 144).associateWith { b.feerateSatVb(it).toLong() }
+            // Gap-limit auto-advance: skip the receive address past any that the
+            // scan just found already used, so "Receive" always shows a fresh one.
+            selectedId?.let { id ->
+                val cur = wallets.firstOrNull { it.id == id }?.nextReceive ?: 0
+                val fresh = runCatching { b.firstUnusedReceive(cur) }.getOrDefault(cur)
+                if (fresh > cur) updateConfig(id) { it.copy(nextReceive = fresh) }
+            }
         }
         runCatching { load(edge, false) }
             .recoverCatching { e -> fallback?.let { load(it, true) } ?: throw e }
@@ -479,6 +500,7 @@ class WalletViewModel(app: Application) : AndroidViewModel(app) {
         require(sweep || amountSat > 0L) { str(R.string.error_enter_amount) }
         val to = to.trim()
         val b = active(); val s = session!!; val c = config!!
+        s.checkAddress(to) // clear "… is not a valid address" before any network I/O
         val feerate = (feerateOverride ?: b.feerateSatVb(confTarget).toLong()).coerceAtLeast(1)
         val utxos = b.utxos(1u)
         require(utxos.isNotEmpty()) { str(R.string.error_no_coins) }

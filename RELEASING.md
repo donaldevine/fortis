@@ -1,0 +1,82 @@
+# Releasing Fortis Wallet
+
+Google Play needs an **organization** account for crypto wallets (policy, Aug 2024)
+and this is a personal account, so distribution is:
+
+- **GitHub Releases** — the source of truth. APK attached to a tagged release.
+- **fortis.rest** — "Download APK" button → the release's `fortis-wallet.apk`,
+  plus an "Add to Obtainium" deep link.
+- **[Obtainium](https://obtainium.imranr.dev/)** — users paste
+  `github.com/donaldevine/fortis`; it polls the releases and auto-updates.
+
+The store-listing groundwork (`store/STORE.md`, `store/RELEASE.md`, the Play
+Console declarations) is kept for whenever an org account exists.
+
+---
+
+## Cut a release
+
+### 1. Bump the version
+
+`android/app/build.gradle.kts` — `versionCode` **must increase every release**;
+bump `versionName` too. Add a `CHANGELOG.md` entry.
+
+### 2. Build the signed APK
+
+```powershell
+$env:JAVA_HOME = 'C:\Program Files\Android\Android Studio\jbr'
+cd C:\Repos\fortis\android
+.\gradlew.bat :app:assembleRelease
+Copy-Item app\build\outputs\apk\release\app-release.apk `
+  ..\fortis-wallet.apk           # stable asset name — the site links to /latest/download/fortis-wallet.apk
+```
+
+Universal APK (arm64-v8a + x86_64), signed with `fortis-upload.jks`. **That key
+is the app's permanent identity for direct installs** — if Play ever happens,
+hand Play *this* key as the app signing key so website users can cross-update.
+
+### 3. Record the hashes
+
+```powershell
+(Get-FileHash ..\fortis-wallet.apk -Algorithm SHA256).Hash.ToLower()
+& "$env:ANDROID_HOME\build-tools\36.0.0\apksigner.bat" verify --print-certs ..\fortis-wallet.apk
+```
+
+Update `site/version.json` (`versionCode`, `versionName`, `sha256`) and, if the
+signing cert ever changes, the fingerprint in `site/index.html`.
+
+### 4. Tag and publish
+
+```powershell
+git tag v0.1.1
+git push origin v0.1.1
+gh release create v0.1.1 ..\fortis-wallet.apk `
+  --title "Fortis Wallet 0.1.1" `
+  --notes-file (New-TemporaryFile | % { Set-Content $_ (Get-Content CHANGELOG.md -Raw); $_ })
+```
+
+…or on github.com: **Releases → Draft a new release**, choose tag `v0.1.1`,
+paste the changelog, attach `fortis-wallet.apk`, **Publish**.
+
+- Tag format `v<versionName>` — Obtainium strips the `v` and compares to the
+  installed `versionName`.
+- Keep the asset named **`fortis-wallet.apk`** (no version in the filename) so
+  `releases/latest/download/fortis-wallet.apk` always resolves.
+
+### 5. Redeploy the site
+
+```powershell
+deploy\publish-site.ps1
+```
+
+Pushes the updated `version.json` and any listing/screenshot changes.
+
+---
+
+## Obtainium notes
+
+- Source URL: `https://github.com/donaldevine/fortis`
+- The one-tap link on the site is `obtainium://add/<url-encoded JSON>` with
+  `id`, `url`, `author`, `name`.
+- Obtainium needs the repo **public** and each release to carry exactly one
+  `.apk` asset (or an `apkFilterRegEx`).

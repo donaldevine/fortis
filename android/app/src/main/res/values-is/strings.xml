@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Loka</string>
 
     <string name="onboard_add_title">Bæta við veski</string>
-    <string name="onboard_tagline">veski án vörslu fyrir Bitcoin og BLAKE2b-kvísl þess</string>
+    <string name="onboard_tagline">veski án vörslu fyrir Bitcoin XBT og Bitcoin BTC</string>
     <string name="onboard_create">Búa til nýtt veski</string>
     <string name="onboard_restore">Endurheimta úr endurheimtarsetningu</string>
 

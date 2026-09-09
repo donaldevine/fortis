@@ -31,7 +31,7 @@
     <string name="cd_dismiss">తీసివేయి</string>
 
     <string name="onboard_add_title">వాలెట్‌ను జోడించు</string>
-    <string name="onboard_tagline">Bitcoin మరియు దాని BLAKE2b ఫోర్క్ కోసం నాన్-కస్టోడియల్ వాలెట్</string>
+    <string name="onboard_tagline">Bitcoin XBT మరియు Bitcoin BTC కోసం నాన్-కస్టోడియల్ వాలెట్</string>
     <string name="onboard_create">కొత్త వాలెట్‌ను సృష్టించు</string>
     <string name="onboard_restore">రికవరీ పదబంధం నుండి పునరుద్ధరించు</string>
 

@@ -31,7 +31,7 @@
     <string name="cd_dismiss">تجاهل</string>
 
     <string name="onboard_add_title">إضافة محفظة</string>
-    <string name="onboard_tagline">محفظة غير وصائية لـ Bitcoin وتفرّعها المبني على BLAKE2b</string>
+    <string name="onboard_tagline">محفظة غير وصائية لـ Bitcoin XBT و Bitcoin BTC</string>
     <string name="onboard_create">إنشاء محفظة جديدة</string>
     <string name="onboard_restore">الاسترداد من عبارة استرداد</string>
 

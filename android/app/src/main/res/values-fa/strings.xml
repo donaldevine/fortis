@@ -31,7 +31,7 @@
     <string name="cd_dismiss">رد کردن</string>
 
     <string name="onboard_add_title">افزودن کیف پول</string>
-    <string name="onboard_tagline">یک کیف پول غیرامانی برای Bitcoin و فورک BLAKE2b آن</string>
+    <string name="onboard_tagline">یک کیف پول غیرامانی برای Bitcoin XBT و Bitcoin BTC</string>
     <string name="onboard_create">ساخت کیف پول جدید</string>
     <string name="onboard_restore">بازیابی از عبارت بازیابی</string>
 

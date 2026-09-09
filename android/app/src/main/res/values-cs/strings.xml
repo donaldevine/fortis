@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Zavřít</string>
 
     <string name="onboard_add_title">Přidat peněženku</string>
-    <string name="onboard_tagline">nesvěřenecká peněženka pro Bitcoin a jeho fork BLAKE2b</string>
+    <string name="onboard_tagline">nesvěřenecká peněženka pro Bitcoin XBT a Bitcoin BTC</string>
     <string name="onboard_create">Vytvořit novou peněženku</string>
     <string name="onboard_restore">Obnovit z obnovovací fráze</string>
 

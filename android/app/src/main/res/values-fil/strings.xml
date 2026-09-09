@@ -31,7 +31,7 @@
     <string name="cd_dismiss">I-dismiss</string>
 
     <string name="onboard_add_title">Magdagdag ng wallet</string>
-    <string name="onboard_tagline">isang non-custodial na wallet para sa Bitcoin at sa BLAKE2b fork nito</string>
+    <string name="onboard_tagline">isang non-custodial na wallet para sa Bitcoin XBT at Bitcoin BTC</string>
     <string name="onboard_create">Gumawa ng bagong wallet</string>
     <string name="onboard_restore">I-restore mula sa recovery phrase</string>
 

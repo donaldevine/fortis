@@ -31,7 +31,7 @@
     <string name="cd_dismiss">ඉවත් කරන්න</string>
 
     <string name="onboard_add_title">පසුම්බියක් එක් කරන්න</string>
-    <string name="onboard_tagline">Bitcoin සහ එහි BLAKE2b දෙබලක සඳහා භාරකාරී නොවන පසුම්බියක්</string>
+    <string name="onboard_tagline">Bitcoin XBT සහ Bitcoin BTC සඳහා භාරකාරී නොවන පසුම්බියක්</string>
     <string name="onboard_create">නව පසුම්බියක් සාදන්න</string>
     <string name="onboard_restore">ප්‍රතිසාධන වාක්‍ය ඛණ්ඩයකින් ප්‍රතිසාධනය කරන්න</string>
 

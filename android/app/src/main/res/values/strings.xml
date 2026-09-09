@@ -33,7 +33,7 @@
 
     <!-- onboarding -->
     <string name="onboard_add_title">Add a wallet</string>
-    <string name="onboard_tagline">a non-custodial wallet for Bitcoin BLAKE2b and Bitcoin Legacy</string>
+    <string name="onboard_tagline">a non-custodial wallet for Bitcoin XBT and Bitcoin BTC</string>
     <string name="onboard_create">Create a new wallet</string>
     <string name="onboard_restore">Restore from a recovery phrase</string>
 
@@ -111,6 +111,7 @@
     <string name="lock_mode_biometric">Fingerprint / device PIN</string>
     <string name="lock_mode_password">Password</string>
     <string name="settings_one_unlock">One unlock opens every wallet in the app.</string>
+    <string name="settings_key_software">This device has no secure hardware — the unlock key is protected in software only.</string>
     <string name="settings_language">Language</string>
     <string name="language_system_default">System default</string>
     <string name="settings_status">Status</string>
@@ -210,6 +211,7 @@
     <string name="error_enter_amount">enter an amount</string>
     <string name="error_no_coins">no confirmed coins to spend</string>
     <string name="error_open_wallet">could not open wallet</string>
+    <string name="error_wrong_password">Incorrect password.</string>
     <string name="error_confirm_phrase">First confirm you\'ve written the recovery phrase down.</string>
     <string name="error_enter_phrase">Enter your recovery phrase first.</string>
 

@@ -75,6 +75,12 @@ export class Session {
   receiveAddress(index) {
     return this.addressAt(0, index);
   }
+  /** Throws "… is not a valid address" if `address` doesn't parse on this
+   *  network. Cheap — call before any network I/O so a bad address isn't
+   *  masked by a later "no coins" error. */
+  checkAddress(address) {
+    return this.view.checkAddress(address);
+  }
   planPayment(utxos, outputs, feerate, minConf, opReturnHex, serviceFee, feeFromAmount = false) {
     return this.view.planPayment(
       utxos, outputs, BigInt(feerate), minConf >>> 0, opReturnHex || undefined, serviceFee || undefined,

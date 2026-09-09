@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Hylkää</string>
 
     <string name="onboard_add_title">Lisää lompakko</string>
-    <string name="onboard_tagline">ei-säilyttävä lompakko Bitcoinille ja sen BLAKE2b-haaralle</string>
+    <string name="onboard_tagline">ei-säilyttävä lompakko Bitcoin XBT:lle ja Bitcoin BTC:lle</string>
     <string name="onboard_create">Luo uusi lompakko</string>
     <string name="onboard_restore">Palauta palautuslauseesta</string>
 

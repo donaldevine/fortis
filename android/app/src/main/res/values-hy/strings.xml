@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Փակել</string>
 
     <string name="onboard_add_title">Ավելացնել դրամապանակ</string>
-    <string name="onboard_tagline">ոչ պահառու դրամապանակ Bitcoin-ի և դրա BLAKE2b պատառաքաղի համար</string>
+    <string name="onboard_tagline">ոչ պահառու դրամապանակ Bitcoin XBT-ի և Bitcoin BTC-ի համար</string>
     <string name="onboard_create">Ստեղծել նոր դրամապանակ</string>
     <string name="onboard_restore">Վերականգնել վերականգնման արտահայտությունից</string>
 

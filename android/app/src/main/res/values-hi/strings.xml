@@ -31,7 +31,7 @@
     <string name="cd_dismiss">खारिज करें</string>
 
     <string name="onboard_add_title">वॉलेट जोड़ें</string>
-    <string name="onboard_tagline">Bitcoin और उसके BLAKE2b फ़ॉर्क के लिए एक नॉन-कस्टोडियल वॉलेट</string>
+    <string name="onboard_tagline">Bitcoin XBT और Bitcoin BTC के लिए एक नॉन-कस्टोडियल वॉलेट</string>
     <string name="onboard_create">नया वॉलेट बनाएँ</string>
     <string name="onboard_restore">रिकवरी वाक्यांश से पुनर्स्थापित करें</string>
 

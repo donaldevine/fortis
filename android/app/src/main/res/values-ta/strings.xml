@@ -31,7 +31,7 @@
     <string name="cd_dismiss">நிராகரி</string>
 
     <string name="onboard_add_title">வாலட்டைச் சேர்</string>
-    <string name="onboard_tagline">Bitcoin மற்றும் அதன் BLAKE2b ஃபோர்க்கிற்கான காப்பகமற்ற வாலட்</string>
+    <string name="onboard_tagline">Bitcoin XBT மற்றும் Bitcoin BTC-க்கான காப்பகமற்ற வாலட்</string>
     <string name="onboard_create">புதிய வாலட்டை உருவாக்கு</string>
     <string name="onboard_restore">மீட்பு சொற்றொடரிலிருந்து மீட்டமை</string>
 

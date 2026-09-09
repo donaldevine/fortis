@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Bỏ qua</string>
 
     <string name="onboard_add_title">Thêm một ví</string>
-    <string name="onboard_tagline">ví không lưu ký cho Bitcoin và bản fork BLAKE2b của nó</string>
+    <string name="onboard_tagline">ví không lưu ký cho Bitcoin XBT và Bitcoin BTC</string>
     <string name="onboard_create">Tạo ví mới</string>
     <string name="onboard_restore">Khôi phục từ cụm từ khôi phục</string>
 

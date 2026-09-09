@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Dispensar</string>
 
     <string name="onboard_add_title">Adicionar uma carteira</string>
-    <string name="onboard_tagline">uma carteira não custodial para Bitcoin e seu fork BLAKE2b</string>
+    <string name="onboard_tagline">uma carteira não custodial para Bitcoin XBT e Bitcoin BTC</string>
     <string name="onboard_create">Criar uma nova carteira</string>
     <string name="onboard_restore">Restaurar a partir de uma frase de recuperação</string>
 

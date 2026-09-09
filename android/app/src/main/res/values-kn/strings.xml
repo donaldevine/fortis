@@ -31,7 +31,7 @@
     <string name="cd_dismiss">ವಜಾಗೊಳಿಸಿ</string>
 
     <string name="onboard_add_title">ವಾಲೆಟ್ ಸೇರಿಸಿ</string>
-    <string name="onboard_tagline">Bitcoin ಮತ್ತು ಅದರ BLAKE2b ಫೋರ್ಕ್‌ಗಾಗಿ ಒಂದು ನಾನ್-ಕಸ್ಟೋಡಿಯಲ್ ವಾಲೆಟ್</string>
+    <string name="onboard_tagline">Bitcoin XBT ಮತ್ತು Bitcoin BTC ಗಾಗಿ ಒಂದು ನಾನ್-ಕಸ್ಟೋಡಿಯಲ್ ವಾಲೆಟ್</string>
     <string name="onboard_create">ಹೊಸ ವಾಲೆಟ್ ರಚಿಸಿ</string>
     <string name="onboard_restore">ಮರುಪಡೆಯುವಿಕೆ ನುಡಿಗಟ್ಟಿನಿಂದ ಮರುಸ್ಥಾಪಿಸಿ</string>
 

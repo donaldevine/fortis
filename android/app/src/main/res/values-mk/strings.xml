@@ -31,7 +31,7 @@
     <string name="cd_dismiss">Отфрли</string>
 
     <string name="onboard_add_title">Додај паричник</string>
-    <string name="onboard_tagline">несокровишен паричник за Bitcoin и неговиот форк со BLAKE2b</string>
+    <string name="onboard_tagline">несокровишен паричник за Bitcoin XBT и Bitcoin BTC</string>
     <string name="onboard_create">Создај нов паричник</string>
     <string name="onboard_restore">Обнови од фраза за обновување</string>
 
