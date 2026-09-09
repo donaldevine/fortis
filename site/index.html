@@ -156,7 +156,8 @@
               <li>On your phone, tap <strong>Download APK</strong> above. Your browser warns that this kind of file can harm your device — choose <strong>Download</strong> / <strong>OK</strong>.</li>
               <li>Open the file — from the download notification, or <em>Files → Downloads → fortis-wallet.apk</em>.</li>
               <li>The first time, Android asks whether to let your browser install unknown apps. Tap <strong>Settings</strong>, turn on <strong>Allow from this source</strong>, then go back.</li>
-              <li>Tap <strong>Install</strong>, then <strong>Open</strong>.</li>
+              <li>Tap <strong>Install</strong>. Play Protect may say it <em>doesn't recognise this developer</em> — expected for any app not shipped through the Play Store, not a sign anything's wrong. Tap <strong>More details → Install anyway</strong> (some phones say <strong>Install without scanning</strong>).</li>
+              <li>Tap <strong>Open</strong>.</li>
             </ol>
             <p class="sub">
               <strong>Keep it updated:</strong> install <a href="https://obtainium.imranr.dev/">Obtainium</a>, then tap
@@ -164,8 +165,8 @@
               <code>github.com/donaldevine/fortis</code>). It watches for new releases and prompts you to update — there's no in-app updater.
             </p>
             <p class="sub">
-              <strong>Verify it's genuine</strong> (optional): <code>apksigner verify --print-certs fortis-wallet.apk</code>
-              should report certificate SHA-256<br>
+              <strong>Verify it's genuine</strong> — the real check behind that Play Protect prompt:
+              <code>apksigner verify --print-certs fortis-wallet.apk</code> should report certificate SHA-256<br>
               <code>16:1A:B9:3F:D5:71:21:99:6A:E0:8E:FD:B4:82:75:DF:D4:AE:55:9B:CB:10:64:12:FB:C4:50:79:1B:94:CD:48</code>
             </p>
           </div>
