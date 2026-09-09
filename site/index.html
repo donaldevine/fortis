@@ -27,6 +27,7 @@
   img { max-width: 100%; }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   .wrap { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
 
   nav { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
@@ -112,6 +113,7 @@
     <span class="brand"><img src="/icon.svg" alt=""> Fortis Tech Labs</span>
     <span class="links">
       <a href="#wallet">Fortis Wallet</a>
+      <a href="#features">Features</a>
       <a href="/privacy">Privacy</a>
       <a href="mailto:info@fortistechlabs.com">Contact</a>
     </span>
@@ -136,17 +138,20 @@
         <p class="kicker">Android 8+ · direct download &amp; Obtainium</p>
         <p style="color:var(--dim)">A non-custodial mobile wallet for Bitcoin XBT and Bitcoin BTC. Your recovery phrase is generated on your device, encrypted under a password you choose, and never leaves it.</p>
         <ul>
-          <li>12- or 24-word phrase with an optional BIP-39 passphrase</li>
-          <li>Send &amp; receive with QR codes and a camera scanner</li>
-          <li>Choose your fee; tap a transaction to open it in a block explorer</li>
-          <li>Phrase and password screens blocked from screenshots</li>
+          <li>12- or 24-word BIP-39 phrase, BIP-84 native SegWit, optional passphrase ("25th word")</li>
+          <li>Up to 10 named wallets — any mix of XBT and BTC — from the one phrase</li>
+          <li>Send &amp; receive with QR codes, a built-in camera scanner, or paste</li>
+          <li>Fee presets or a custom sat/vB rate; "take the fees out of this amount"; sweep a whole balance</li>
+          <li>History with a tap-through to a block explorer; approximate USD value</li>
+          <li>One unlock — fingerprint, face, or device PIN — opens every wallet</li>
+          <li>Phrase and password screens blocked from screenshots, screen recording, and the app switcher</li>
         </ul>
         <div class="dl">
           <a class="primary" href="https://github.com/donaldevine/fortis/releases/latest/download/fortis-wallet.apk">Download APK</a>
           <a class="secondary" href="https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fadd%2Fhttps%253A%252F%252Fgithub.com%252Fdonaldevine%252Ffortis" target="_blank" rel="noopener">Add to Obtainium</a>
         </div>
         <p class="dl-note">
-          Latest: <strong>v0.1.1</strong> · ~10&nbsp;MB · Android 8+ ·
+          Latest: <strong>v0.1.2</strong> · ~10&nbsp;MB · Android 8+ ·
           <a href="https://github.com/donaldevine/fortis/releases">all releases &amp; changelog</a>
         </p>
         <details class="install" open>
@@ -181,21 +186,54 @@
   </div>
 </section>
 
+<section id="features">
+  <div class="wrap">
+    <h2>What sets it apart</h2>
+    <p class="lead">The basics work the way you'd expect. These are the parts that don't.</p>
+    <div class="grid">
+      <div class="feature">
+        <h3>Made for Bitcoin XBT</h3>
+        <p>Bitcoin XBT is the Bitcoin Knots BLAKE2b hard fork — and almost no wallet speaks it. Fortis runs it right alongside regular Bitcoin (BTC), chosen per wallet.</p>
+      </div>
+      <div class="feature">
+        <h3>Cross-chain replay protection</h3>
+        <p>On a BTC send you can attach an oversized OP_RETURN so that exact signed transaction can't be replayed on the XBT chain. Off by default; it adds a little fee.</p>
+      </div>
+      <div class="feature">
+        <h3>Entropy from your hands</h3>
+        <p>Creating a wallet, you can shake the phone, scribble on the screen, or let it sample CPU-timing jitter — real physical noise folded into the seed on top of the system RNG, with a meter for how much you've stirred in.</p>
+      </div>
+      <div class="feature">
+        <h3>Straight about your hardware</h3>
+        <p>The key that unlocks the app goes into your phone's secure element — StrongBox or the TEE — when there is one. When there isn't, Settings says so plainly: "software only." No pretending.</p>
+      </div>
+      <div class="feature">
+        <h3>No account, nothing held over you</h3>
+        <p>No sign-up, no login. The backend only ever sees public addresses and finished signed transactions; a random per-install token rate-limits abuse and is tied to nothing about you. If it's unreachable, the app reads the chain from public explorers instead.</p>
+      </div>
+      <div class="feature">
+        <h3>Yours to leave with</h3>
+        <p>A standard 12- or 24-word BIP-39 phrase with BIP-84 derivation — restore it in any compatible wallet. No Google Play Services (the scanner is built in). Open source, MIT; every release APK signed with the same published key.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section>
   <div class="wrap">
     <h2>How we build</h2>
     <div class="grid">
       <div class="feature">
-        <h3>Non-custodial by design</h3>
-        <p>Keys are generated and stay on the user's device. We can't move funds, freeze accounts, or recover a lost phrase.</p>
+        <h3>One core, every platform</h3>
+        <p>The security-critical code — key derivation, coin selection, signing, seed encryption — is a single Rust library shared by the Android app and the web wallet. The crypto isn't reimplemented per platform.</p>
       </div>
       <div class="feature">
-        <h3>Standard, portable keys</h3>
-        <p>A normal BIP-39 recovery phrase and BIP-84 derivation — your funds aren't locked to our app. Restore the same phrase in any compatible wallet.</p>
+        <h3>Open and checkable</h3>
+        <p>Source is public under the MIT licence. Every release APK is signed with one key whose SHA-256 fingerprint is published, so <code>apksigner</code> can confirm a download is the real thing.</p>
       </div>
       <div class="feature">
-        <h3>Minimal data</h3>
-        <p>No analytics, no ad SDKs, no third-party trackers. The backend keeps no account for you. See the <a href="/privacy">privacy policy</a>.</p>
+        <h3>No trackers</h3>
+        <p>No analytics, no ad SDKs, no third-party SDKs of any kind. Everything the backend can see is spelled out in the <a href="/privacy">privacy policy</a>.</p>
       </div>
     </div>
     <p class="warn" style="font-size:14px; margin-top:26px">Our software is early. Back up your recovery phrase offline and start with small amounts.</p>
