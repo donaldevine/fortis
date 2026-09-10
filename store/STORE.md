@@ -8,7 +8,7 @@ Draft copy and assets for the Play Console listing. Fill the `TODO` items.
 |---|---|
 | App name | **Fortis Wallet** |
 | Developer/publisher | **Fortis Tech Labs** |
-| Package | `rest.fortis.wallet` |
+| Package | `com.fortistechlabs.wallet` |
 | Category | Finance |
 | Contact email | info@fortistechlabs.com |
 | Website | https://fortistechlabs.com |

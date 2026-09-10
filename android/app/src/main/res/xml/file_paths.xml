@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- FileProvider (rest.fortis.wallet.fileprovider) — exposes only cacheDir/shared/,
+<!-- FileProvider (${applicationId}.fileprovider) — exposes only cacheDir/shared/,
      where the QR "copy image" feature writes qr.png. -->
 <paths>
     <cache-path name="shared" path="shared/" />

@@ -276,7 +276,7 @@ testers to install until it's approved and live on the track.
 
 ### 7d. Get the links
 Once live, the track page shows:
-- **Copy link** — a `https://play.google.com/apps/testing/rest.fortis.wallet`
+- **Copy link** — a `https://play.google.com/apps/testing/com.fortistechlabs.wallet`
   web opt-in page.
 - The Play Store listing link (works only for opted-in testers).
 
@@ -300,7 +300,7 @@ reset progress, so tell people to leave it installed.
 > use it, just keep it installed.
 >
 > 1. Join the tester group: <googlegroups link>
-> 2. Opt in: https://play.google.com/apps/testing/rest.fortis.wallet
+> 2. Opt in: https://play.google.com/apps/testing/com.fortistechlabs.wallet
 > 3. Install "Fortis Wallet" from the Play Store (the link on that page).
 >
 > It's mainnet and it's beta — **don't put in more than pocket change**, and
@@ -337,7 +337,7 @@ test track → promote), send for review.
 
 | Thing | Value |
 |---|---|
-| Package | `rest.fortis.wallet` |
+| Package | `com.fortistechlabs.wallet` |
 | Upload keystore | `C:\Repos\fortis\android\fortis-upload.jks` (alias `fortis`, git-ignored) — **back up** |
 | Signing config | `android/keystore.properties` (git-ignored) |
 | Build | `cd android && .\gradlew.bat clean :app:bundleRelease` |

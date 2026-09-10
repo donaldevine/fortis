@@ -2,6 +2,16 @@
 
 Fortis Wallet (Android). Versions are `versionName (versionCode)`.
 
+## 0.2.0 (4) — 2026-09-10
+
+- **App renamed to `com.fortistechlabs.wallet`** (was `rest.fortis.wallet`), to
+  match the fortistechlabs.com domain. Android treats this as a new app: it
+  installs alongside the old one and does **not** carry your wallets over.
+  **Install 0.2.0, restore each wallet from its recovery phrase, then uninstall
+  the old app.** Same signing key as before, so the certificate fingerprint is
+  unchanged.
+- No feature changes.
+
 ## Backend — 2026-09-10
 
 - Payments through the hosted backend carry a 1% service fee (minimum 400 sat)

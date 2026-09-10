@@ -16,9 +16,7 @@ pubkey: npub1qsasj2ljwllm9a3nget7jmdl7ggswf4jtpqjlryyz7l4mxc7lu0qdwthtf
 name: Fortis Wallet
 summary: Non-custodial wallet for Bitcoin XBT and Bitcoin BTC
 description: |
-  A non-custodial mobile wallet for Bitcoin XBT and Bitcoin BTC. Your recovery
-  phrase is generated on your device, encrypted under a password you choose, and
-  never leaves it.
+  A non-custodial mobile wallet for Bitcoin XBT and Bitcoin BTC. Your recovery phrase is generated on your device, encrypted under a password you choose, and never leaves it.
 
   - 12- or 24-word BIP-39 phrase, BIP-84 native SegWit, optional passphrase
   - Up to 10 named wallets, any mix of XBT and BTC, from the one phrase
@@ -26,21 +24,14 @@ description: |
   - Fee presets or a custom sat/vB rate; "take the fees out of this amount"; sweep a whole balance
   - History with a tap-through to a block explorer; approximate USD value
   - One unlock (fingerprint, face, or device PIN) opens every wallet
-  - Cross-chain replay protection: SIGHASH_UNIFIED on every XBT send (automatic),
-    plus an optional oversized OP_RETURN on BTC sends
-  - Extra entropy from your hands: shake the phone, scribble on screen, or
-    CPU-timing jitter, folded into the seed
-  - The app-unlock key lives in StrongBox or the TEE when the device has one;
-    Settings says so plainly when it does not
-  - Recovery-phrase and password screens blocked from screenshots, screen
-    recording, and the app switcher
-  - No analytics, no ads, no third-party SDKs; the backend only ever sees public
-    addresses and finished signed transactions - no account, no sign-up
-  - Payments through the hosted backend carry a 1% fee (min 400 sat) that funds
-    it, shown before you sign
+  - Cross-chain replay protection: SIGHASH_UNIFIED on every XBT send (automatic), plus an optional oversized OP_RETURN on BTC sends
+  - Extra entropy from your hands: shake the phone, scribble on screen, or CPU-timing jitter, folded into the seed
+  - The app-unlock key lives in StrongBox or the TEE when the device has one; Settings says so plainly when it does not
+  - Recovery-phrase and password screens blocked from screenshots, screen recording, and the app switcher
+  - No analytics, no ads, no third-party SDKs; the backend only ever sees public addresses and finished signed transactions - no account, no sign-up
+  - Payments through the hosted backend carry a 1% fee (min 400 sat) that funds it, shown before you sign
 
-  Standard, portable keys - restore the same phrase in any BIP-84 wallet. Open
-  source (MIT). No Google Play Services.
+  Standard, portable keys - restore the same phrase in any BIP-84 wallet. Open source (MIT). No Google Play Services.
 
 tags:
   - bitcoin
@@ -48,6 +39,7 @@ tags:
   - finance
   - cryptocurrency
   - nostr
+  - xbt
 
 license: MIT
 website: https://fortistechlabs.com

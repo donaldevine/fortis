@@ -19,18 +19,20 @@ val keystoreProps = Properties().apply {
 val hasReleaseKeystore = keystoreProps.getProperty("storeFile") != null
 
 android {
-    // namespace stays com.fortis.wallet (the source package + generated R/BuildConfig);
-    // applicationId is the permanent Play/device identity — reverse-DNS of the
-    // original fortis.rest domain; it never changes, whatever the site domain is.
+    // namespace = the source package + generated R/BuildConfig; unrelated to
+    // applicationId and left as-is to avoid churning every Kotlin file.
+    // applicationId is the on-device / store identity: renamed rest.fortis.wallet
+    // -> com.fortistechlabs.wallet at v0.2.0 (the fortis.rest -> fortistechlabs.com
+    // move). A new applicationId is a new app — installs do not cross-update.
     namespace = "com.fortis.wallet"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "rest.fortis.wallet"
+        applicationId = "com.fortistechlabs.wallet"
         minSdk = 26
         targetSdk = 37
-        versionCode = 3
-        versionName = "0.1.2"
+        versionCode = 4
+        versionName = "0.2.0"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
