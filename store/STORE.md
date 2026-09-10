@@ -57,7 +57,9 @@ detail: https://fortistechlabs.com/privacy
 
 FEES
 The Bitcoin network fee is set by you (fast / normal / slow, or a custom
-sat/vB rate). fortis takes no fee of its own.
+sat/vB rate). Payments made through the hosted backend also carry a 1% service
+fee (minimum 400 sat) that funds it, added as a transaction output and shown
+before you sign.
 
 fortis is early software. Back up your recovery phrase offline and start small.
 ```
@@ -108,9 +110,10 @@ The operating entity is **Fortis Tech Labs** (address as in the privacy policy).
 Screenshots are from the **release** build (`app-release.apk`, R8-minified,
 upload-key-signed), `Pixel_8_Pro_AVD`, 1344×2688 with the status bar + gesture
 pill cropped off. Password-locked wallet "Savings" on XBT against the live
-`api.fortistechlabs.com` ("connected"). Re-grabbed 2026-09-09 for the current UI (no
-service fee — the send screen has no fee disclosure). Consider adding
-framed/captioned marketing versions later.
+`api.fortistechlabs.com` ("connected"). Last grabbed 2026-09-09 **without** the
+service fee — re-grab `03-send.png` (and the confirm screen) before submitting,
+now that the 1% fee is back on and the send screen shows the fee line again.
+Consider adding framed/captioned marketing versions later.
 
 ## TODO before submitting
 

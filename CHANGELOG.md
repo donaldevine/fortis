@@ -2,6 +2,13 @@
 
 Fortis Wallet (Android). Versions are `versionName (versionCode)`.
 
+## Backend — 2026-09-10
+
+- Payments through the hosted backend carry a 1% service fee (minimum 400 sat)
+  that funds it. The app adds it as a transaction output and shows the exact
+  amount on the confirmation screen before you sign. No app update needed — the
+  app reads this from the backend.
+
 ## 0.1.2 (3) — 2026-09-09
 
 - Backend moved to `api.fortistechlabs.com` (was `api.fortis.rest`). The old
@@ -30,4 +37,4 @@ First public release. Direct download + [Obtainium](https://obtainium.imranr.dev
   recording / the app switcher.
 - No analytics, no ads, no third-party trackers. The backend only ever sees
   public addresses and finished signed transactions — no account, no sign-up.
-- Fortis takes no fee of its own; you set the Bitcoin network fee.
+- You set the Bitcoin network fee (fast / normal / slow, or a custom sat/vB rate).
