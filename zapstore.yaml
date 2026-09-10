@@ -53,6 +53,9 @@ license: MIT
 website: https://fortistechlabs.com
 release_notes: ./CHANGELOG.md
 
+# zsp mis-extracts the adaptive launcher icon from the APK; pin the real one.
+icon: https://fortistechlabs.com/icon.png
+
 images:
   - https://raw.githubusercontent.com/donaldevine/fortis/main/store/screenshots/01-onboard.png
   - https://raw.githubusercontent.com/donaldevine/fortis/main/store/screenshots/02-receive.png
