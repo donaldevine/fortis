@@ -16,9 +16,9 @@ pubkey: npub1qsasj2ljwllm9a3nget7jmdl7ggswf4jtpqjlryyz7l4mxc7lu0qdwthtf
 name: Fortis Wallet
 summary: Non-custodial wallet for Bitcoin XBT and Bitcoin BTC
 description: |
-  A non-custodial mobile wallet for Bitcoin XBT (the Bitcoin Knots BLAKE2b hard
-  fork) and Bitcoin BTC. Your recovery phrase is generated on your device,
-  encrypted under a password you choose, and never leaves it.
+  A non-custodial mobile wallet for Bitcoin XBT and Bitcoin BTC. Your recovery
+  phrase is generated on your device, encrypted under a password you choose, and
+  never leaves it.
 
   - 12- or 24-word BIP-39 phrase, BIP-84 native SegWit, optional passphrase
   - Up to 10 named wallets, any mix of XBT and BTC, from the one phrase
